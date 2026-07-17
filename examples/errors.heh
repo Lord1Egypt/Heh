@@ -1,0 +1,14 @@
+# Errors as values: result types, try, match on ok/err (SPEC §7).
+
+fn parse_age(s: str) -> int or error
+    let n = try int_of(s)
+    if n < 0
+        return err("age cannot be negative: {n}")
+    ok(n)
+
+for raw in ["34", "-2", "ra"]
+    match parse_age(raw)
+        ok(age)
+            sys.print("age {age}")
+        err(e)
+            sys.print("bad input: {e.msg}")

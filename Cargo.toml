@@ -1,0 +1,13 @@
+[package]
+name = "heh"
+version = "0.0.1"
+edition = "2021"
+description = "Heh 𓁨 — the immortal programming language. Zero-dependency reference implementation."
+license = "MIT"
+
+# HARD RULE: this table stays empty forever. Zero crates. Rust std only.
+[dependencies]
+
+[profile.release]
+lto = true
+codegen-units = 1

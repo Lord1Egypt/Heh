@@ -1,0 +1,16 @@
+# Infinity, twice: unbounded integers (SPEC §5.1) and an infinite range (§5.5).
+
+fn factorial(n: int) -> int
+    mut acc = 1
+    for i in 1..=n
+        acc *= i
+    acc
+
+sys.print(factorial(50))          # 30414093201713378043612608166064768844377641568960512000000000000
+
+mut i = 0
+for k in 0..                      # the god's own loop — runs until break
+    if k * k > 2_000
+        i = k
+        break
+sys.print("first square above 2000 is {i}²")
