@@ -13,3 +13,17 @@ PR#. No entry = the step didn't happen. Mohamed reads this first when rating.
 - Verify: `cargo test` → ok (3 passed); `cargo fmt --check` → ok.
 - Commit: 55a7986 · PR: #1 — **MERGED by Mohamed's word 2026-07-17** (merge
   e84648f); main re-verified green; tag `safe-baseline-2026-07-17` cut+pushed.
+
+## 2026-07-17 — feat/p1-lexer (Claude, session 1, route-proof phase)
+- What: P1 complete — `src/lexer.rs` (full token set: 19 keywords, ints all
+  bases + `_` rules, floats incl. exponents, strings with nested interpolation
+  token streams, 25 operators; SPEC §3 layout algorithm with INDENT/DEDENT/
+  NEWLINE, E0001 tabs, E0002 bad levels, bracket continuation with E0006
+  delimiter tracking, \r\n + BOM handling), `src/diag.rs` (SPEC §15 renderer),
+  `heh tokens` subcommand, docs/DIAGNOSTICS.md registry (E0001–E0006).
+  Golden dumps for all 6 examples generated AND reviewed by eye
+  (tests/golden/lexer/). SPEC clarifications (float literal shapes incl. `1e5`,
+  underscore placement, lowercase base prefixes) — approved via Mohamed's merge.
+- Verify: `cargo test` → ok (37 passed: 31 lexer + 6 CLI); `cargo fmt --check`
+  → ok. All 6 examples lex clean.
+- Commit: (see PR #2) · PR: #2.

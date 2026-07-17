@@ -5,21 +5,24 @@
 > short and true.
 
 ## Current state
-- **Progress: P0 ✅ (scaffold) — P1–P12 not started.**
+- **Progress: P0 ✅ scaffold · P1 ✅ lexer — P2–P12 not started.**
 - **Branch to work from:** `main` (always `git pull` first).
-- **Baseline:** `cargo test` green (3 CLI smoke tests). Binary `heh` builds,
-  `--version` → 0.0.1.
-- **Safe tag:** `safe-baseline-2026-07-17` (P0 scaffold, main @ e84648f).
-- **Open PRs:** none.
+- **Baseline:** `cargo test` green (37 tests: 31 lexer + 6 CLI). `heh tokens
+  <file>` works; all 6 examples lex clean with reviewed golden dumps in
+  `tests/golden/lexer/`.
+- **Safe tags:** `safe-baseline-2026-07-17` (P0), `safe-p1-2026-07-17` (cut
+  after PR #2 merged — check `git tag` if missing).
+- **Open PRs:** none expected (PR #2 = P1; if still open, wait for Mohamed).
 
 ## NEXT STEP (on "continue Heh" / `/goal`)
 1. `git checkout main && git pull && cargo test` (must be green).
-2. Start **Phase P1 — Lexer** from `TASK_MENU.md`: `src/lexer.rs` (full token
-   set + the SPEC §3 layout algorithm), `heh tokens` subcommand,
-   `tests/lexer.rs` with golden token dumps for all `examples/*.heh` +
-   layout edge cases (tabs `E0001`, bad dedent `E0002`, brackets, EOF).
-3. Follow the loop in `PLAYBOOK.md` (in `/goal` mode: `GOAL_MODE.md`). One
-   small PR, `cargo test` green, then merge per the rules.
+2. Start **Phase P2 — Parser → AST** from `TASK_MENU.md`: `src/ast.rs` +
+   `src/parser.rs` (recursive descent over the P1 token stream, full SPEC §14
+   grammar, precedence per §6.1), `heh ast` subcommand with a stable dump,
+   golden AST dumps for all examples + seed `tests/corpus/errors/` with syntax
+   error cases. Follow the P1 pattern exactly (it is the approved route-proof:
+   raw-text literals, golden files reviewed by eye, diagnostics never panic).
+3. One small PR, `cargo test` green, then merge per the rules.
 
 ## Before you end EVERY session (mandatory)
 - Overwrite "Current state" + "NEXT STEP" above to reflect reality now.

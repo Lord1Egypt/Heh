@@ -118,11 +118,14 @@ wrap-around, no `i32/i64` zoo. `2 ** 200` just works.
 > fast path with automatic promotion to a bignum, so ordinary arithmetic runs at
 > native speed. Semantics are always unbounded.
 
-Literals: `0`, `42`, `1_000_000`, `0xFF`, `0b1010`, `0o755`.
+Literals: `0`, `42`, `1_000_000`, `0xFF`, `0b1010`, `0o755`. Base prefixes are
+lowercase; `_` separators must sit between two digits.
 
 ### 5.2 `float`
 
-IEEE-754 binary64. Literals: `1.5`, `2.0`, `6.02e23`. `float` has `inf`,
+IEEE-754 binary64. A float literal has a decimal point (with digits on both
+sides), a lowercase-`e` exponent, or both: `1.5`, `2.0`, `1e5`, `6.02e23`,
+`1.5e-3`. `float` has `inf`,
 `-inf`, and `nan` values (produced by arithmetic; there are no literals for
 them — use `std/math`). `int` and `float` never mix implicitly: converting is
 explicit via the builtins `int(x)` (truncates, may error on nan/inf) and
