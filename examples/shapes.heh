@@ -1,0 +1,24 @@
+# Records, enums, exhaustive match, UFCS (SPEC §8, §6.5).
+
+type Point
+    x: float
+    y: float
+
+type Shape = circle(r: float) or square(side: float) or dot
+
+fn area(s: Shape) -> float
+    match s
+        circle(r)
+            3.141592653589793 * r * r
+        square(side)
+            side * side
+        dot
+            0.0
+
+fn dist(a: Point, b: Point) -> float
+    ((a.x - b.x) ** 2.0 + (a.y - b.y) ** 2.0).sqrt()
+
+let p = Point(x: 0.0, y: 0.0)
+let q = Point(x: 3.0, y: 4.0)
+sys.print("dist = {p.dist(q)}")
+sys.print("area = {area(square(side: 3.0))}")

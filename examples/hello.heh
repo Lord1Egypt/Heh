@@ -1,0 +1,2 @@
+# The complete Heh hello world (script mode, SPEC §11).
+sys.print("Heh lives forever 𓁨")
