@@ -9,9 +9,8 @@
 - **Branch to work from:** `main` (always `git pull` first).
 - **Baseline:** `cargo test` green (3 CLI smoke tests). Binary `heh` builds,
   `--version` → 0.0.1.
-- **Safe tag:** cut `safe-baseline-<date>` on main after PR #1 (scaffold) is
-  merged, if not already present (`git tag | grep safe`).
-- **Open PRs:** #1 (base scaffold) — awaiting Mohamed's merge.
+- **Safe tag:** `safe-baseline-2026-07-17` (P0 scaffold, main @ e84648f).
+- **Open PRs:** none.
 
 ## NEXT STEP (on "continue Heh" / `/goal`)
 1. `git checkout main && git pull && cargo test` (must be green).

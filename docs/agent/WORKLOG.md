@@ -11,4 +11,5 @@ PR#. No entry = the step didn't happen. Mohamed reads this first when rating.
   outputs), zero-dep Rust CLI baseline (`--version/--help`), CI workflow,
   full agent kit (AGENTS/GEMINI + 8 docs/agent files), MIT license.
 - Verify: `cargo test` → ok (3 passed); `cargo fmt --check` → ok.
-- Commit: (see PR #1) · PR: #1 — awaiting Mohamed's merge.
+- Commit: 55a7986 · PR: #1 — **MERGED by Mohamed's word 2026-07-17** (merge
+  e84648f); main re-verified green; tag `safe-baseline-2026-07-17` cut+pushed.
