@@ -24,7 +24,7 @@ This is what makes "it works" provable instead of hopeful.
 - SPEC v0.1, examples corpus seed, zero-dep `heh` CLI baseline (`--version`,
   `--help`), CI, agent kit. **Gate:** `cargo test` green (3 CLI smoke tests).
 
-## P1 — Lexer  ⬜
+## P1 — Lexer  ✅ (PR #2)
 - `src/lexer.rs`: full token set (SPEC §2–§4): keywords, identifiers, int
   literals (all bases + `_`), float literals, strings **with interpolation
   segments** (`"a {expr} b"` lexes to parts), operators, comments; the layout

@@ -1,0 +1,8 @@
+2:1	IDENT(sys)
+2:4	OP(.)
+2:5	IDENT(print)
+2:10	OP(()
+2:11	STR("Heh lives forever 𓁨")
+2:32	OP())
+2:33	NEWLINE
+3:1	EOF

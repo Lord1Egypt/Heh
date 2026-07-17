@@ -66,9 +66,11 @@ No null. No exceptions. No classes. No `pip install`. No overflow. Forever.
 
 ## Status
 
-**Phase P0 — scaffold.** The spec ([SPEC.md](SPEC.md)) and plan are complete;
-the interpreter is built phase by phase (P1 lexer → P12 v1.0 freeze) by
-autonomous AI agents following [AGENTS.md](AGENTS.md). Progress lives in
+**Phase P1 — lexer done** (full token set, layout algorithm, string
+interpolation, `heh tokens` — 37 tests + golden dumps green). The spec
+([SPEC.md](SPEC.md)) and plan are complete; the interpreter is built phase by
+phase (P2 parser → P12 v1.0 freeze) by autonomous AI agents following
+[AGENTS.md](AGENTS.md). Progress lives in
 [docs/agent/TASK_MENU.md](docs/agent/TASK_MENU.md).
 
 | | |
