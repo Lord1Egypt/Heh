@@ -146,10 +146,13 @@ impl Evaluator {
                     })
                 }
                 Err(d) => {
-                    if d.code == "E_TRY_PROPAGATE" {
-                        // main returns err, exit with code
-                        eprintln!("fault: {}", d.msg);
-                        std::process::exit(1);
+                    if d.code == "E_TRY_PROPAGATE" || d.code == "E_TRY_PROPAGATE_NONE" {
+                        return Err(Diag {
+                            code: "E0114",
+                            msg: "try propagated outside result-returning function".into(),
+                            line: 1,
+                            col: 1,
+                        });
                     }
                     return Err(d);
                 }
@@ -159,9 +162,9 @@ impl Evaluator {
         // Script mode
         for item in &file.items {
             match item {
-                TopItem::Stmt(s) => match self.eval_stmt(s, self.global.clone())? {
-                    Err(Flow::Return(_)) => return Ok(()),
-                    Err(_) => {
+                TopItem::Stmt(s) => match self.eval_stmt(s, self.global.clone()) {
+                    Ok(Err(Flow::Return(_))) => return Ok(()),
+                    Ok(Err(_)) => {
                         return Err(Diag {
                             code: "E0110",
                             msg: "break/continue outside loop".into(),
@@ -169,10 +172,31 @@ impl Evaluator {
                             col: 1,
                         })
                     }
-                    Ok(_) => {}
+                    Ok(Ok(_)) => {}
+                    Err(d) => {
+                        if d.code == "E_TRY_PROPAGATE" || d.code == "E_TRY_PROPAGATE_NONE" {
+                            return Err(Diag {
+                                code: "E0114",
+                                msg: "try propagated outside result-returning function".into(),
+                                line: 1,
+                                col: 1,
+                            });
+                        }
+                        return Err(d);
+                    }
                 },
                 TopItem::Let(l) => {
-                    self.eval_let(l, self.global.clone())?;
+                    if let Err(d) = self.eval_let(l, self.global.clone()) {
+                        if d.code == "E_TRY_PROPAGATE" || d.code == "E_TRY_PROPAGATE_NONE" {
+                            return Err(Diag {
+                                code: "E0114",
+                                msg: "try propagated outside result-returning function".into(),
+                                line: 1,
+                                col: 1,
+                            });
+                        }
+                        return Err(d);
+                    }
                 }
                 TopItem::Fn(_) | TopItem::Type(_) => {}
             }
@@ -494,8 +518,9 @@ impl Evaluator {
                                 if let Some(i) = BigInt::parse(&s) {
                                     return Ok(Val::Ok(Box::new(Val::Int(i))));
                                 }
+                                return Ok(Val::Err(format!("not an integer: \"{}\"", s)));
                             }
-                            return Ok(Val::Err("invalid int".into()));
+                            return Ok(Val::Err("not an integer".into()));
                         }
                     }
                     if obj == "ok" && args.len() == 1 {
@@ -511,6 +536,12 @@ impl Evaluator {
                                 return Ok(Val::Err(s));
                             }
                             return Ok(Val::Err(val.to_string())); // fallback
+                        }
+                    }
+                    if obj == "some" && args.len() == 1 {
+                        if let CallArg::Positional(a) = &args[0] {
+                            let val = self.eval_expr(a, env.clone())?;
+                            return Ok(Val::Some(Box::new(val)));
                         }
                     }
                     if obj == "sqrt" && args.len() == 1 {
@@ -709,21 +740,25 @@ impl Evaluator {
                 let val = self.eval_expr(inner, env.clone())?;
                 match val {
                     Val::Ok(v) => Ok(*v),
+                    Val::Some(v) => Ok(*v),
+                    Val::None => {
+                        if *else_exit {
+                            eprintln!("fault: none");
+                            std::process::exit(1);
+                        } else {
+                            Err(Diag {
+                                code: "E_TRY_PROPAGATE_NONE",
+                                msg: "none".into(),
+                                line: expr.span.line,
+                                col: expr.span.col,
+                            })
+                        }
+                    }
                     Val::Err(e) => {
                         if *else_exit {
-                            // exit with diagnostic message
                             eprintln!("fault: {}", e);
                             std::process::exit(1);
                         } else {
-                            // In Heh, `try` without `else exit` returns the error from the current function.
-                            // We can use a special Diag code, but actually Heh uses `try` to return `err(e)`.
-                            // To implement `try` returning `err(e)` from the function, we need a special Flow::Return.
-                            // But `eval_expr` doesn't return `Flow`. It returns `Val` or `Diag`.
-                            // This means `try` is an expression that can short-circuit the whole function!
-                            // Rust `?` equivalent. Wait! We need `Flow::Return` to be propagatable from `eval_expr`.
-                            // Let's cheat and return a special Diag that gets caught by `eval_block`?
-                            // No, `eval_expr` returning a Diag is a hard error (panic).
-                            // Let's implement `try` via a special Diag that `eval_block` handles.
                             Err(Diag {
                                 code: "E_TRY_PROPAGATE",
                                 msg: e,
@@ -1038,6 +1073,12 @@ impl Evaluator {
                     if let Val::Err(e) = val {
                         if binds.len() == 1 {
                             return Some(vec![(binds[0].clone(), Val::Err(e.clone()))]);
+                        }
+                    }
+                } else if name == "some" {
+                    if let Val::Some(inner) = val {
+                        if binds.len() == 1 {
+                            return Some(vec![(binds[0].clone(), *inner.clone())]);
                         }
                     }
                 } else {

@@ -68,7 +68,7 @@ This is what makes "it works" provable instead of hopeful.
 - **Gate:** `shapes` example passes byte-exact; corpus grows with
   match/record/UFCS programs + error cases.
 
-## P5 — option, result, try, diagnostics polish  ⬜
+## P5 — option, result, try, diagnostics polish  ✅
 - `T?`/`some`/`none`, `T or error`/`ok`/`err`/`error(msg)`, `try` propagation,
   `try ... else exit`, match on `ok/err/some/none`; builtin `int_of(str)`
   (error message: `not an integer: "<s>"`).

@@ -21,6 +21,7 @@ pub enum Val {
     BuiltinFn(&'static str),
     Ok(Box<Val>),
     Err(String),
+    Some(Box<Val>),
     List(Rc<RefCell<Vec<Val>>>),
     Map(Rc<RefCell<HashMap<Val, Val>>>),
     Record(String, Rc<RefCell<HashMap<String, Val>>>),
@@ -47,6 +48,7 @@ impl PartialEq for Val {
             (Val::BoundMethod(oa, ma), Val::BoundMethod(ob, mb)) => oa == ob && ma == mb,
             (Val::Ok(a), Val::Ok(b)) => a == b,
             (Val::Err(a), Val::Err(b)) => a == b,
+            (Val::Some(a), Val::Some(b)) => a == b,
             (Val::List(a), Val::List(b)) => *a.borrow() == *b.borrow(),
             (Val::Map(a), Val::Map(b)) => *a.borrow() == *b.borrow(),
             (Val::Record(n1, a), Val::Record(n2, b)) => n1 == n2 && *a.borrow() == *b.borrow(),
@@ -108,9 +110,13 @@ impl Hash for Val {
                 n.hash(state);
                 v.hash(state);
             }
-            Val::Ok(v) => {
-                9u8.hash(state);
-                v.hash(state);
+            Val::Ok(inner) => {
+                5.hash(state);
+                inner.hash(state);
+            }
+            Val::Some(inner) => {
+                15.hash(state);
+                inner.hash(state);
             }
             Val::Err(e) => {
                 10u8.hash(state);
@@ -152,8 +158,9 @@ impl fmt::Display for Val {
             }
             Val::Fn(..) => write!(f, "<fn>"),
             Val::BuiltinFn(n) => write!(f, "<builtin {}>", n),
-            Val::Ok(v) => write!(f, "ok({})", v),
+            Val::Ok(inner) => write!(f, "ok({})", inner),
             Val::Err(e) => write!(f, "err(\"{}\")", e),
+            Val::Some(inner) => write!(f, "some({})", inner),
             Val::List(l) => {
                 write!(f, "[")?;
                 let b = l.borrow();
