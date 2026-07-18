@@ -1,5 +1,7 @@
 use std::fmt;
 use std::cmp::Ordering;
+use std::rc::Rc;
+use std::cell::RefCell;
 use crate::bignum::BigInt;
 
 #[derive(Debug, Clone)]
@@ -9,6 +11,11 @@ pub enum Val {
     Bool(bool),
     Str(String),
     Range(Box<Val>, Box<Val>, bool), // (start, end, is_inclusive)
+    Fn(Vec<String>, crate::ast::Block, std::rc::Rc<std::cell::RefCell<crate::eval::Scope>>),
+    BuiltinFn(&'static str),
+    Ok(Box<Val>),
+    Err(String),
+    List(Rc<RefCell<Vec<Val>>>),
     None,
 }
 
@@ -26,6 +33,10 @@ impl PartialEq for Val {
             (Val::Bool(a), Val::Bool(b)) => a == b,
             (Val::Str(a), Val::Str(b)) => a == b,
             (Val::Range(a1, b1, i1), Val::Range(a2, b2, i2)) => a1 == a2 && b1 == b2 && i1 == i2,
+            (Val::BuiltinFn(a), Val::BuiltinFn(b)) => a == b,
+            (Val::Ok(a), Val::Ok(b)) => a == b,
+            (Val::Err(a), Val::Err(b)) => a == b,
+            (Val::List(a), Val::List(b)) => *a.borrow() == *b.borrow(),
             (Val::None, Val::None) => true,
             _ => false,
         }
@@ -55,6 +66,21 @@ impl fmt::Display for Val {
             Val::Range(start, end, inc) => {
                 if *inc { write!(f, "{}..={}", start, end) }
                 else { write!(f, "{}..{}", start, end) }
+            }
+            Val::Fn(..) => write!(f, "<fn>"),
+            Val::BuiltinFn(n) => write!(f, "<builtin {}>", n),
+            Val::Ok(v) => write!(f, "ok({})", v),
+            Val::Err(e) => write!(f, "err(\"{}\")", e),
+            Val::List(l) => {
+                write!(f, "[")?;
+                let b = l.borrow();
+                for (i, v) in b.iter().enumerate() {
+                    if i > 0 { write!(f, ", ")?; }
+                    // In real Heh, lists print string elements with quotes, but we'll keep it simple for now
+                    if let Val::Str(s) = v { write!(f, "\"{}\"", s)?; }
+                    else { write!(f, "{}", v)?; }
+                }
+                write!(f, "]")
             }
             Val::None => write!(f, "none"),
         }
