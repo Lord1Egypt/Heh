@@ -25,6 +25,7 @@ pub enum Val {
     Map(Rc<RefCell<HashMap<Val, Val>>>),
     Record(String, Rc<RefCell<HashMap<String, Val>>>),
     Enum(String, Vec<Val>),
+    BoundMethod(Box<Val>, String),
     None,
 }
 
@@ -43,6 +44,7 @@ impl PartialEq for Val {
             (Val::Str(a), Val::Str(b)) => a == b,
             (Val::Range(a1, b1, i1), Val::Range(a2, b2, i2)) => a1 == a2 && b1 == b2 && i1 == i2,
             (Val::BuiltinFn(a), Val::BuiltinFn(b)) => a == b,
+            (Val::BoundMethod(oa, ma), Val::BoundMethod(ob, mb)) => oa == ob && ma == mb,
             (Val::Ok(a), Val::Ok(b)) => a == b,
             (Val::Err(a), Val::Err(b)) => a == b,
             (Val::List(a), Val::List(b)) => *a.borrow() == *b.borrow(),
@@ -63,6 +65,15 @@ impl Hash for Val {
             Val::Int(i) => {
                 0u8.hash(state);
                 i.hash(state);
+            }
+            Val::BuiltinFn(name) => {
+                7.hash(state);
+                name.hash(state);
+            }
+            Val::BoundMethod(obj, method) => {
+                8.hash(state);
+                obj.hash(state);
+                method.hash(state);
             }
             Val::Bool(b) => {
                 1u8.hash(state);
@@ -199,16 +210,22 @@ impl fmt::Display for Val {
                 }
                 write!(f, "}}")
             }
-            Val::Enum(n, binds) => {
-                write!(f, "{}(", n)?;
-                for (i, v) in binds.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, ", ")?;
+            Val::Enum(n, args) => {
+                if args.is_empty() {
+                    write!(f, "{}", n)
+                } else {
+                    let mut s = format!("{}(", n);
+                    for (i, v) in args.iter().enumerate() {
+                        if i > 0 {
+                            s.push_str(", ");
+                        }
+                        s.push_str(&v.to_string());
                     }
-                    write!(f, "{}", v)?;
+                    s.push(')');
+                    write!(f, "{}", s)
                 }
-                write!(f, ")")
             }
+            Val::BoundMethod(obj, m) => write!(f, "<bound method {}.{}>", obj.to_string(), m),
             Val::None => write!(f, "none"),
         }
     }

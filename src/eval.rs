@@ -447,6 +447,13 @@ impl Evaluator {
                 }
 
                 let rval = self.eval_expr(right, env.clone())?;
+                
+                // Float Power: a ** b
+                if *op == BinOp::Pow {
+                    if let (Val::Float(f1), Val::Float(f2)) = (&lval, &rval) {
+                        return Ok(Val::Float(f1.powf(*f2)));
+                    }
+                }
                 self.eval_binop(op.clone(), lval, rval, expr.span.clone())
             }
             ExprKind::Unary(op, inner) => {
@@ -506,30 +513,73 @@ impl Evaluator {
                             return Ok(Val::Err(val.to_string())); // fallback
                         }
                     }
+                    if obj == "sqrt" && args.len() == 1 {
+                        if let CallArg::Positional(a) = &args[0] {
+                            let val = self.eval_expr(a, env.clone())?;
+                            if let Val::Float(f) = val {
+                                return Ok(Val::Float(f.sqrt()));
+                            }
+                        }
+                    }
                 }
 
                 let callee_val = self.eval_expr(callee, env.clone())?;
 
                 let mut arg_vals = Vec::new();
+                let mut is_named_args = false;
                 for arg in args {
                     if let CallArg::Positional(a) = arg {
                         arg_vals.push(self.eval_expr(a, env.clone())?);
-                    } else {
-                        // Named arg
+                    } else if let CallArg::Named(_, a) = arg {
+                        is_named_args = true;
+                        arg_vals.push(self.eval_expr(a, env.clone())?);
                     }
                 }
 
                 match callee_val {
-                    Val::Enum(name, empty_args) if empty_args.is_empty() => {
-                        // It's either an Enum or a Record constructor
-                        let mut is_named_args = false;
-                        for a in args {
-                            if let CallArg::Named(_, _) = a {
-                                is_named_args = true;
-                                break;
+                    Val::BoundMethod(obj, method) => {
+                        if let Val::Float(f) = *obj {
+                            if method == "sqrt" && arg_vals.is_empty() {
+                                return Ok(Val::Float(f.sqrt()));
                             }
                         }
-
+                        
+                        let mut new_args = vec![*obj];
+                        new_args.extend(arg_vals);
+                        // Invoke as a static function with self as first arg
+                        let func_val = env.borrow().get(&method).ok_or(Diag {
+                            code: "E0111",
+                            msg: format!("method '{}' not found", method),
+                            line: callee.span.line,
+                            col: callee.span.col,
+                        })?;
+                        if let Val::Fn(params, body, closure_env) = func_val {
+                            let call_env = Rc::new(RefCell::new(Scope::new(Some(closure_env))));
+                            for (p, v) in params.into_iter().zip(new_args) {
+                                call_env.borrow_mut().define(p, v, false);
+                            }
+                            match self.eval_block(&body, call_env) {
+                                Ok(Ok(v)) => Ok(v),
+                                Ok(Err(Flow::Return(v))) => Ok(v),
+                                Ok(Err(_)) => Err(Diag {
+                                    code: "E0110",
+                                    msg: "break/continue outside loop".into(),
+                                    line: callee.span.line,
+                                    col: callee.span.col,
+                                }),
+                                Err(d) => Err(d),
+                            }
+                        } else {
+                            Err(Diag {
+                                code: "E0111",
+                                msg: "not callable".into(),
+                                line: callee.span.line,
+                                col: callee.span.col,
+                            })
+                        }
+                    }
+                    Val::Enum(name, empty_args) if empty_args.is_empty() => {
+                        // It's either an Enum or a Record constructor
                         if is_named_args {
                             let mut map = std::collections::HashMap::new();
                             for arg in args {
@@ -537,7 +587,7 @@ impl Evaluator {
                                     CallArg::Named(k, val_expr) => {
                                         map.insert(
                                             k.clone(),
-                                            self.eval_expr(val_expr, env.clone())?,
+                                            self.eval_expr(&val_expr, env.clone())?,
                                         );
                                     }
                                     _ => {
@@ -705,46 +755,35 @@ impl Evaluator {
                             })
                         }
                     }
-                    Val::Record(_, r) => {
+                    Val::Record(_, ref r) => {
                         if let Some(v) = r.borrow().get(f) {
                             Ok(v.clone())
                         } else {
-                            Err(Diag {
-                                code: "E0105",
-                                msg: format!("no field '{}' on record", f),
-                                line: expr.span.line,
-                                col: expr.span.col,
-                            })
+                            Ok(Val::BoundMethod(Box::new(obj.clone()), f.clone()))
                         }
                     }
-                    Val::Str(s) => {
+                    Val::Str(ref s) => {
                         if f == "len" {
                             Ok(Val::Int(BigInt::from_i64(s.chars().count() as i64)))
                         } else {
-                            Err(Diag {
-                                code: "E0105",
-                                msg: format!("no field '{}' on string", f),
-                                line: expr.span.line,
-                                col: expr.span.col,
-                            })
+                            Ok(Val::BoundMethod(Box::new(obj.clone()), f.clone()))
                         }
                     }
-                    Val::List(l) => {
+                    Val::List(ref l) => {
                         if f == "len" {
-                            return Ok(Val::Int(BigInt::from_i64(l.borrow().len() as i64)));
+                            Ok(Val::Int(BigInt::from_i64(l.borrow().len() as i64)))
+                        } else {
+                            Ok(Val::BoundMethod(Box::new(obj.clone()), f.clone()))
                         }
-                        // we can handle push/pop as builtin fns, but actually they mutate the list.
-                        // In Heh methods like list.push(val) are used.
-                        // To support list.push(x), we return a BuiltinMethod(Val, String)?
-                        // Instead, we can stub `push` as a special case in `ExprKind::Call` or return a closure.
-                        unimplemented!("list methods not fully implemented")
                     }
-                    _ => Err(Diag {
-                        code: "E0106",
-                        msg: "expression not yet supported".into(),
-                        line: expr.span.line,
-                        col: expr.span.col,
-                    }),
+                    Val::Map(ref m) => {
+                        if f == "len" {
+                            Ok(Val::Int(BigInt::from_i64(m.borrow().len() as i64)))
+                        } else {
+                            Ok(Val::BoundMethod(Box::new(obj.clone()), f.clone()))
+                        }
+                    }
+                    _ => Ok(Val::BoundMethod(Box::new(obj.clone()), f.clone())),
                 }
             }
             ExprKind::Index(obj, idx) => {
@@ -1009,6 +1048,27 @@ impl Evaluator {
                                 res.push((b_name.clone(), b_val.clone()));
                             }
                             return Some(res);
+                        }
+                    } else if let Val::Record(variant, r) = val {
+                        if variant == name {
+                            let r_borrow = r.borrow();
+                            if binds.len() == r_borrow.len() {
+                                let mut res = Vec::new();
+                                // We map bindings by matching the binding name to the field name.
+                                // Because in Heh `match circle(r)` binds the field `r` to the variable `r`.
+                                let mut ok = true;
+                                for b_name in binds {
+                                    if let Some(v) = r_borrow.get(b_name) {
+                                        res.push((b_name.clone(), v.clone()));
+                                    } else {
+                                        ok = false;
+                                        break;
+                                    }
+                                }
+                                if ok {
+                                    return Some(res);
+                                }
+                            }
                         }
                     }
                 }
