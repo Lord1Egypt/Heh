@@ -1,0 +1,12 @@
+# String interpolation and standard library
+
+let x = 10
+let y = 20
+sys.print("x + y = {x + y}")
+sys.print("Length of string is {"hello".len}")
+
+let n = try int_of("123")
+sys.print(n)
+
+let s = str(456)
+sys.print("The string is {s}")

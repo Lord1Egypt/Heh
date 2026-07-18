@@ -51,3 +51,9 @@ PR#. No entry = the step didn't happen. Mohamed reads this first when rating.
 - **What:** Implemented P5 Data Structures. Added `Val::Record`, `Val::Map`, and `Val::Enum`. Implemented `Hash` for `BigInt` and `Val`. Evaluator handles instantiation and field access. Added test corpus for lists, records, and enums.
 - **Verification:** `cargo test` green. Checked `lists.heh`, `records.heh`, and `enums.heh` output.
 - **PR:** Pending
+
+- **Date:** 2026-07-18
+- **Branch:** `feat/p6-eval-4`
+- **What:** Implemented P6 String Formatting and Standard Library. Added `str.len`, verified string interpolation, and built-ins `str`, `int_of`, `ok`, `err`. Added `strings.heh` to the corpus.
+- **Verification:** `cargo test` green. All programs in corpus evaluate correctly.
+- **PR:** Pending
