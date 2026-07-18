@@ -1,13 +1,11 @@
 # Current State
-Phase P2 (Parser -> AST) is COMPLETE and merged.
-The lexer and parser support the full Heh grammar.
-Golden AST dumps and syntax error tests have been seeded.
+Phase P3 (Evaluator I) is COMPLETE and merged.
+The evaluator supports basic arithmetic, bignums, block scopes, let/mut, if/elif/else, while, for loops with ranges, and `sys.print`.
 
 # Next Step
-Start Phase P3 — Evaluator I.
-- Draft `src/val.rs` (runtime values) and `src/eval.rs` (tree-walking evaluator).
-- Implement basic types (`int`, `float`, `bool`, `str`).
-- Implement basic control flow (`if`/`elif`/`else`, `while`, block scopes).
-- Implement variables (`let`/`mut`).
-- Stub `sys.print`.
-- Introduce `tests/corpus.rs` test harness.
+Start Phase P4 — Evaluator II.
+- Implement first-class functions and closures.
+- Implement option narrowing (`T?` narrowing inside `if x != none` blocks).
+- Implement `match` statements (value matching, enum variants, wildcards).
+- Implement `try` expressions and faults.
+- Gate: Execute `tests/corpus/programs/factorial.heh` (needs to be created from examples/infinity.heh probably) and `errors.heh`.
