@@ -1,0 +1,10 @@
+(file
+  (fn 4:1 summarize (params text:str) -> str
+(expr (str (call (. (call (. text split) "
+") len)) " lines, " (call (. text len)) " chars"))
+  )
+  (fn 7:1 main (params sys:Sys)
+(let 8:5 text (try (call (. (. sys fs) read) "notes.txt") else exit))
+(expr (call (. sys print) (call summarize text)))
+  )
+)

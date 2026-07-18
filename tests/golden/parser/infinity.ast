@@ -1,0 +1,21 @@
+(file
+  (fn 3:1 factorial (params n:int) -> int
+(mut 4:5 acc 1)
+(for 5:5 i (..= 1 n)
+(= 6:9 acc *= i)
+
+    )
+(expr acc)
+  )
+  (expr (call (. sys print) (call factorial 50)))
+  (mut 11:1 i 0)
+  (for 12:1 k (.. 0 none)
+(if 13:5 (> (* k k) 2_000)
+(= 14:9 i = k)
+(break 15:9)
+
+    )
+
+  )
+  (expr (call (. sys print) (str "first square above 2000 is " i "²")))
+)
