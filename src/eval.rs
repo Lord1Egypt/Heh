@@ -7,9 +7,16 @@ use crate::diag::Diag;
 use crate::val::Val;
 use crate::bignum::BigInt;
 
+#[derive(Clone)]
 pub struct Scope {
     parent: Option<Rc<RefCell<Scope>>>,
     vars: HashMap<String, (Val, bool)>, // (value, is_mut)
+}
+
+impl std::fmt::Debug for Scope {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Scope")
+    }
 }
 
 impl Scope {
@@ -62,17 +69,51 @@ impl Evaluator {
     }
 
     pub fn eval_file(&mut self, file: &File) -> Result<(), Diag> {
+        // Pass 1: functions
+        for item in &file.items {
+            if let TopItem::Fn(f) = item {
+                let params = f.params.iter().map(|p| p.name.clone()).collect();
+                let func = Val::Fn(params, f.body.clone(), self.global.clone());
+                self.global.borrow_mut().define(f.name.clone(), func, false);
+            }
+        }
+        
+        // Check for main
+        let main_fn = self.global.borrow().get("main");
+        if let Some(Val::Fn(params, body, env)) = main_fn {
+            let call_env = Rc::new(RefCell::new(Scope::new(Some(env))));
+            // Pass sys (dummy) if it expects a param
+            if !params.is_empty() {
+                call_env.borrow_mut().define(params[0].clone(), Val::None, false);
+            }
+            match self.eval_block(&body, call_env) {
+                Ok(Ok(_)) | Ok(Err(Flow::Return(_))) => return Ok(()),
+                Ok(Err(_)) => return Err(Diag { code: "E0107", msg: "invalid flow in main".into(), line: 1, col: 1 }),
+                Err(d) => {
+                    if d.code == "E_TRY_PROPAGATE" {
+                        // main returns err, exit with code
+                        eprintln!("fault: {}", d.msg);
+                        std::process::exit(1);
+                    }
+                    return Err(d);
+                }
+            }
+        }
+
+        // Script mode
         for item in &file.items {
             match item {
                 TopItem::Stmt(s) => {
-                    self.eval_stmt(s, self.global.clone())?;
+                    match self.eval_stmt(s, self.global.clone())? {
+                        Err(Flow::Return(_)) => return Ok(()),
+                        Err(_) => return Err(Diag { code: "E0110", msg: "break/continue outside loop".into(), line: 1, col: 1 }),
+                        Ok(_) => {}
+                    }
                 }
                 TopItem::Let(l) => {
                     self.eval_let(l, self.global.clone())?;
                 }
-                TopItem::Fn(_) | TopItem::Type(_) => {
-                    // Ignored in P3 unless we support top-level fns. Wait, P3 has no functions.
-                }
+                TopItem::Fn(_) | TopItem::Type(_) => {}
             }
         }
         Ok(())
@@ -80,18 +121,21 @@ impl Evaluator {
 
     fn eval_block(&mut self, block: &Block, parent_env: Rc<RefCell<Scope>>) -> Result<Result<Val, Flow>, Diag> {
         let env = Rc::new(RefCell::new(Scope::new(Some(parent_env))));
+        let mut last_val = Val::None;
         for stmt in &block.stmts {
-            if let Some(flow) = self.eval_stmt(stmt, env.clone())? {
-                return Ok(Err(flow));
+            match self.eval_stmt(stmt, env.clone())? {
+                Ok(v) => last_val = v,
+                Err(flow) => return Ok(Err(flow)),
             }
         }
-        Ok(Ok(Val::None))
+        Ok(Ok(last_val))
     }
 
-    fn eval_stmt(&mut self, stmt: &Statement, env: Rc<RefCell<Scope>>) -> Result<Option<Flow>, Diag> {
+    fn eval_stmt(&mut self, stmt: &Statement, env: Rc<RefCell<Scope>>) -> Result<Result<Val, Flow>, Diag> {
         match stmt {
             Statement::Expr(e) => {
-                self.eval_expr(e, env.clone())?;
+                let v = self.eval_expr(e, env.clone())?;
+                return Ok(Ok(v));
             }
             Statement::Let(l) => {
                 self.eval_let(l, env.clone())?;
@@ -131,26 +175,24 @@ impl Evaluator {
                 let cond_val = self.eval_expr(&i.cond, env.clone())?;
                 let b = self.expect_bool(cond_val, i.cond.span.clone())?;
                 if b {
-                    if let Err(f) = self.eval_block(&i.then_block, env.clone())? {
-                        return Ok(Some(f));
+                    match self.eval_block(&i.then_block, env.clone())? {
+                        Ok(v) => return Ok(Ok(v)),
+                        Err(f) => return Ok(Err(f)),
                     }
                 } else {
-                    let mut matched = false;
                     for (elif_cond, elif_block) in &i.elifs {
                         let elif_val = self.eval_expr(elif_cond, env.clone())?;
                         if self.expect_bool(elif_val, elif_cond.span.clone())? {
-                            if let Err(f) = self.eval_block(elif_block, env.clone())? {
-                                return Ok(Some(f));
+                            match self.eval_block(elif_block, env.clone())? {
+                                Ok(v) => return Ok(Ok(v)),
+                                Err(f) => return Ok(Err(f)),
                             }
-                            matched = true;
-                            break;
                         }
                     }
-                    if !matched {
-                        if let Some(else_b) = &i.else_block {
-                            if let Err(f) = self.eval_block(else_b, env.clone())? {
-                                return Ok(Some(f));
-                            }
+                    if let Some(else_b) = &i.else_block {
+                        match self.eval_block(else_b, env.clone())? {
+                            Ok(v) => return Ok(Ok(v)),
+                            Err(f) => return Ok(Err(f)),
                         }
                     }
                 }
@@ -165,7 +207,7 @@ impl Evaluator {
                         Ok(_) => {}
                         Err(Flow::Break(_)) => break,
                         Err(Flow::Continue(_)) => continue,
-                        Err(Flow::Return(v)) => return Ok(Some(Flow::Return(v))),
+                        Err(Flow::Return(v)) => return Ok(Err(Flow::Return(v))),
                     }
                 }
             }
@@ -192,7 +234,7 @@ impl Evaluator {
                                 Ok(_) => {}
                                 Err(Flow::Break(_)) => break,
                                 Err(Flow::Continue(_)) => continue,
-                                Err(Flow::Return(v)) => return Ok(Some(Flow::Return(v))),
+                                Err(Flow::Return(v)) => return Ok(Err(Flow::Return(v))),
                             }
                             
                             // Increment current
@@ -200,22 +242,50 @@ impl Evaluator {
                             current = next;
                         }
                     }
+                    Val::List(l) => {
+                        let items = l.borrow().clone();
+                        for item in items {
+                            let loop_env = Rc::new(RefCell::new(Scope::new(Some(env.clone()))));
+                            loop_env.borrow_mut().define(f.name.clone(), item, false);
+                            match self.eval_block(&f.body, loop_env)? {
+                                Ok(_) => {}
+                                Err(Flow::Break(_)) => break,
+                                Err(Flow::Continue(_)) => continue,
+                                Err(Flow::Return(v)) => return Ok(Err(Flow::Return(v))),
+                            }
+                        }
+                    }
                     _ => return Err(Diag { code: "E0104", msg: "not iterable".into(), line: f.iter.span.line, col: f.iter.span.col }),
                 }
             }
-            Statement::Break(span) => return Ok(Some(Flow::Break(span.clone()))),
-            Statement::Continue(span) => return Ok(Some(Flow::Continue(span.clone()))),
+            Statement::Match(m) => {
+                let val = self.eval_expr(&m.expr, env.clone())?;
+                for arm in &m.arms {
+                    if let Some(bindings) = self.match_pattern(&val, &arm.pattern) {
+                        let arm_env = Rc::new(RefCell::new(Scope::new(Some(env.clone()))));
+                        for (k, v) in bindings {
+                            arm_env.borrow_mut().define(k, v, false);
+                        }
+                        match self.eval_block(&arm.body, arm_env)? {
+                            Ok(v) => return Ok(Ok(v)),
+                            Err(f) => return Ok(Err(f)),
+                        }
+                    }
+                }
+                return Err(Diag { code: "E0020", msg: "non-exhaustive match".into(), line: m.span.line, col: m.span.col });
+            }
+            Statement::Break(span) => return Ok(Err(Flow::Break(span.clone()))),
+            Statement::Continue(span) => return Ok(Err(Flow::Continue(span.clone()))),
             Statement::Return(r) => {
                 let v = if let Some(e) = &r.expr {
                     self.eval_expr(e, env.clone())?
                 } else {
                     Val::None
                 };
-                return Ok(Some(Flow::Return(v)));
+                return Ok(Err(Flow::Return(v)));
             }
-            _ => unimplemented!(),
         }
-        Ok(None)
+        Ok(Ok(Val::None))
     }
 
     fn eval_let(&mut self, l: &LetStmt, env: Rc<RefCell<Scope>>) -> Result<(), Diag> {
@@ -290,7 +360,7 @@ impl Evaluator {
                     }
                 }
                 
-                // stub for builtin str()
+                // stub for builtins
                 if let ExprKind::Ident(obj) = &callee.kind {
                     if obj == "str" && args.len() == 1 {
                         if let CallArg::Positional(a) = &args[0] {
@@ -298,9 +368,117 @@ impl Evaluator {
                             return Ok(Val::Str(val.to_string()));
                         }
                     }
+                    if obj == "int_of" && args.len() == 1 {
+                        if let CallArg::Positional(a) = &args[0] {
+                            let val = self.eval_expr(a, env.clone())?;
+                            if let Val::Str(s) = val {
+                                if let Some(i) = BigInt::parse(&s) {
+                                    return Ok(Val::Ok(Box::new(Val::Int(i))));
+                                }
+                            }
+                            return Ok(Val::Err("invalid int".into()));
+                        }
+                    }
+                    if obj == "ok" && args.len() == 1 {
+                        if let CallArg::Positional(a) = &args[0] {
+                            let val = self.eval_expr(a, env.clone())?;
+                            return Ok(Val::Ok(Box::new(val)));
+                        }
+                    }
+                    if obj == "err" && args.len() == 1 {
+                        if let CallArg::Positional(a) = &args[0] {
+                            let val = self.eval_expr(a, env.clone())?;
+                            if let Val::Str(s) = val {
+                                return Ok(Val::Err(s));
+                            }
+                            return Ok(Val::Err(val.to_string())); // fallback
+                        }
+                    }
                 }
 
-                Err(Diag { code: "E0105", msg: "calls not yet implemented".into(), line: callee.span.line, col: callee.span.col })
+                let callee_val = self.eval_expr(callee, env.clone())?;
+                let mut arg_vals = Vec::new();
+                for arg in args {
+                    if let CallArg::Positional(a) = arg {
+                        arg_vals.push(self.eval_expr(a, env.clone())?);
+                    } else {
+                        return Err(Diag { code: "E0108", msg: "named args not supported yet".into(), line: callee.span.line, col: callee.span.col });
+                    }
+                }
+
+                match callee_val {
+                    Val::Fn(params, body, closure_env) => {
+                        if params.len() != arg_vals.len() {
+                            return Err(Diag { code: "E0109", msg: format!("expected {} args, got {}", params.len(), arg_vals.len()), line: callee.span.line, col: callee.span.col });
+                        }
+                        let call_env = Rc::new(RefCell::new(Scope::new(Some(closure_env))));
+                        for (p, v) in params.into_iter().zip(arg_vals) {
+                            call_env.borrow_mut().define(p, v, false);
+                        }
+                        match self.eval_block(&body, call_env) {
+                            Ok(Ok(v)) => Ok(v),
+                            Ok(Err(Flow::Return(v))) => Ok(v),
+                            Ok(Err(_)) => Err(Diag { code: "E0110", msg: "break/continue outside loop".into(), line: callee.span.line, col: callee.span.col }),
+                            Err(d) => {
+                                if d.code == "E_TRY_PROPAGATE" {
+                                    Ok(Val::Err(d.msg))
+                                } else {
+                                    Err(d)
+                                }
+                            }
+                        }
+                    }
+                    _ => Err(Diag { code: "E0111", msg: "not callable".into(), line: callee.span.line, col: callee.span.col }),
+                }
+            }
+            ExprKind::Closure(params, _, body) => {
+                let p_names = params.iter().map(|p| p.name.clone()).collect();
+                Ok(Val::Fn(p_names, body.clone(), env.clone()))
+            }
+            ExprKind::Try(inner, else_exit) => {
+                let val = self.eval_expr(inner, env.clone())?;
+                match val {
+                    Val::Ok(v) => Ok(*v),
+                    Val::Err(e) => {
+                        if *else_exit {
+                            // exit with diagnostic message
+                            eprintln!("fault: {}", e);
+                            std::process::exit(1);
+                        } else {
+                            // In Heh, `try` without `else exit` returns the error from the current function.
+                            // We can use a special Diag code, but actually Heh uses `try` to return `err(e)`.
+                            // To implement `try` returning `err(e)` from the function, we need a special Flow::Return.
+                            // But `eval_expr` doesn't return `Flow`. It returns `Val` or `Diag`.
+                            // This means `try` is an expression that can short-circuit the whole function!
+                            // Rust `?` equivalent. Wait! We need `Flow::Return` to be propagatable from `eval_expr`.
+                            // Let's cheat and return a special Diag that gets caught by `eval_block`?
+                            // No, `eval_expr` returning a Diag is a hard error (panic).
+                            // Let's implement `try` via a special Diag that `eval_block` handles.
+                            Err(Diag { code: "E_TRY_PROPAGATE", msg: e, line: expr.span.line, col: expr.span.col })
+                        }
+                    }
+                    _ => Err(Diag { code: "E0112", msg: "try on non-result".into(), line: expr.span.line, col: expr.span.col }),
+                }
+            }
+            ExprKind::Field(inner, f) => {
+                let obj = self.eval_expr(inner, env.clone())?;
+                match obj {
+                    Val::Err(s) => {
+                        if f == "msg" {
+                            Ok(Val::Str(s))
+                        } else {
+                            Err(Diag { code: "E0105", msg: format!("no field '{}' on error", f), line: expr.span.line, col: expr.span.col })
+                        }
+                    }
+                    _ => Err(Diag { code: "E0106", msg: "expression not yet supported".into(), line: expr.span.line, col: expr.span.col }),
+                }
+            }
+            ExprKind::List(items) => {
+                let mut vals = Vec::new();
+                for item in items {
+                    vals.push(self.eval_expr(item, env.clone())?);
+                }
+                Ok(Val::List(Rc::new(RefCell::new(vals))))
             }
             ExprKind::InterpStr(parts) => {
                 let mut out = String::new();
@@ -392,6 +570,41 @@ impl Evaluator {
                 _ => Err(Diag { code: "E0104", msg: "type mismatch in '**'".into(), line: span.line, col: span.col }),
             }
             _ => Err(Diag { code: "E0105", msg: "operator not supported".into(), line: span.line, col: span.col }),
+        }
+    }
+
+    fn match_pattern(&self, val: &Val, pat: &Pattern) -> Option<Vec<(String, Val)>> {
+        match pat {
+            Pattern::Wildcard(_) => Some(vec![]),
+            Pattern::Literal(lit) => {
+                let lit_val = match lit {
+                    Literal::Int(s) => Val::Int(BigInt::parse(s).unwrap()),
+                    Literal::Float(s) => Val::Float(s.parse().unwrap()),
+                    Literal::Bool(b) => Val::Bool(*b),
+                    Literal::Str(s) => Val::Str(s.clone()),
+                    Literal::None => Val::None,
+                };
+                if val == &lit_val { Some(vec![]) } else { None }
+            }
+            Pattern::Variant(_, name, binds) => {
+                if name == "ok" {
+                    if let Val::Ok(inner) = val {
+                        if binds.len() == 1 {
+                            return Some(vec![(binds[0].clone(), *inner.clone())]);
+                        }
+                    }
+                } else if name == "err" {
+                    if let Val::Err(e) = val {
+                        if binds.len() == 1 {
+                            return Some(vec![(binds[0].clone(), Val::Err(e.clone()))]);
+                        }
+                    }
+                } else {
+                    // Unimplemented custom enum variants for P4, will be in P5
+                    // But we can fallback to just checking if the value is an Enum Variant (which we don't have yet)
+                }
+                None
+            }
         }
     }
 }

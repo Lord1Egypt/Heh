@@ -39,3 +39,9 @@ PR#. No entry = the step didn't happen. Mohamed reads this first when rating.
 - **What:** Built `src/val.rs` and `src/bignum.rs` (arbitrary-precision ints), and `src/eval.rs` (tree-walking evaluator). Added `heh run` subcommand. Created `tests/corpus.rs` harness and ran `fizzbuzz.heh` successfully against golden stdout.
 - **Verification:** `cargo test` green (40 tests pass).
 - **PR:** Pending
+
+- **Date:** 2026-07-18
+- **Branch:** `feat/p4-eval-2`
+- **What:** Implemented first-class functions, closures, `try`, fault propagation, and `match` statements. Added implicit block return. Supported list iteration.
+- **Verification:** `cargo test` green. `factorial.heh` and `errors.heh` execute correctly.
+- **PR:** Pending
