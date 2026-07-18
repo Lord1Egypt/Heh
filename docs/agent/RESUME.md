@@ -1,11 +1,15 @@
-# Current State
-Phase P8 (Script Mode & Entry Points) is COMPLETE and merged.
-`sys` is explicitly passed to `main`.
-Top-level statements execute properly for script mode.
-`script.heh` added to test corpus.
+# RESUME
 
-# Next Step
-Start Phase P9 — Conformance & Polish
-- Ensure `cargo test` runs cleanly for the entire corpus.
-- Ensure `cargo clippy` and `cargo fmt` pass without warnings.
-- Review for 100% test coverage of the MVP specs.
+**Current State:**
+- Finished and merged P5 (option, result, try propagation, diagnostics).
+- Project is stable, `cargo test` and `cargo clippy` pass cleanly.
+- `examples/errors.heh` and `examples/shapes.heh` are verified byte-exact.
+
+**Next Step:**
+- **START P6 — Static checker.**
+- Create `src/check.rs` and wire it up to `src/main.rs` (the `check` subcommand).
+- Implement type checking for all expressions.
+- The checker runs *before* `eval` in the `run` command as well.
+- Implement flow narrowing for `T?`, let reassignment checks, exhaustiveness for match, etc.
+- Verify `cargo run -- check examples/shapes.heh` passes.
+- Read `SPEC.md` to collect all `E00xx` type errors and write corpus error tests for them.
