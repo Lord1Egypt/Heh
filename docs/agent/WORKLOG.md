@@ -75,3 +75,9 @@ PR#. No entry = the step didn't happen. Mohamed reads this first when rating.
 - **What:** Finished P4. Added enum variant match bindings by named record fields mapping, UFCS fallback (`x.f(y)` -> `f(x, y)`), and float `sqrt`/`pow`. Confirmed `examples/shapes.heh` passes.
 - **Verification:** `cargo run -- run examples/shapes.heh` runs clean. `cargo test` clean.
 - **PR:** Pending
+
+- **Date:** 2026-07-18
+- **Branch:** `feat/p5-results-try`
+- **What:** Finished P5. Added `Val::Some`, supported `some()` constructor, updated `try` propagation to handle `T?` mapping to `E_TRY_PROPAGATE_NONE`. Mapped top-level propagation to `E0114`. Adjusted `int_of` error message. Added corpus error cases for unhandled match variants (`E0020`) and `try` outside result function (`E0114`).
+- **Verification:** `cargo test` passes, `examples/errors.heh` passes.
+- **PR:** Pending
