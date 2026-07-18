@@ -1,0 +1,6 @@
+# Script mode test
+# No main function, just statements executing in order
+
+let name = "Heh script"
+sys.print("Running in {name} mode")
+sys.print("Done")

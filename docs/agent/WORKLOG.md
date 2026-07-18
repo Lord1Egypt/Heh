@@ -63,3 +63,9 @@ PR#. No entry = the step didn't happen. Mohamed reads this first when rating.
 - **What:** Implemented P7 I/O Capabilities. Added capability tokens (`sys.fs.read`, `sys.fs.write`). Integrated CLI args to strip capabilities (e.g. `--deny-fs`). Built `tests/corpus/programs/io.heh` and `io_deny.heh` with `.args` support in test corpus harness.
 - **Verification:** `cargo test` green. Checked filesystem capabilities.
 - **PR:** Pending
+
+- **Date:** 2026-07-18
+- **Branch:** `feat/p8-eval-6`
+- **What:** Implemented P8 Script Mode & Entry Points. Verified `eval_file` automatically executes top-level statements for scripts. Updated `main` execution to correctly receive the `sys` capability object instead of `None`. Added `script.heh` to corpus.
+- **Verification:** `cargo test` green. Checked `script.heh`.
+- **PR:** Pending
