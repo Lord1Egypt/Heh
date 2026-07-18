@@ -507,6 +507,13 @@ impl Evaluator {
                             Err(Diag { code: "E0105", msg: format!("no field '{}' on record", f), line: expr.span.line, col: expr.span.col })
                         }
                     }
+                    Val::Str(s) => {
+                        if f == "len" {
+                            Ok(Val::Int(BigInt::from_i64(s.chars().count() as i64)))
+                        } else {
+                            Err(Diag { code: "E0105", msg: format!("no field '{}' on string", f), line: expr.span.line, col: expr.span.col })
+                        }
+                    }
                     Val::List(l) => {
                         if f == "len" {
                             return Ok(Val::Int(BigInt::from_i64(l.borrow().len() as i64)));
