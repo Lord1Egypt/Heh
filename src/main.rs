@@ -44,10 +44,10 @@ fn main() -> ExitCode {
             cmd_ast(path)
         }
         Some("run") => {
-            let mut iter = args.iter().skip(1);
+            let iter = args.iter().skip(1);
             let mut path = None;
             let mut run_args = Vec::new();
-            while let Some(arg) = iter.next() {
+            for arg in iter {
                 if arg.starts_with("--deny-") {
                     run_args.push(arg.clone());
                 } else if path.is_none() {
@@ -98,7 +98,7 @@ fn cmd_ast(path: &str) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    
+
     let tokens = match heh::lexer::lex(&source) {
         Ok(t) => t,
         Err(d) => {
@@ -106,7 +106,7 @@ fn cmd_ast(path: &str) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    
+
     let mut parser = heh::parser::Parser::new(&tokens);
     match parser.parse_file() {
         Ok(ast) => {
@@ -128,7 +128,7 @@ fn cmd_run(path: &str, run_args: Vec<String>) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    
+
     let tokens = match heh::lexer::lex(&source) {
         Ok(t) => t,
         Err(d) => {
@@ -136,7 +136,7 @@ fn cmd_run(path: &str, run_args: Vec<String>) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    
+
     let mut parser = heh::parser::Parser::new(&tokens);
     let ast = match parser.parse_file() {
         Ok(a) => a,
