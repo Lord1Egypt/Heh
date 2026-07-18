@@ -109,9 +109,10 @@ impl Evaluator {
         let main_fn = self.global.borrow().get("main");
         if let Some(Val::Fn(params, body, env)) = main_fn {
             let call_env = Rc::new(RefCell::new(Scope::new(Some(env))));
-            // Pass sys (dummy) if it expects a param
+            // Pass sys if it expects a param
             if !params.is_empty() {
-                call_env.borrow_mut().define(params[0].clone(), Val::None, false);
+                let sys_val = self.global.borrow().get("sys").unwrap();
+                call_env.borrow_mut().define(params[0].clone(), sys_val, false);
             }
             match self.eval_block(&body, call_env) {
                 Ok(Ok(_)) | Ok(Err(Flow::Return(_))) => return Ok(()),
