@@ -1,17 +1,20 @@
-use std::fmt;
 use std::cmp::Ordering;
+use std::fmt;
 
 use std::hash::{Hash, Hasher};
 
 #[derive(Clone, Eq)]
 pub struct BigInt {
-    pub sign: bool, // true if negative
+    pub sign: bool,      // true if negative
     pub limbs: Vec<u32>, // base 2^32, little endian
 }
 
 impl BigInt {
     pub fn zero() -> Self {
-        Self { sign: false, limbs: Vec::new() }
+        Self {
+            sign: false,
+            limbs: Vec::new(),
+        }
     }
 
     pub fn from_u64(mut n: u64) -> Self {
@@ -36,7 +39,9 @@ impl BigInt {
 
     pub fn parse(s: &str) -> Option<Self> {
         let s = s.replace("_", "");
-        if s.is_empty() { return None; }
+        if s.is_empty() {
+            return None;
+        }
         let mut sign = false;
         let mut bytes = s.as_bytes();
         if bytes[0] == b'-' {
@@ -46,15 +51,26 @@ impl BigInt {
             bytes = &bytes[1..];
         }
 
-        if bytes.is_empty() { return None; }
+        if bytes.is_empty() {
+            return None;
+        }
 
         let mut radix = 10;
         let mut digits = bytes;
         if bytes.len() >= 2 && bytes[0] == b'0' {
             match bytes[1] {
-                b'x' | b'X' => { radix = 16; digits = &bytes[2..]; }
-                b'b' | b'B' => { radix = 2; digits = &bytes[2..]; }
-                b'o' | b'O' => { radix = 8; digits = &bytes[2..]; }
+                b'x' | b'X' => {
+                    radix = 16;
+                    digits = &bytes[2..];
+                }
+                b'b' | b'B' => {
+                    radix = 2;
+                    digits = &bytes[2..];
+                }
+                b'o' | b'O' => {
+                    radix = 8;
+                    digits = &bytes[2..];
+                }
                 _ => {}
             }
         }
@@ -67,7 +83,9 @@ impl BigInt {
                 b'A'..=b'F' => b - b'A' + 10,
                 _ => return None,
             };
-            if d >= radix { return None; }
+            if d >= radix {
+                return None;
+            }
             res = res.mul_u32(radix as u32).add_u32(d as u32);
         }
         if !res.limbs.is_empty() {
@@ -94,7 +112,10 @@ impl BigInt {
         if carry > 0 {
             limbs.push(carry as u32);
         }
-        Self { sign: self.sign, limbs }
+        Self {
+            sign: self.sign,
+            limbs,
+        }
     }
 
     fn add_u32(&self, v: u32) -> Self {
@@ -127,7 +148,11 @@ impl BigInt {
         for &limb in self.limbs.iter().rev() {
             res = res * 4294967296.0 + (limb as f64);
         }
-        if self.sign { -res } else { res }
+        if self.sign {
+            -res
+        } else {
+            res
+        }
     }
 
     fn cmp_abs(&self, other: &Self) -> Ordering {
@@ -231,17 +256,26 @@ impl std::ops::Add for &BigInt {
     fn add(self, other: Self) -> BigInt {
         if self.sign == other.sign {
             let limbs = self.add_abs(other);
-            BigInt { sign: self.sign, limbs }
+            BigInt {
+                sign: self.sign,
+                limbs,
+            }
         } else {
             match self.cmp_abs(other) {
                 Ordering::Equal => BigInt::zero(),
                 Ordering::Greater => {
                     let limbs = self.sub_abs(other);
-                    BigInt { sign: self.sign, limbs }
+                    BigInt {
+                        sign: self.sign,
+                        limbs,
+                    }
                 }
                 Ordering::Less => {
                     let limbs = other.sub_abs(self);
-                    BigInt { sign: other.sign, limbs }
+                    BigInt {
+                        sign: other.sign,
+                        limbs,
+                    }
                 }
             }
         }
@@ -253,17 +287,26 @@ impl std::ops::Sub for &BigInt {
     fn sub(self, other: Self) -> BigInt {
         if self.sign != other.sign {
             let limbs = self.add_abs(other);
-            BigInt { sign: self.sign, limbs }
+            BigInt {
+                sign: self.sign,
+                limbs,
+            }
         } else {
             match self.cmp_abs(other) {
                 Ordering::Equal => BigInt::zero(),
                 Ordering::Greater => {
                     let limbs = self.sub_abs(other);
-                    BigInt { sign: self.sign, limbs }
+                    BigInt {
+                        sign: self.sign,
+                        limbs,
+                    }
                 }
                 Ordering::Less => {
                     let limbs = other.sub_abs(self);
-                    BigInt { sign: !self.sign, limbs }
+                    BigInt {
+                        sign: !self.sign,
+                        limbs,
+                    }
                 }
             }
         }
@@ -289,7 +332,10 @@ impl std::ops::Mul for &BigInt {
         while limbs.last() == Some(&0) {
             limbs.pop();
         }
-        BigInt { sign: self.sign != other.sign, limbs }
+        BigInt {
+            sign: self.sign != other.sign,
+            limbs,
+        }
     }
 }
 
@@ -311,7 +357,13 @@ impl BigInt {
         while limbs.last() == Some(&0) {
             limbs.pop();
         }
-        (Self { sign: self.sign, limbs }, rem as u32)
+        (
+            Self {
+                sign: self.sign,
+                limbs,
+            },
+            rem as u32,
+        )
     }
 
     // Binary long division for BigInt / BigInt. Not the fastest, but small code.
@@ -323,17 +375,16 @@ impl BigInt {
             return (Self::zero(), self.clone());
         }
 
-        // We use binary division:
         let mut q = Self::zero();
-        let mut r = Self::zero();
 
         // Count bits
         let self_bits = self.limbs.len() * 32 - self.limbs.last().unwrap().leading_zeros() as usize;
-        let other_bits = other.limbs.len() * 32 - other.limbs.last().unwrap().leading_zeros() as usize;
+        let other_bits =
+            other.limbs.len() * 32 - other.limbs.last().unwrap().leading_zeros() as usize;
 
         let mut b = other.clone();
         b.sign = false;
-        
+
         // Shift b up to align with self
         let mut shift = self_bits.saturating_sub(other_bits);
         let mut b_shifted = b.shl_usize(shift);
@@ -375,7 +426,9 @@ impl BigInt {
     }
 
     fn shl_usize(&self, mut shift: usize) -> Self {
-        if self.is_zero() { return self.clone(); }
+        if self.is_zero() {
+            return self.clone();
+        }
         let limb_shift = shift / 32;
         shift %= 32;
         let mut limbs = vec![0u32; limb_shift];
@@ -388,11 +441,16 @@ impl BigInt {
         if carry > 0 {
             limbs.push(carry);
         }
-        Self { sign: self.sign, limbs }
+        Self {
+            sign: self.sign,
+            limbs,
+        }
     }
 
     fn shr_1(&self) -> Self {
-        if self.is_zero() { return self.clone(); }
+        if self.is_zero() {
+            return self.clone();
+        }
         let mut limbs = Vec::with_capacity(self.limbs.len());
         let mut carry = 0u32;
         for &limb in self.limbs.iter().rev() {
@@ -404,7 +462,10 @@ impl BigInt {
         while limbs.last() == Some(&0) {
             limbs.pop();
         }
-        Self { sign: self.sign, limbs }
+        Self {
+            sign: self.sign,
+            limbs,
+        }
     }
 
     fn set_bit(mut self, bit: usize) -> Self {
