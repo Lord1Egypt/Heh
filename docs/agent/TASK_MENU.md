@@ -45,7 +45,7 @@ This is what makes "it works" provable instead of hopeful.
 - **Gate:** golden AST dumps for all examples; `tests/corpus/errors/` seeded
   with syntax-error cases (`E0002`, unexpected token, unclosed string).
 
-## P3 — Evaluator I: expressions, control flow, functions  ⬜
+## P3 — Evaluator I: expressions, control flow, functions  ✅
 - `src/value.rs` + `src/interp.rs`: tree-walking evaluator for script mode
   (SPEC §11): int (see below)/float/bool/str values, all operators (§6.1,
   Python sign rules for `%`/`//`), let/mut/assign, if/elif/else, while, for

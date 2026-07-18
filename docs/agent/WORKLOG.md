@@ -33,3 +33,9 @@ PR#. No entry = the step didn't happen. Mohamed reads this first when rating.
 - **What:** Built `src/ast.rs` and `src/parser.rs` for recursive-descent parsing of the full v0.1 grammar. Added `heh ast` subcommand to `main.rs`. Verified golden AST dumps for all examples. Seeded `tests/corpus/errors/` with syntax error cases (`E0002`, `E0100`, `E0006`). Marked P2 as done.
 - **Verification:** `cargo test` green (38 tests pass).
 - **PR:** Pending
+
+- **Date:** 2026-07-18
+- **Branch:** `feat/p3-eval-1`
+- **What:** Built `src/val.rs` and `src/bignum.rs` (arbitrary-precision ints), and `src/eval.rs` (tree-walking evaluator). Added `heh run` subcommand. Created `tests/corpus.rs` harness and ran `fizzbuzz.heh` successfully against golden stdout.
+- **Verification:** `cargo test` green (40 tests pass).
+- **PR:** Pending

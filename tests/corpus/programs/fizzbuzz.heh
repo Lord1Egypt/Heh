@@ -1,0 +1,10 @@
+# Control flow, interpolation, ranges (SPEC §5.5, §6.3).
+for i in 1..=15
+    if i % 15 == 0
+        sys.print("fizzbuzz")
+    elif i % 3 == 0
+        sys.print("fizz")
+    elif i % 5 == 0
+        sys.print("buzz")
+    else
+        sys.print("{i}")
