@@ -1,0 +1,23 @@
+# Testing the generic stdlib methods
+
+sys.print("hello".upper())
+sys.print("WORLD".lower())
+sys.print(" a ".trim())
+sys.print("a,b,c".split(",")[1])
+sys.print("hello".replace("l", "r"))
+sys.print("hello".contains("ll"))
+sys.print("hello".starts_with("he"))
+
+let l = [1, 2, 3]
+l.push(4)
+sys.print(try l.pop() else exit)
+sys.print(try l.get(1) else exit)
+l.sort()
+sys.print(l[2])
+sys.print(l.join("-"))
+
+let m = {"a": 1}
+m.set("b", 2)
+m.remove("a")
+sys.print(m.keys()[0])
+sys.print(m.values()[0])

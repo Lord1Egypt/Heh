@@ -86,7 +86,7 @@ This is what makes "it works" provable instead of hopeful.
 - **Gate:** big negative corpus (each bad program → expected code in `.err`);
   all existing corpus still green (checker must accept every good program).
 
-## P7 — Stdlib: builtin methods + pure modules  🔧
+## P7 — Stdlib: builtin methods + pure modules  ✅
 - Complete builtin method sets for str/list/map (SPEC §12 list), `list.sort`
   stable, `map` insertion-ordered. Modules: `std/math`, `std/fmt`,
   `std/json` (parser + writer, zero-copy not required), `std/time` (pure

@@ -114,6 +114,15 @@ impl Evaluator {
             Val::Record("Sys".into(), Rc::new(RefCell::new(sys_map))),
             false,
         );
+        
+        let builtins = vec![
+            "len", "upper", "lower", "trim", "split", "replace", "contains", "starts_with", "chars",
+            "push", "pop", "get", "sort", "map", "filter", "join", "set", "remove", "keys", "values",
+            "int_of", "str"
+        ];
+        for b in builtins {
+            self.global.borrow_mut().define(b.into(), Val::BuiltinFn(b), false);
+        }
 
         // Find main
         for item in &file.items {
@@ -505,24 +514,6 @@ impl Evaluator {
             ExprKind::Call(callee, args) => {
                 // stub for builtins
                 if let ExprKind::Ident(obj) = &callee.kind {
-                    if obj == "str" && args.len() == 1 {
-                        if let CallArg::Positional(a) = &args[0] {
-                            let val = self.eval_expr(a, env.clone())?;
-                            return Ok(Val::Str(val.to_string()));
-                        }
-                    }
-                    if obj == "int_of" && args.len() == 1 {
-                        if let CallArg::Positional(a) = &args[0] {
-                            let val = self.eval_expr(a, env.clone())?;
-                            if let Val::Str(s) = val {
-                                if let Some(i) = BigInt::parse(&s) {
-                                    return Ok(Val::Ok(Box::new(Val::Int(i))));
-                                }
-                                return Ok(Val::Err(format!("not an integer: \"{}\"", s)));
-                            }
-                            return Ok(Val::Err("not an integer".into()));
-                        }
-                    }
                     if obj == "ok" && args.len() == 1 {
                         if let CallArg::Positional(a) = &args[0] {
                             let val = self.eval_expr(a, env.clone())?;
@@ -600,6 +591,8 @@ impl Evaluator {
                                 }),
                                 Err(d) => Err(d),
                             }
+                        } else if let Val::BuiltinFn(name) = func_val {
+                            self.call_builtin(name, new_args, callee)
                         } else {
                             Err(Diag {
                                 code: "E0111",
@@ -671,59 +664,7 @@ impl Evaluator {
                             }
                         }
                     }
-                    Val::BuiltinFn(name) => match name {
-                        "sys.print" => {
-                            let mut outs = Vec::new();
-                            for a in arg_vals {
-                                outs.push(a.to_string());
-                            }
-                            println!("{}", outs.join(" "));
-                            Ok(Val::None)
-                        }
-                        "sys.fs.denied" => Ok(Val::Err("capability denied: fs".into())),
-                        "sys.fs.read" => {
-                            if arg_vals.len() != 1 {
-                                return Err(Diag {
-                                    code: "E0109",
-                                    msg: "sys.fs.read expects 1 arg".into(),
-                                    line: callee.span.line,
-                                    col: callee.span.col,
-                                });
-                            }
-                            if let Val::Str(s) = &arg_vals[0] {
-                                match std::fs::read_to_string(s) {
-                                    Ok(content) => Ok(Val::Ok(Box::new(Val::Str(content)))),
-                                    Err(e) => Ok(Val::Err(e.to_string())),
-                                }
-                            } else {
-                                Ok(Val::Err("path must be string".into()))
-                            }
-                        }
-                        "sys.fs.write" => {
-                            if arg_vals.len() != 2 {
-                                return Err(Diag {
-                                    code: "E0109",
-                                    msg: "sys.fs.write expects 2 args".into(),
-                                    line: callee.span.line,
-                                    col: callee.span.col,
-                                });
-                            }
-                            if let (Val::Str(path), Val::Str(data)) = (&arg_vals[0], &arg_vals[1]) {
-                                match std::fs::write(path, data) {
-                                    Ok(_) => Ok(Val::Ok(Box::new(Val::None))),
-                                    Err(e) => Ok(Val::Err(e.to_string())),
-                                }
-                            } else {
-                                Ok(Val::Err("path and data must be strings".into()))
-                            }
-                        }
-                        _ => Err(Diag {
-                            code: "E0111",
-                            msg: format!("unknown builtin '{}'", name),
-                            line: callee.span.line,
-                            col: callee.span.col,
-                        }),
-                    },
+                    Val::BuiltinFn(name) => self.call_builtin(name, arg_vals, callee),
                     _ => Err(Diag {
                         code: "E0111",
                         msg: "not callable".into(),
@@ -1042,6 +983,159 @@ impl Evaluator {
                 line: span.line,
                 col: span.col,
             }),
+        }
+    }
+
+    fn call_builtin(&mut self, name: &str, arg_vals: Vec<Val>, callee: &Expr) -> Result<Val, Diag> {
+        match name {
+            "sys.print" => {
+                let mut outs = Vec::new();
+                for a in arg_vals {
+                    outs.push(a.to_string());
+                }
+                println!("{}", outs.join(" "));
+                Ok(Val::None)
+            }
+            "sys.fs.denied" => Ok(Val::Err("capability denied: fs".into())),
+            "sys.fs.read" => {
+                if arg_vals.len() != 1 {
+                    return Err(Diag {
+                        code: "E0109",
+                        msg: "sys.fs.read expects 1 arg".into(),
+                        line: callee.span.line,
+                        col: callee.span.col,
+                    });
+                }
+                if let Val::Str(s) = &arg_vals[0] {
+                    match std::fs::read_to_string(s) {
+                        Ok(content) => Ok(Val::Ok(Box::new(Val::Str(content)))),
+                        Err(e) => Ok(Val::Err(e.to_string())),
+                    }
+                } else {
+                    Ok(Val::Err("path must be string".into()))
+                }
+            }
+            "sys.fs.write" => {
+                if arg_vals.len() != 2 {
+                    return Err(Diag {
+                        code: "E0109",
+                        msg: "sys.fs.write expects 2 args".into(),
+                        line: callee.span.line,
+                        col: callee.span.col,
+                    });
+                }
+                if let (Val::Str(path), Val::Str(data)) = (&arg_vals[0], &arg_vals[1]) {
+                    match std::fs::write(path, data) {
+                        Ok(_) => Ok(Val::Ok(Box::new(Val::None))),
+                        Err(e) => Ok(Val::Err(e.to_string())),
+                    }
+                } else {
+                    Ok(Val::Err("path and data must be strings".into()))
+                }
+            }
+            "sort" => {
+                if arg_vals.len() != 1 {
+                    return Err(Diag { code: "E0109", msg: "sort expects 1 arg".into(), line: callee.span.line, col: callee.span.col });
+                }
+                if let Val::List(l) = &arg_vals[0] {
+                    let mut b = l.borrow_mut();
+                    b.sort_by(|a, b| {
+                        if let (Val::Int(i1), Val::Int(i2)) = (a, b) {
+                            i1.cmp(i2)
+                        } else if let (Val::Str(s1), Val::Str(s2)) = (a, b) {
+                            s1.cmp(s2)
+                        } else {
+                            std::cmp::Ordering::Equal
+                        }
+                    });
+                    Ok(Val::None)
+                } else {
+                    Err(Diag { code: "E0111", msg: "sort expects list".into(), line: callee.span.line, col: callee.span.col })
+                }
+            }
+            "map" => {
+                if arg_vals.len() != 2 {
+                    return Err(Diag { code: "E0109", msg: "map expects 2 args".into(), line: callee.span.line, col: callee.span.col });
+                }
+                let l_val = arg_vals[0].clone();
+                let f_val = arg_vals[1].clone();
+                if let Val::List(l) = l_val {
+                    let mut outs = Vec::new();
+                    let items = l.borrow().clone();
+                    for item in items {
+                        if let Val::Fn(params, body, closure_env) = &f_val {
+                            let call_env = Rc::new(RefCell::new(Scope::new(Some(closure_env.clone()))));
+                            if !params.is_empty() {
+                                call_env.borrow_mut().define(params[0].clone(), item, false);
+                            }
+                            match self.eval_block(body, call_env) {
+                                Ok(Ok(v)) => outs.push(v),
+                                Ok(Err(Flow::Return(v))) => outs.push(v),
+                                Err(e) => return Err(e),
+                                _ => return Err(Diag { code: "E0110", msg: "flow error in map".into(), line: callee.span.line, col: callee.span.col })
+                            }
+                        } else {
+                            return Err(Diag { code: "E0111", msg: "map expects fn".into(), line: callee.span.line, col: callee.span.col });
+                        }
+                    }
+                    Ok(Val::List(Rc::new(RefCell::new(outs))))
+                } else {
+                    Err(Diag { code: "E0111", msg: "map expects list".into(), line: callee.span.line, col: callee.span.col })
+                }
+            }
+            "filter" => {
+                if arg_vals.len() != 2 {
+                    return Err(Diag { code: "E0109", msg: "filter expects 2 args".into(), line: callee.span.line, col: callee.span.col });
+                }
+                let l_val = arg_vals[0].clone();
+                let f_val = arg_vals[1].clone();
+                if let Val::List(l) = l_val {
+                    let mut outs = Vec::new();
+                    let items = l.borrow().clone();
+                    for item in items {
+                        if let Val::Fn(params, body, closure_env) = &f_val {
+                            let call_env = Rc::new(RefCell::new(Scope::new(Some(closure_env.clone()))));
+                            if !params.is_empty() {
+                                call_env.borrow_mut().define(params[0].clone(), item.clone(), false);
+                            }
+                            let res = match self.eval_block(body, call_env) {
+                                Ok(Ok(v)) => v,
+                                Ok(Err(Flow::Return(v))) => v,
+                                Err(e) => return Err(e),
+                                _ => return Err(Diag { code: "E0110", msg: "flow error in filter".into(), line: callee.span.line, col: callee.span.col })
+                            };
+                            if let Val::Bool(b) = res {
+                                if b { outs.push(item); }
+                            }
+                        } else {
+                            return Err(Diag { code: "E0111", msg: "filter expects fn".into(), line: callee.span.line, col: callee.span.col });
+                        }
+                    }
+                    Ok(Val::List(Rc::new(RefCell::new(outs))))
+                } else {
+                    Err(Diag { code: "E0111", msg: "filter expects list".into(), line: callee.span.line, col: callee.span.col })
+                }
+            }
+            _ => {
+                if name.starts_with("sys.") {
+                    Err(Diag {
+                        code: "E0111",
+                        msg: format!("unknown builtin '{}'", name),
+                        line: callee.span.line,
+                        col: callee.span.col,
+                    })
+                } else {
+                    match crate::stdlib::eval_builtin(name, arg_vals) {
+                        Ok(v) => Ok(v),
+                        Err(e) => Err(Diag {
+                            code: "E0111",
+                            msg: e,
+                            line: callee.span.line,
+                            col: callee.span.col,
+                        })
+                    }
+                }
+            }
         }
     }
 

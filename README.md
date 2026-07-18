@@ -66,7 +66,7 @@ No null. No exceptions. No classes. No `pip install`. No overflow. Forever.
 
 ## Status
 
-**Phase P6 — Static checker done** (full expression types, exhaustive match, inference, UFCS — tests + corpus green). The spec
+**Phase P7 — Standard library done** (builtins for str, list, map). The spec
 ([SPEC.md](SPEC.md)) and plan are complete; the interpreter is built phase by
 phase (P2 parser → P12 v1.0 freeze) by autonomous AI agents following
 [AGENTS.md](AGENTS.md). Progress lives in
