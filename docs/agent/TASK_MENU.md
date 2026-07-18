@@ -77,7 +77,7 @@ This is what makes "it works" provable instead of hopeful.
 - **Gate:** `errors` example passes byte-exact; corpus error cases for `try`
   outside result-returning fn, unhandled variants.
 
-## P6 — Static checker  ⬜
+## P6 — Static checker  ✅
 - `src/check.rs`: types for all expressions; required annotations at fn
   boundaries, inference for locals; no implicit coercion (`E0040`);
   conditions must be bool; exhaustive `match` (`E0020`); flow narrowing for
@@ -86,7 +86,7 @@ This is what makes "it works" provable instead of hopeful.
 - **Gate:** big negative corpus (each bad program → expected code in `.err`);
   all existing corpus still green (checker must accept every good program).
 
-## P7 — Stdlib: builtin methods + pure modules  ⬜
+## P7 — Stdlib: builtin methods + pure modules  🔧
 - Complete builtin method sets for str/list/map (SPEC §12 list), `list.sort`
   stable, `map` insertion-ordered. Modules: `std/math`, `std/fmt`,
   `std/json` (parser + writer, zero-copy not required), `std/time` (pure
