@@ -11,10 +11,17 @@ fn corpus_programs() {
             if path.extension().and_then(|e| e.to_str()) == Some("heh") {
                 let name = path.file_stem().unwrap().to_str().unwrap();
                 let out_path = format!("{}/{}.out", programs_dir, name);
+                let args_path = format!("{}/{}.args", programs_dir, name);
+                let mut cmd = Command::new(env!("CARGO_BIN_EXE_heh"));
+                cmd.arg("run").arg(&path);
                 
-                let output = Command::new(env!("CARGO_BIN_EXE_heh"))
-                    .arg("run")
-                    .arg(&path)
+                if let Ok(args_content) = fs::read_to_string(&args_path) {
+                    for arg in args_content.split_whitespace() {
+                        cmd.arg(arg);
+                    }
+                }
+                
+                let output = cmd
                     .output()
                     .expect("failed to execute heh run");
 
