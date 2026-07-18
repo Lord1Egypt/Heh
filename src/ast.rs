@@ -73,12 +73,12 @@ pub struct TypeExpr {
     pub span: Span,
     pub kind: TypeExprKind,
     pub optional: bool, // ?
-    pub result: bool, // or error
+    pub result: bool,   // or error
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeExprKind {
-    Named(String, Vec<TypeExpr>), // Ident[args]
+    Named(String, Vec<TypeExpr>),             // Ident[args]
     Fn(Vec<TypeExpr>, Option<Box<TypeExpr>>), // fn(args) -> ret
 }
 
@@ -228,11 +228,22 @@ pub enum InterpPart {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum BinOp {
-    Or, And,
-    Eq, Neq, Lt, Leq, Gt, Geq,
-    Range, RangeInc,
-    Add, Sub,
-    Mul, Div, FloorDiv, Mod,
+    Or,
+    And,
+    Eq,
+    Neq,
+    Lt,
+    Leq,
+    Gt,
+    Geq,
+    Range,
+    RangeInc,
+    Add,
+    Sub,
+    Mul,
+    Div,
+    FloorDiv,
+    Mod,
     Pow,
 }
 
@@ -331,7 +342,13 @@ fn dump_type(t: &TypeDecl, _depth: usize) -> String {
 
 fn dump_let(l: &LetStmt, depth: usize) -> String {
     let kw = if l.is_mut { "mut" } else { "let" };
-    format!("({kw} {}:{} {} {})", l.span.line, l.span.col, l.name, dump_expr(&l.init, depth))
+    format!(
+        "({kw} {}:{} {} {})",
+        l.span.line,
+        l.span.col,
+        l.name,
+        dump_expr(&l.init, depth)
+    )
 }
 
 fn dump_stmt(stmt: &Statement, depth: usize) -> String {
@@ -346,36 +363,71 @@ fn dump_stmt(stmt: &Statement, depth: usize) -> String {
                 AssignOp::MulEq => "*=",
                 AssignOp::DivEq => "/=",
             };
-            format!("(= {}:{} {} {} {})", a.span.line, a.span.col, dump_lvalue(&a.target), op, dump_expr(&a.rhs, depth))
+            format!(
+                "(= {}:{} {} {} {})",
+                a.span.line,
+                a.span.col,
+                dump_lvalue(&a.target),
+                op,
+                dump_expr(&a.rhs, depth)
+            )
         }
         Statement::If(i) => {
-            let mut s = format!("(if {}:{} {}\n", i.span.line, i.span.col, dump_expr(&i.cond, depth));
+            let mut s = format!(
+                "(if {}:{} {}\n",
+                i.span.line,
+                i.span.col,
+                dump_expr(&i.cond, depth)
+            );
             s.push_str(&dump_block(&i.then_block, depth + 1));
             for (cond, block) in &i.elifs {
-                s.push_str(&format!("\n{pad}  (elif {}\n{}", dump_expr(cond, depth), dump_block(block, depth + 2)));
+                s.push_str(&format!(
+                    "\n{pad}  (elif {}\n{}",
+                    dump_expr(cond, depth),
+                    dump_block(block, depth + 2)
+                ));
                 s.push_str(&format!("{pad}  )"));
             }
             if let Some(else_b) = &i.else_block {
-                s.push_str(&format!("\n{pad}  (else\n{}", dump_block(else_b, depth + 2)));
+                s.push_str(&format!(
+                    "\n{pad}  (else\n{}",
+                    dump_block(else_b, depth + 2)
+                ));
                 s.push_str(&format!("{pad}  )"));
             }
             s.push_str(&format!("\n{pad})"));
             s
         }
         Statement::While(w) => {
-            let mut s = format!("(while {}:{} {}\n", w.span.line, w.span.col, dump_expr(&w.cond, depth));
+            let mut s = format!(
+                "(while {}:{} {}\n",
+                w.span.line,
+                w.span.col,
+                dump_expr(&w.cond, depth)
+            );
             s.push_str(&dump_block(&w.body, depth + 1));
             s.push_str(&format!("\n{pad})"));
             s
         }
         Statement::For(f) => {
-            let mut s = format!("(for {}:{} {} {}\n", f.span.line, f.span.col, f.name, dump_expr(&f.iter, depth));
+            let mut s = format!(
+                "(for {}:{} {} {}\n",
+                f.span.line,
+                f.span.col,
+                f.name,
+                dump_expr(&f.iter, depth)
+            );
             s.push_str(&dump_block(&f.body, depth + 1));
             s.push_str(&format!("\n{pad})"));
             s
         }
         Statement::Match(m) => {
-            let mut s = format!("(match {}:{} {}\n", m.span.line, m.span.col, dump_expr(&m.expr, depth));
+            let mut s = format!(
+                "(match {}:{} {}\n",
+                m.span.line,
+                m.span.col,
+                dump_expr(&m.expr, depth)
+            );
             for arm in &m.arms {
                 s.push_str(&format!("{pad}  (arm {}:{} ", arm.span.line, arm.span.col));
                 match &arm.pattern {
@@ -383,7 +435,9 @@ fn dump_stmt(stmt: &Statement, depth: usize) -> String {
                     Pattern::Literal(Literal::Int(x)) => s.push_str(x),
                     Pattern::Literal(Literal::Float(x)) => s.push_str(x),
                     Pattern::Literal(Literal::Str(x)) => s.push_str(&format!("\"{}\"", x)),
-                    Pattern::Literal(Literal::Bool(x)) => s.push_str(if *x { "true" } else { "false" }),
+                    Pattern::Literal(Literal::Bool(x)) => {
+                        s.push_str(if *x { "true" } else { "false" })
+                    }
                     Pattern::Literal(Literal::None) => s.push_str("none"),
                     Pattern::Variant(_, name, binds) => {
                         s.push_str(&format!("({}", name));
@@ -402,7 +456,12 @@ fn dump_stmt(stmt: &Statement, depth: usize) -> String {
         }
         Statement::Return(r) => {
             if let Some(e) = &r.expr {
-                format!("(return {}:{} {})", r.span.line, r.span.col, dump_expr(e, depth))
+                format!(
+                    "(return {}:{} {})",
+                    r.span.line,
+                    r.span.col,
+                    dump_expr(e, depth)
+                )
             } else {
                 format!("(return {}:{})", r.span.line, r.span.col)
             }
@@ -465,17 +524,35 @@ fn dump_expr(e: &Expr, depth: usize) -> String {
     match &e.kind {
         ExprKind::Binary(op, left, right) => {
             let ops = match op {
-                BinOp::Or => "or", BinOp::And => "and",
-                BinOp::Eq => "==", BinOp::Neq => "!=", BinOp::Lt => "<", BinOp::Leq => "<=", BinOp::Gt => ">", BinOp::Geq => ">=",
-                BinOp::Range => "..", BinOp::RangeInc => "..=",
-                BinOp::Add => "+", BinOp::Sub => "-",
-                BinOp::Mul => "*", BinOp::Div => "/", BinOp::FloorDiv => "//", BinOp::Mod => "%",
+                BinOp::Or => "or",
+                BinOp::And => "and",
+                BinOp::Eq => "==",
+                BinOp::Neq => "!=",
+                BinOp::Lt => "<",
+                BinOp::Leq => "<=",
+                BinOp::Gt => ">",
+                BinOp::Geq => ">=",
+                BinOp::Range => "..",
+                BinOp::RangeInc => "..=",
+                BinOp::Add => "+",
+                BinOp::Sub => "-",
+                BinOp::Mul => "*",
+                BinOp::Div => "/",
+                BinOp::FloorDiv => "//",
+                BinOp::Mod => "%",
                 BinOp::Pow => "**",
             };
-            format!("({ops} {} {})", dump_expr(left, depth), dump_expr(right, depth))
+            format!(
+                "({ops} {} {})",
+                dump_expr(left, depth),
+                dump_expr(right, depth)
+            )
         }
         ExprKind::Unary(op, inner) => {
-            let ops = match op { UnOp::Neg => "-", UnOp::Not => "not" };
+            let ops = match op {
+                UnOp::Neg => "-",
+                UnOp::Not => "not",
+            };
             format!("({ops} {})", dump_expr(inner, depth))
         }
         ExprKind::Call(callee, args) => {
@@ -483,14 +560,20 @@ fn dump_expr(e: &Expr, depth: usize) -> String {
             for a in args {
                 match a {
                     CallArg::Positional(e) => s.push_str(&format!(" {}", dump_expr(e, depth))),
-                    CallArg::Named(n, e) => s.push_str(&format!(" ({} {})", n, dump_expr(e, depth))),
+                    CallArg::Named(n, e) => {
+                        s.push_str(&format!(" ({} {})", n, dump_expr(e, depth)))
+                    }
                 }
             }
             s.push(')');
             s
         }
         ExprKind::Field(inner, f) => format!("(. {} {})", dump_expr(inner, depth), f),
-        ExprKind::Index(inner, idx) => format!("(index {} {})", dump_expr(inner, depth), dump_expr(idx, depth)),
+        ExprKind::Index(inner, idx) => format!(
+            "(index {} {})",
+            dump_expr(inner, depth),
+            dump_expr(idx, depth)
+        ),
         ExprKind::List(items) => {
             let mut s = String::from("(list");
             for i in items {
@@ -502,7 +585,11 @@ fn dump_expr(e: &Expr, depth: usize) -> String {
         ExprKind::Map(items) => {
             let mut s = String::from("(map");
             for (k, v) in items {
-                s.push_str(&format!(" ({} {})", dump_expr(k, depth), dump_expr(v, depth)));
+                s.push_str(&format!(
+                    " ({} {})",
+                    dump_expr(k, depth),
+                    dump_expr(v, depth)
+                ));
             }
             s.push(')');
             s
@@ -543,7 +630,13 @@ fn dump_expr(e: &Expr, depth: usize) -> String {
         ExprKind::Literal(Literal::Int(x)) => x.clone(),
         ExprKind::Literal(Literal::Float(x)) => x.clone(),
         ExprKind::Literal(Literal::Str(x)) => format!("\"{}\"", x),
-        ExprKind::Literal(Literal::Bool(x)) => if *x { "true".into() } else { "false".into() },
+        ExprKind::Literal(Literal::Bool(x)) => {
+            if *x {
+                "true".into()
+            } else {
+                "false".into()
+            }
+        }
         ExprKind::Literal(Literal::None) => "none".into(),
         ExprKind::InterpStr(parts) => {
             let mut s = String::from("(str");

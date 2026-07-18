@@ -1,10 +1,10 @@
-use std::fmt;
-use std::cmp::Ordering;
-use std::rc::Rc;
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::hash::{Hash, Hasher};
 use crate::bignum::BigInt;
+use std::cell::RefCell;
+use std::cmp::Ordering;
+use std::collections::HashMap;
+use std::fmt;
+use std::hash::{Hash, Hasher};
+use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub enum Val {
@@ -13,7 +13,11 @@ pub enum Val {
     Bool(bool),
     Str(String),
     Range(Box<Val>, Box<Val>, bool), // (start, end, is_inclusive)
-    Fn(Vec<String>, crate::ast::Block, std::rc::Rc<std::cell::RefCell<crate::eval::Scope>>),
+    Fn(
+        Vec<String>,
+        crate::ast::Block,
+        std::rc::Rc<std::cell::RefCell<crate::eval::Scope>>,
+    ),
     BuiltinFn(&'static str),
     Ok(Box<Val>),
     Err(String),
@@ -56,18 +60,54 @@ impl Eq for Val {}
 impl Hash for Val {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
-            Val::Int(i) => { 0u8.hash(state); i.hash(state); }
-            Val::Bool(b) => { 1u8.hash(state); b.hash(state); }
-            Val::Str(s) => { 2u8.hash(state); s.hash(state); }
-            Val::Float(f) => { 3u8.hash(state); f.to_bits().hash(state); }
-            Val::None => { 4u8.hash(state); }
-            Val::List(l) => { 5u8.hash(state); Rc::as_ptr(l).hash(state); }
-            Val::Map(m) => { 6u8.hash(state); Rc::as_ptr(m).hash(state); }
-            Val::Record(n, r) => { 7u8.hash(state); n.hash(state); Rc::as_ptr(r).hash(state); }
-            Val::Enum(n, v) => { 8u8.hash(state); n.hash(state); v.hash(state); }
-            Val::Ok(v) => { 9u8.hash(state); v.hash(state); }
-            Val::Err(e) => { 10u8.hash(state); e.hash(state); }
-            _ => { 255u8.hash(state); }
+            Val::Int(i) => {
+                0u8.hash(state);
+                i.hash(state);
+            }
+            Val::Bool(b) => {
+                1u8.hash(state);
+                b.hash(state);
+            }
+            Val::Str(s) => {
+                2u8.hash(state);
+                s.hash(state);
+            }
+            Val::Float(f) => {
+                3u8.hash(state);
+                f.to_bits().hash(state);
+            }
+            Val::None => {
+                4u8.hash(state);
+            }
+            Val::List(l) => {
+                5u8.hash(state);
+                Rc::as_ptr(l).hash(state);
+            }
+            Val::Map(m) => {
+                6u8.hash(state);
+                Rc::as_ptr(m).hash(state);
+            }
+            Val::Record(n, r) => {
+                7u8.hash(state);
+                n.hash(state);
+                Rc::as_ptr(r).hash(state);
+            }
+            Val::Enum(n, v) => {
+                8u8.hash(state);
+                n.hash(state);
+                v.hash(state);
+            }
+            Val::Ok(v) => {
+                9u8.hash(state);
+                v.hash(state);
+            }
+            Val::Err(e) => {
+                10u8.hash(state);
+                e.hash(state);
+            }
+            _ => {
+                255u8.hash(state);
+            }
         }
     }
 }
@@ -93,8 +133,11 @@ impl fmt::Display for Val {
             Val::Bool(b) => write!(f, "{}", b),
             Val::Str(s) => write!(f, "{}", s),
             Val::Range(start, end, inc) => {
-                if *inc { write!(f, "{}..={}", start, end) }
-                else { write!(f, "{}..{}", start, end) }
+                if *inc {
+                    write!(f, "{}..={}", start, end)
+                } else {
+                    write!(f, "{}..{}", start, end)
+                }
             }
             Val::Fn(..) => write!(f, "<fn>"),
             Val::BuiltinFn(n) => write!(f, "<builtin {}>", n),
@@ -104,10 +147,15 @@ impl fmt::Display for Val {
                 write!(f, "[")?;
                 let b = l.borrow();
                 for (i, v) in b.iter().enumerate() {
-                    if i > 0 { write!(f, ", ")?; }
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
                     // In real Heh, lists print string elements with quotes, but we'll keep it simple for now
-                    if let Val::Str(s) = v { write!(f, "\"{}\"", s)?; }
-                    else { write!(f, "{}", v)?; }
+                    if let Val::Str(s) = v {
+                        write!(f, "\"{}\"", s)?;
+                    } else {
+                        write!(f, "{}", v)?;
+                    }
                 }
                 write!(f, "]")
             }
@@ -116,12 +164,20 @@ impl fmt::Display for Val {
                 let b = m.borrow();
                 let mut first = true;
                 for (k, v) in b.iter() {
-                    if !first { write!(f, ", ")?; }
+                    if !first {
+                        write!(f, ", ")?;
+                    }
                     first = false;
-                    if let Val::Str(s) = k { write!(f, "\"{}\": ", s)?; }
-                    else { write!(f, "{}: ", k)?; }
-                    if let Val::Str(s) = v { write!(f, "\"{}\"", s)?; }
-                    else { write!(f, "{}", v)?; }
+                    if let Val::Str(s) = k {
+                        write!(f, "\"{}\": ", s)?;
+                    } else {
+                        write!(f, "{}: ", k)?;
+                    }
+                    if let Val::Str(s) = v {
+                        write!(f, "\"{}\"", s)?;
+                    } else {
+                        write!(f, "{}", v)?;
+                    }
                 }
                 write!(f, "}}")
             }
@@ -130,18 +186,25 @@ impl fmt::Display for Val {
                 let b = r.borrow();
                 let mut first = true;
                 for (k, v) in b.iter() {
-                    if !first { write!(f, ", ")?; }
+                    if !first {
+                        write!(f, ", ")?;
+                    }
                     first = false;
                     write!(f, "{}: ", k)?;
-                    if let Val::Str(s) = v { write!(f, "\"{}\"", s)?; }
-                    else { write!(f, "{}", v)?; }
+                    if let Val::Str(s) = v {
+                        write!(f, "\"{}\"", s)?;
+                    } else {
+                        write!(f, "{}", v)?;
+                    }
                 }
                 write!(f, "}}")
             }
             Val::Enum(n, binds) => {
                 write!(f, "{}(", n)?;
                 for (i, v) in binds.iter().enumerate() {
-                    if i > 0 { write!(f, ", ")?; }
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
                     write!(f, "{}", v)?;
                 }
                 write!(f, ")")
