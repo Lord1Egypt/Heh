@@ -1,0 +1,23 @@
+(file
+  (fn 3:1 parse_age (params s:str) -> int or error
+(let 4:5 n (try (call int_of s)))
+(if 5:5 (< n 0)
+(return 6:9 (call err (str "age cannot be negative: " n)))
+
+    )
+(expr (call ok n))
+  )
+  (for 9:1 raw (list "34" "-2" "ra")
+(match 10:5 (call parse_age raw)
+      (arm 11:9 (ok age)
+(expr (call (. sys print) (str "age " age)))
+
+      )
+      (arm 13:9 (err e)
+(expr (call (. sys print) (str "bad input: " (. e msg))))
+
+      )
+    )
+
+  )
+)

@@ -1,0 +1,3 @@
+fn main(sys: Sys)
+    let x = 
+    sys.print(x)

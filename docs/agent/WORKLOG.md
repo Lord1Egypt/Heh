@@ -27,3 +27,9 @@ PR#. No entry = the step didn't happen. Mohamed reads this first when rating.
 - Verify: `cargo test` → ok (37 passed: 31 lexer + 6 CLI); `cargo fmt --check`
   → ok. All 6 examples lex clean.
 - Commit: (see PR #2) · PR: #2.
+
+- **Date:** 2026-07-18
+- **Branch:** `feat/p2-parser`
+- **What:** Built `src/ast.rs` and `src/parser.rs` for recursive-descent parsing of the full v0.1 grammar. Added `heh ast` subcommand to `main.rs`. Verified golden AST dumps for all examples. Seeded `tests/corpus/errors/` with syntax error cases (`E0002`, `E0100`, `E0006`). Marked P2 as done.
+- **Verification:** `cargo test` green (38 tests pass).
+- **PR:** Pending

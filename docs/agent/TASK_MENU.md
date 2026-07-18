@@ -36,7 +36,7 @@ This is what makes "it works" provable instead of hopeful.
   `examples/*.heh` in `tests/lexer.rs`; layout edge cases (blank lines,
   comment-only lines, EOF dedents, bad dedent `E0002`, tabs `E0001`).
 
-## P2 — Parser → AST  ⬜
+## P2 — Parser → AST  ✅
 - `src/ast.rs` + `src/parser.rs`: recursive-descent parser for the full v0.1
   grammar (SPEC §14): use/fn/type decls, statements, full expression
   precedence (§6.1), patterns, named record-construction args, anonymous fn.

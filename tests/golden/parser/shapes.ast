@@ -1,0 +1,27 @@
+(file
+  (type 3:1 Point (record (x float) (y float)))
+  (type 7:1 Shape (enum (circle (r float)) (square (side float)) (dot)))
+  (fn 9:1 area (params s:Shape) -> float
+(match 10:5 s
+      (arm 11:9 (circle r)
+(expr (* (* 3.141592653589793 r) r))
+
+      )
+      (arm 13:9 (square side)
+(expr (* side side))
+
+      )
+      (arm 15:9 (dot)
+(expr 0.0)
+
+      )
+    )
+  )
+  (fn 18:1 dist (params a:Point b:Point) -> float
+(expr (call (. (+ (** (- (. a x) (. b x)) 2.0) (** (- (. a y) (. b y)) 2.0)) sqrt)))
+  )
+  (let 21:1 p (call Point (x 0.0) (y 0.0)))
+  (let 22:1 q (call Point (x 3.0) (y 4.0)))
+  (expr (call (. sys print) (str "dist = " (call (. p dist) q))))
+  (expr (call (. sys print) (str "area = " (call area (call square (side 3.0))))))
+)
