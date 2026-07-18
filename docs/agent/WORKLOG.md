@@ -81,3 +81,8 @@ PR#. No entry = the step didn't happen. Mohamed reads this first when rating.
 - **What:** Finished P5. Added `Val::Some`, supported `some()` constructor, updated `try` propagation to handle `T?` mapping to `E_TRY_PROPAGATE_NONE`. Mapped top-level propagation to `E0114`. Adjusted `int_of` error message. Added corpus error cases for unhandled match variants (`E0020`) and `try` outside result function (`E0114`).
 - **Verification:** `cargo test` passes, `examples/errors.heh` passes.
 - **PR:** Pending
+## 2026-07-18
+- Branch: `feat/phase6-checker`
+- What: Implemented full static checker (check_expr, check_stmt), scopes, match arm bindings, UFCS methods. 
+- Test: `cargo test` -> ok. 6/6 cli, 2/2 corpus, 31/31 lexer, 1/1 parser.
+- PR: (goal mode self-merge)

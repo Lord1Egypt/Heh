@@ -1,5 +1,7 @@
 # Enum matching
 
+type Shape = circle(r: float) or square(side: float) or dot
+
 let s1 = circle(10)
 let s2 = square(5)
 let s3 = dot

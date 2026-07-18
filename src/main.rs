@@ -43,6 +43,13 @@ fn main() -> ExitCode {
             };
             cmd_ast(path)
         }
+        Some("check") => {
+            let Some(path) = args.get(1) else {
+                eprintln!("heh: usage: heh check <file.heh>");
+                return ExitCode::from(2);
+            };
+            cmd_check(path)
+        }
         Some("run") => {
             let iter = args.iter().skip(1);
             let mut path = None;
@@ -146,6 +153,15 @@ fn cmd_run(path: &str, run_args: Vec<String>) -> ExitCode {
         }
     };
 
+    let mut checker = heh::check::Checker::new();
+    checker.check_file(&ast);
+    if !checker.diags.is_empty() {
+        for d in checker.diags {
+            eprintln!("{}", d.render(path, &source));
+        }
+        return ExitCode::FAILURE;
+    }
+
     let mut eval = heh::eval::Evaluator::new();
     match eval.eval_file(&ast, run_args) {
         Ok(_) => ExitCode::SUCCESS,
@@ -154,4 +170,42 @@ fn cmd_run(path: &str, run_args: Vec<String>) -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+fn cmd_check(path: &str) -> ExitCode {
+    let source = match std::fs::read_to_string(path) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("heh: cannot read '{path}': {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+
+    let tokens = match heh::lexer::lex(&source) {
+        Ok(t) => t,
+        Err(d) => {
+            eprintln!("{}", d.render(path, &source));
+            return ExitCode::FAILURE;
+        }
+    };
+
+    let mut parser = heh::parser::Parser::new(&tokens);
+    let ast = match parser.parse_file() {
+        Ok(a) => a,
+        Err(d) => {
+            eprintln!("{}", d.render(path, &source));
+            return ExitCode::FAILURE;
+        }
+    };
+
+    let mut checker = heh::check::Checker::new();
+    checker.check_file(&ast);
+    if !checker.diags.is_empty() {
+        for d in checker.diags {
+            eprintln!("{}", d.render(path, &source));
+        }
+        return ExitCode::FAILURE;
+    }
+    
+    ExitCode::SUCCESS
 }

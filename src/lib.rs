@@ -3,6 +3,7 @@
 
 pub mod ast;
 pub mod bignum;
+pub mod check;
 pub mod diag;
 pub mod eval;
 pub mod lexer;
