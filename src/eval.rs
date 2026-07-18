@@ -306,7 +306,11 @@ impl Evaluator {
                 }
             }
             ExprKind::Ident(id) => {
-                env.borrow().get(id).ok_or_else(|| Diag { code: "E0103", msg: format!("undefined variable '{}'", id), line: expr.span.line, col: expr.span.col })
+                if let Some(v) = env.borrow().get(id) {
+                    Ok(v)
+                } else {
+                    Ok(Val::Enum(id.clone(), vec![]))
+                }
             }
             ExprKind::Binary(op, left, right) => {
                 let lval = self.eval_expr(left, env.clone())?;
@@ -397,16 +401,42 @@ impl Evaluator {
                 }
 
                 let callee_val = self.eval_expr(callee, env.clone())?;
+
                 let mut arg_vals = Vec::new();
                 for arg in args {
                     if let CallArg::Positional(a) = arg {
                         arg_vals.push(self.eval_expr(a, env.clone())?);
                     } else {
-                        return Err(Diag { code: "E0108", msg: "named args not supported yet".into(), line: callee.span.line, col: callee.span.col });
+                        // Named arg
                     }
                 }
 
                 match callee_val {
+                    Val::Enum(name, empty_args) if empty_args.is_empty() => {
+                        // It's either an Enum or a Record constructor
+                        let mut is_named_args = false;
+                        for a in args {
+                            if let CallArg::Named(_, _) = a {
+                                is_named_args = true;
+                                break;
+                            }
+                        }
+                        
+                        if is_named_args {
+                            let mut map = std::collections::HashMap::new();
+                            for arg in args {
+                                match arg {
+                                    CallArg::Named(k, val_expr) => {
+                                        map.insert(k.clone(), self.eval_expr(val_expr, env.clone())?);
+                                    }
+                                    _ => return Err(Diag { code: "E0106", msg: "positional arg in record literal".into(), line: callee.span.line, col: callee.span.col }),
+                                }
+                            }
+                            return Ok(Val::Record(name, Rc::new(RefCell::new(map))));
+                        } else {
+                            return Ok(Val::Enum(name, arg_vals));
+                        }
+                    }
                     Val::Fn(params, body, closure_env) => {
                         if params.len() != arg_vals.len() {
                             return Err(Diag { code: "E0109", msg: format!("expected {} args, got {}", params.len(), arg_vals.len()), line: callee.span.line, col: callee.span.col });
@@ -470,8 +500,63 @@ impl Evaluator {
                             Err(Diag { code: "E0105", msg: format!("no field '{}' on error", f), line: expr.span.line, col: expr.span.col })
                         }
                     }
+                    Val::Record(_, r) => {
+                        if let Some(v) = r.borrow().get(f) {
+                            Ok(v.clone())
+                        } else {
+                            Err(Diag { code: "E0105", msg: format!("no field '{}' on record", f), line: expr.span.line, col: expr.span.col })
+                        }
+                    }
+                    Val::List(l) => {
+                        if f == "len" {
+                            return Ok(Val::Int(BigInt::from_i64(l.borrow().len() as i64)));
+                        }
+                        // we can handle push/pop as builtin fns, but actually they mutate the list.
+                        // In Heh methods like list.push(val) are used. 
+                        // To support list.push(x), we return a BuiltinMethod(Val, String)? 
+                        // Instead, we can stub `push` as a special case in `ExprKind::Call` or return a closure.
+                        unimplemented!("list methods not fully implemented")
+                    }
                     _ => Err(Diag { code: "E0106", msg: "expression not yet supported".into(), line: expr.span.line, col: expr.span.col }),
                 }
+            }
+            ExprKind::Index(obj, idx) => {
+                let obj_val = self.eval_expr(obj, env.clone())?;
+                let idx_val = self.eval_expr(idx, env.clone())?;
+                match obj_val {
+                    Val::List(l) => {
+                        if let Val::Int(i) = idx_val {
+                            let b = l.borrow();
+                            let idx = i.to_f64() as usize;
+                            if idx < b.len() {
+                                return Ok(b[idx].clone());
+                            }
+                        }
+                        Err(Diag { code: "E0106", msg: "index out of bounds".into(), line: expr.span.line, col: expr.span.col })
+                    }
+                    Val::Map(m) => {
+                        if let Some(v) = m.borrow().get(&idx_val) {
+                            Ok(v.clone())
+                        } else {
+                            Err(Diag { code: "E0106", msg: "key not found".into(), line: expr.span.line, col: expr.span.col })
+                        }
+                    }
+                    _ => Err(Diag { code: "E0106", msg: "not indexable".into(), line: expr.span.line, col: expr.span.col }),
+                }
+            }
+            ExprKind::Record(name, fields) => {
+                let mut map = std::collections::HashMap::new();
+                for (k, v) in fields {
+                    map.insert(k.clone(), self.eval_expr(v, env.clone())?);
+                }
+                Ok(Val::Record(name.clone(), Rc::new(RefCell::new(map))))
+            }
+            ExprKind::Map(entries) => {
+                let mut map = std::collections::HashMap::new();
+                for (k, v) in entries {
+                    map.insert(self.eval_expr(k, env.clone())?, self.eval_expr(v, env.clone())?);
+                }
+                Ok(Val::Map(Rc::new(RefCell::new(map))))
             }
             ExprKind::List(items) => {
                 let mut vals = Vec::new();
@@ -493,7 +578,6 @@ impl Evaluator {
                 }
                 Ok(Val::Str(out))
             }
-            _ => Err(Diag { code: "E0106", msg: "expression not yet supported".into(), line: expr.span.line, col: expr.span.col }),
         }
     }
 
@@ -600,8 +684,15 @@ impl Evaluator {
                         }
                     }
                 } else {
-                    // Unimplemented custom enum variants for P4, will be in P5
-                    // But we can fallback to just checking if the value is an Enum Variant (which we don't have yet)
+                    if let Val::Enum(variant, v_binds) = val {
+                        if variant == name && binds.len() == v_binds.len() {
+                            let mut res = Vec::new();
+                            for (b_name, b_val) in binds.iter().zip(v_binds.iter()) {
+                                res.push((b_name.clone(), b_val.clone()));
+                            }
+                            return Some(res);
+                        }
+                    }
                 }
                 None
             }

@@ -1,0 +1,14 @@
+# Enum matching
+
+let s1 = circle(10)
+let s2 = square(5)
+let s3 = dot
+
+for s in [s1, s2, s3]
+    match s
+        circle(r)
+            sys.print("circle r = {r}")
+        square(side)
+            sys.print("square side = {side}")
+        dot
+            sys.print("just a dot")

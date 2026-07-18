@@ -1,0 +1,14 @@
+# Lists and iteration
+
+let l = [1, 2, 3]
+let m = [4, 5, 6]
+
+sys.print(l.len)
+sys.print(l[1])
+
+for x in m
+    sys.print(x)
+
+# We can also nest
+let nested = [[1, 2], [3, 4]]
+sys.print(nested[1][0])

@@ -45,3 +45,9 @@ PR#. No entry = the step didn't happen. Mohamed reads this first when rating.
 - **What:** Implemented first-class functions, closures, `try`, fault propagation, and `match` statements. Added implicit block return. Supported list iteration.
 - **Verification:** `cargo test` green. `factorial.heh` and `errors.heh` execute correctly.
 - **PR:** Pending
+
+- **Date:** 2026-07-18
+- **Branch:** `feat/p5-eval-3`
+- **What:** Implemented P5 Data Structures. Added `Val::Record`, `Val::Map`, and `Val::Enum`. Implemented `Hash` for `BigInt` and `Val`. Evaluator handles instantiation and field access. Added test corpus for lists, records, and enums.
+- **Verification:** `cargo test` green. Checked `lists.heh`, `records.heh`, and `enums.heh` output.
+- **PR:** Pending

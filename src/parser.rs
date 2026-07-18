@@ -839,6 +839,23 @@ impl<'a> Parser<'a> {
         if let Some(TokenKind::Ident(i)) = self.peek_kind() {
             let id = i.clone();
             self.advance();
+            // Check if it's a record instantiation: `Ident {`
+            if self.advance_if_op("{") {
+                let mut fields = Vec::new();
+                if !self.advance_if_op("}") {
+                    loop {
+                        let (fname, _) = self.expect_ident("field name")?;
+                        self.expect_op(":", "':' after field name")?;
+                        let fval = self.parse_expr()?;
+                        fields.push((fname, fval));
+                        if !self.advance_if_op(",") {
+                            break;
+                        }
+                    }
+                    self.expect_op("}", "'}' after record fields")?;
+                }
+                return Ok(Expr { span, kind: ExprKind::Record(id, fields) });
+            }
             return Ok(Expr { span, kind: ExprKind::Ident(id) });
         }
         
