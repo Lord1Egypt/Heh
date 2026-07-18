@@ -1,13 +1,11 @@
 # Current State
-Phase P4 (Evaluator II) is COMPLETE and merged.
-The evaluator supports functions, closures, `try`, `match`, implicit returns, and basic list iteration.
-`factorial.heh` and `errors.heh` pass the test suite.
+Phase P5 (Data Structures) is COMPLETE and merged.
+The evaluator supports `Val::Record`, `Val::Map`, `Val::Enum` and their instantiations.
+`Hash` is implemented for `BigInt` and `Val`.
+`lists.heh`, `records.heh`, and `enums.heh` pass the test suite.
 
 # Next Step
-Start Phase P5 — Data Structures
-- Implement `Val::Record` (using a map-like structure for fields) and `Val::Enum` (custom variants).
-- Enhance lists: indexing `list[i]`, `list.len()`, push/pop mutations.
-- Implement Maps (`Val::Map`).
-- Record initialization and field access (dot syntax `obj.field`).
-- Enum instantiation and variant matching in `match`.
-- Gate: `tests/corpus/programs/lists.heh`, `tests/corpus/programs/records.heh`.
+Start Phase P6 — String Formatting & Standard Library
+- Verify and finalize string interpolation (`{expr}`).
+- Verify basic stdlib (`sys.print`, type conversions like `int_of`).
+- Gate: `tests/corpus/programs/strings.heh`.
