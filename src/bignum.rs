@@ -1,6 +1,8 @@
 use std::fmt;
 use std::cmp::Ordering;
 
+use std::hash::{Hash, Hasher};
+
 #[derive(Clone, Eq)]
 pub struct BigInt {
     pub sign: bool, // true if negative
@@ -210,6 +212,17 @@ impl Ord for BigInt {
             (false, false) => self.cmp_abs(other),
             (true, true) => other.cmp_abs(self),
         }
+    }
+}
+
+impl Hash for BigInt {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        if self.is_zero() {
+            false.hash(state);
+            return;
+        }
+        self.sign.hash(state);
+        self.limbs.hash(state);
     }
 }
 

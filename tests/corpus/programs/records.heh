@@ -1,0 +1,9 @@
+# Records and maps
+
+let p = Point { x: 10, y: 20 }
+sys.print(p.x)
+sys.print(p.y)
+
+let m = { "a": 100, "b": 200 }
+sys.print(m["a"])
+sys.print(m["b"])

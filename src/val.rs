@@ -2,6 +2,8 @@ use std::fmt;
 use std::cmp::Ordering;
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
 use crate::bignum::BigInt;
 
 #[derive(Debug, Clone)]
@@ -16,6 +18,9 @@ pub enum Val {
     Ok(Box<Val>),
     Err(String),
     List(Rc<RefCell<Vec<Val>>>),
+    Map(Rc<RefCell<HashMap<Val, Val>>>),
+    Record(String, Rc<RefCell<HashMap<String, Val>>>),
+    Enum(String, Vec<Val>),
     None,
 }
 
@@ -37,8 +42,32 @@ impl PartialEq for Val {
             (Val::Ok(a), Val::Ok(b)) => a == b,
             (Val::Err(a), Val::Err(b)) => a == b,
             (Val::List(a), Val::List(b)) => *a.borrow() == *b.borrow(),
+            (Val::Map(a), Val::Map(b)) => *a.borrow() == *b.borrow(),
+            (Val::Record(n1, a), Val::Record(n2, b)) => n1 == n2 && *a.borrow() == *b.borrow(),
+            (Val::Enum(n1, b1), Val::Enum(n2, b2)) => n1 == n2 && b1 == b2,
             (Val::None, Val::None) => true,
             _ => false,
+        }
+    }
+}
+
+impl Eq for Val {}
+
+impl Hash for Val {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            Val::Int(i) => { 0u8.hash(state); i.hash(state); }
+            Val::Bool(b) => { 1u8.hash(state); b.hash(state); }
+            Val::Str(s) => { 2u8.hash(state); s.hash(state); }
+            Val::Float(f) => { 3u8.hash(state); f.to_bits().hash(state); }
+            Val::None => { 4u8.hash(state); }
+            Val::List(l) => { 5u8.hash(state); Rc::as_ptr(l).hash(state); }
+            Val::Map(m) => { 6u8.hash(state); Rc::as_ptr(m).hash(state); }
+            Val::Record(n, r) => { 7u8.hash(state); n.hash(state); Rc::as_ptr(r).hash(state); }
+            Val::Enum(n, v) => { 8u8.hash(state); n.hash(state); v.hash(state); }
+            Val::Ok(v) => { 9u8.hash(state); v.hash(state); }
+            Val::Err(e) => { 10u8.hash(state); e.hash(state); }
+            _ => { 255u8.hash(state); }
         }
     }
 }
@@ -81,6 +110,41 @@ impl fmt::Display for Val {
                     else { write!(f, "{}", v)?; }
                 }
                 write!(f, "]")
+            }
+            Val::Map(m) => {
+                write!(f, "{{")?;
+                let b = m.borrow();
+                let mut first = true;
+                for (k, v) in b.iter() {
+                    if !first { write!(f, ", ")?; }
+                    first = false;
+                    if let Val::Str(s) = k { write!(f, "\"{}\": ", s)?; }
+                    else { write!(f, "{}: ", k)?; }
+                    if let Val::Str(s) = v { write!(f, "\"{}\"", s)?; }
+                    else { write!(f, "{}", v)?; }
+                }
+                write!(f, "}}")
+            }
+            Val::Record(n, r) => {
+                write!(f, "{} {{", n)?;
+                let b = r.borrow();
+                let mut first = true;
+                for (k, v) in b.iter() {
+                    if !first { write!(f, ", ")?; }
+                    first = false;
+                    write!(f, "{}: ", k)?;
+                    if let Val::Str(s) = v { write!(f, "\"{}\"", s)?; }
+                    else { write!(f, "{}", v)?; }
+                }
+                write!(f, "}}")
+            }
+            Val::Enum(n, binds) => {
+                write!(f, "{}(", n)?;
+                for (i, v) in binds.iter().enumerate() {
+                    if i > 0 { write!(f, ", ")?; }
+                    write!(f, "{}", v)?;
+                }
+                write!(f, ")")
             }
             Val::None => write!(f, "none"),
         }

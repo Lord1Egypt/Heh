@@ -206,6 +206,7 @@ pub enum ExprKind {
     Index(Box<Expr>, Box<Expr>),
     List(Vec<Expr>),
     Map(Vec<(Expr, Expr)>),
+    Record(String, Vec<(String, Expr)>),
     Closure(Vec<Param>, Option<Box<TypeExpr>>, Block),
     Try(Box<Expr>, bool), // true if `else exit`
     Ident(String),
@@ -502,6 +503,14 @@ fn dump_expr(e: &Expr, depth: usize) -> String {
             let mut s = String::from("(map");
             for (k, v) in items {
                 s.push_str(&format!(" ({} {})", dump_expr(k, depth), dump_expr(v, depth)));
+            }
+            s.push(')');
+            s
+        }
+        ExprKind::Record(name, fields) => {
+            let mut s = format!("(record {}", name);
+            for (k, v) in fields {
+                s.push_str(&format!(" ({} {})", k, dump_expr(v, depth)));
             }
             s.push(')');
             s
