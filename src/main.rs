@@ -43,6 +43,13 @@ fn main() -> ExitCode {
             };
             cmd_ast(path)
         }
+        Some("run") => {
+            let Some(path) = args.get(1) else {
+                eprintln!("heh: usage: heh run <file.heh>");
+                return ExitCode::from(2);
+            };
+            cmd_run(path)
+        }
         Some(other) => {
             eprintln!("heh: unknown command '{other}' (see --help)");
             ExitCode::from(2)
@@ -93,6 +100,42 @@ fn cmd_ast(path: &str) -> ExitCode {
             print!("{}", heh::ast::dump_file(&ast));
             ExitCode::SUCCESS
         }
+        Err(d) => {
+            eprintln!("{}", d.render(path, &source));
+            ExitCode::FAILURE
+        }
+    }
+}
+
+fn cmd_run(path: &str) -> ExitCode {
+    let source = match std::fs::read_to_string(path) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("heh: cannot read '{path}': {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    
+    let tokens = match heh::lexer::lex(&source) {
+        Ok(t) => t,
+        Err(d) => {
+            eprintln!("{}", d.render(path, &source));
+            return ExitCode::FAILURE;
+        }
+    };
+    
+    let mut parser = heh::parser::Parser::new(&tokens);
+    let ast = match parser.parse_file() {
+        Ok(a) => a,
+        Err(d) => {
+            eprintln!("{}", d.render(path, &source));
+            return ExitCode::FAILURE;
+        }
+    };
+
+    let mut eval = heh::eval::Evaluator::new();
+    match eval.eval_file(&ast) {
+        Ok(_) => ExitCode::SUCCESS,
         Err(d) => {
             eprintln!("{}", d.render(path, &source));
             ExitCode::FAILURE

@@ -5,3 +5,6 @@ pub mod diag;
 pub mod lexer;
 pub mod ast;
 pub mod parser;
+pub mod bignum;
+pub mod val;
+pub mod eval;
