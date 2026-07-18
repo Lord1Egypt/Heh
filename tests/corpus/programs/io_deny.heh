@@ -1,0 +1,4 @@
+# File I/O capabilities - DENIED
+
+let read_back = sys.fs.read("test_io.txt")
+sys.print(read_back)

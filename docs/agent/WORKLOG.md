@@ -57,3 +57,9 @@ PR#. No entry = the step didn't happen. Mohamed reads this first when rating.
 - **What:** Implemented P6 String Formatting and Standard Library. Added `str.len`, verified string interpolation, and built-ins `str`, `int_of`, `ok`, `err`. Added `strings.heh` to the corpus.
 - **Verification:** `cargo test` green. All programs in corpus evaluate correctly.
 - **PR:** Pending
+
+- **Date:** 2026-07-18
+- **Branch:** `feat/p7-eval-5`
+- **What:** Implemented P7 I/O Capabilities. Added capability tokens (`sys.fs.read`, `sys.fs.write`). Integrated CLI args to strip capabilities (e.g. `--deny-fs`). Built `tests/corpus/programs/io.heh` and `io_deny.heh` with `.args` support in test corpus harness.
+- **Verification:** `cargo test` green. Checked filesystem capabilities.
+- **PR:** Pending

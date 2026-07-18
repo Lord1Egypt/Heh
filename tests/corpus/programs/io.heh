@@ -1,0 +1,7 @@
+# File I/O capabilities
+
+let text = "Hello, filesystem!"
+sys.fs.write("test_io.txt", text)
+
+let read_back = try sys.fs.read("test_io.txt") else exit
+sys.print(read_back)

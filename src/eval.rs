@@ -68,8 +68,35 @@ impl Evaluator {
         Self { global: Rc::new(RefCell::new(Scope::new(None))) }
     }
 
-    pub fn eval_file(&mut self, file: &File) -> Result<(), Diag> {
-        // Pass 1: functions
+    pub fn eval_file(&mut self, file: &File, run_args: Vec<String>) -> Result<(), Diag> {
+        let mut deny_fs = false;
+        let mut app_args = Vec::new();
+        for arg in run_args {
+            if arg == "--deny-fs" {
+                deny_fs = true;
+            } else if !arg.starts_with("--deny-") {
+                app_args.push(Val::Str(arg));
+            }
+        }
+        
+        let mut sys_map = std::collections::HashMap::new();
+        sys_map.insert("print".into(), Val::BuiltinFn("sys.print"));
+        sys_map.insert("args".into(), Val::List(Rc::new(RefCell::new(app_args))));
+        
+        let mut fs_map = std::collections::HashMap::new();
+        if deny_fs {
+            fs_map.insert("read".into(), Val::BuiltinFn("sys.fs.denied"));
+            fs_map.insert("write".into(), Val::BuiltinFn("sys.fs.denied"));
+        } else {
+            fs_map.insert("read".into(), Val::BuiltinFn("sys.fs.read"));
+            fs_map.insert("write".into(), Val::BuiltinFn("sys.fs.write"));
+        }
+        sys_map.insert("fs".into(), Val::Record("SysFs".into(), Rc::new(RefCell::new(fs_map))));
+        
+        self.global.borrow_mut().define("sys".into(), Val::Record("Sys".into(), Rc::new(RefCell::new(sys_map))), false);
+        
+        // Find main
+        let mut has_main = false;
         for item in &file.items {
             if let TopItem::Fn(f) = item {
                 let params = f.params.iter().map(|p| p.name.clone()).collect();
@@ -348,21 +375,7 @@ impl Evaluator {
                 }
             }
             ExprKind::Call(callee, args) => {
-                // stub for sys.print
-                if let ExprKind::Field(inner, f) = &callee.kind {
-                    if let ExprKind::Ident(obj) = &inner.kind {
-                        if obj == "sys" && f == "print" {
-                            let mut outs = Vec::new();
-                            for arg in args {
-                                if let CallArg::Positional(a) = arg {
-                                    outs.push(self.eval_expr(a, env.clone())?.to_string());
-                                }
-                            }
-                            println!("{}", outs.join(" "));
-                            return Ok(Val::None);
-                        }
-                    }
-                }
+
                 
                 // stub for builtins
                 if let ExprKind::Ident(obj) = &callee.kind {
@@ -456,6 +469,46 @@ impl Evaluator {
                                     Err(d)
                                 }
                             }
+                        }
+                    }
+                    Val::BuiltinFn(name) => {
+                        match name {
+                            "sys.print" => {
+                                let mut outs = Vec::new();
+                                for a in arg_vals {
+                                    outs.push(a.to_string());
+                                }
+                                println!("{}", outs.join(" "));
+                                Ok(Val::None)
+                            }
+                            "sys.fs.denied" => Ok(Val::Err("capability denied: fs".into())),
+                            "sys.fs.read" => {
+                                if arg_vals.len() != 1 {
+                                    return Err(Diag { code: "E0109", msg: "sys.fs.read expects 1 arg".into(), line: callee.span.line, col: callee.span.col });
+                                }
+                                if let Val::Str(s) = &arg_vals[0] {
+                                    match std::fs::read_to_string(s) {
+                                        Ok(content) => Ok(Val::Ok(Box::new(Val::Str(content)))),
+                                        Err(e) => Ok(Val::Err(e.to_string())),
+                                    }
+                                } else {
+                                    Ok(Val::Err("path must be string".into()))
+                                }
+                            }
+                            "sys.fs.write" => {
+                                if arg_vals.len() != 2 {
+                                    return Err(Diag { code: "E0109", msg: "sys.fs.write expects 2 args".into(), line: callee.span.line, col: callee.span.col });
+                                }
+                                if let (Val::Str(path), Val::Str(data)) = (&arg_vals[0], &arg_vals[1]) {
+                                    match std::fs::write(path, data) {
+                                        Ok(_) => Ok(Val::Ok(Box::new(Val::None))),
+                                        Err(e) => Ok(Val::Err(e.to_string())),
+                                    }
+                                } else {
+                                    Ok(Val::Err("path and data must be strings".into()))
+                                }
+                            }
+                            _ => Err(Diag { code: "E0111", msg: format!("unknown builtin '{}'", name), line: callee.span.line, col: callee.span.col }),
                         }
                     }
                     _ => Err(Diag { code: "E0111", msg: "not callable".into(), line: callee.span.line, col: callee.span.col }),

@@ -44,11 +44,24 @@ fn main() -> ExitCode {
             cmd_ast(path)
         }
         Some("run") => {
-            let Some(path) = args.get(1) else {
-                eprintln!("heh: usage: heh run <file.heh>");
-                return ExitCode::from(2);
-            };
-            cmd_run(path)
+            let mut iter = args.iter().skip(1);
+            let mut path = None;
+            let mut run_args = Vec::new();
+            while let Some(arg) = iter.next() {
+                if arg.starts_with("--deny-") {
+                    run_args.push(arg.clone());
+                } else if path.is_none() {
+                    path = Some(arg.clone());
+                } else {
+                    run_args.push(arg.clone());
+                }
+            }
+            if let Some(p) = path {
+                cmd_run(&p, run_args)
+            } else {
+                eprintln!("heh: usage: heh run <file.heh> [args...]");
+                ExitCode::from(2)
+            }
         }
         Some(other) => {
             eprintln!("heh: unknown command '{other}' (see --help)");
@@ -107,7 +120,7 @@ fn cmd_ast(path: &str) -> ExitCode {
     }
 }
 
-fn cmd_run(path: &str) -> ExitCode {
+fn cmd_run(path: &str, run_args: Vec<String>) -> ExitCode {
     let source = match std::fs::read_to_string(path) {
         Ok(s) => s,
         Err(e) => {
@@ -134,7 +147,7 @@ fn cmd_run(path: &str) -> ExitCode {
     };
 
     let mut eval = heh::eval::Evaluator::new();
-    match eval.eval_file(&ast) {
+    match eval.eval_file(&ast, run_args) {
         Ok(_) => ExitCode::SUCCESS,
         Err(d) => {
             eprintln!("{}", d.render(path, &source));
