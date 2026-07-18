@@ -69,3 +69,9 @@ PR#. No entry = the step didn't happen. Mohamed reads this first when rating.
 - **What:** Implemented P8 Script Mode & Entry Points. Verified `eval_file` automatically executes top-level statements for scripts. Updated `main` execution to correctly receive the `sys` capability object instead of `None`. Added `script.heh` to corpus.
 - **Verification:** `cargo test` green. Checked `script.heh`.
 - **PR:** Pending
+
+- **Date:** 2026-07-18
+- **Branch:** `feat/p4-eval-ufcs`
+- **What:** Finished P4. Added enum variant match bindings by named record fields mapping, UFCS fallback (`x.f(y)` -> `f(x, y)`), and float `sqrt`/`pow`. Confirmed `examples/shapes.heh` passes.
+- **Verification:** `cargo run -- run examples/shapes.heh` runs clean. `cargo test` clean.
+- **PR:** Pending

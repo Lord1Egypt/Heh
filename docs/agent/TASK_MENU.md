@@ -60,7 +60,7 @@ This is what makes "it works" provable instead of hopeful.
   examples pass byte-exact; bigint unit tests incl. factorial(1000),
   `2**200`, negative divmod, `1_000_000` literals.
 
-## P4 — Records, enums, match, UFCS  ⬜
+## P4 — Records, enums, match, UFCS  ✅
 - `type` records (named-field construction, field get/set) and enums;
   `match` with literal/binding/wildcard patterns on enums, int, str, bool;
   runtime exhaustiveness fault until P6 makes it static; UFCS dispatch
