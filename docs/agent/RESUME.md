@@ -1,10 +1,11 @@
 # Current State
-Phase P6 (String Formatting & Standard Library) is COMPLETE and merged.
-String interpolation, `str.len`, `int_of`, `str`, `ok`, and `err` built-ins are working.
-`strings.heh` passes the test suite.
+Phase P8 (Script Mode & Entry Points) is COMPLETE and merged.
+`sys` is explicitly passed to `main`.
+Top-level statements execute properly for script mode.
+`script.heh` added to test corpus.
 
 # Next Step
-Start Phase P7 — I/O Capabilities (Security)
-- Implement `sys.read_file(path, cap)` and `sys.write_file(path, data, cap)`.
-- Implement capability tokens (read/write access) checking.
-- Gate: `tests/corpus/programs/io.heh`.
+Start Phase P9 — Conformance & Polish
+- Ensure `cargo test` runs cleanly for the entire corpus.
+- Ensure `cargo clippy` and `cargo fmt` pass without warnings.
+- Review for 100% test coverage of the MVP specs.
