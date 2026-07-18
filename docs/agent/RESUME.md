@@ -1,11 +1,13 @@
 # Current State
-Phase P3 (Evaluator I) is COMPLETE and merged.
-The evaluator supports basic arithmetic, bignums, block scopes, let/mut, if/elif/else, while, for loops with ranges, and `sys.print`.
+Phase P4 (Evaluator II) is COMPLETE and merged.
+The evaluator supports functions, closures, `try`, `match`, implicit returns, and basic list iteration.
+`factorial.heh` and `errors.heh` pass the test suite.
 
 # Next Step
-Start Phase P4 — Evaluator II.
-- Implement first-class functions and closures.
-- Implement option narrowing (`T?` narrowing inside `if x != none` blocks).
-- Implement `match` statements (value matching, enum variants, wildcards).
-- Implement `try` expressions and faults.
-- Gate: Execute `tests/corpus/programs/factorial.heh` (needs to be created from examples/infinity.heh probably) and `errors.heh`.
+Start Phase P5 — Data Structures
+- Implement `Val::Record` (using a map-like structure for fields) and `Val::Enum` (custom variants).
+- Enhance lists: indexing `list[i]`, `list.len()`, push/pop mutations.
+- Implement Maps (`Val::Map`).
+- Record initialization and field access (dot syntax `obj.field`).
+- Enum instantiation and variant matching in `match`.
+- Gate: `tests/corpus/programs/lists.heh`, `tests/corpus/programs/records.heh`.
