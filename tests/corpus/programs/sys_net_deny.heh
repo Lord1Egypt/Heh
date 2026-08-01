@@ -1,0 +1,2 @@
+# sys.net.get fails closed under --deny-net (P9)
+sys.print(sys.net.get("http://example.com"))

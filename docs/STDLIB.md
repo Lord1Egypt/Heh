@@ -108,3 +108,9 @@ traversal outside the working directory requires an absolute path.
 ### sys.rand — `--deny-rand`
 - `sys.rand.bytes(n: int) -> list[int] or error` (OS entropy, /dev/urandom)
 - `sys.rand.int(min: int, max: int) -> int or error` (half-open `[min, max)`)
+
+### sys.net — `--deny-net`
+- `sys.net.get(url: str) -> str or error` — HTTP/1.1 GET. `http://` uses a
+  std `TcpStream` directly; `https://` shells out to `curl` (the std library
+  has no TLS), returning a clean error if `curl` is not installed. Returns the
+  response body on a 2xx status, otherwise an error.

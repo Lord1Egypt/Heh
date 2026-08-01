@@ -97,7 +97,7 @@ impl Default for Evaluator {
 impl Evaluator {
     pub fn eval_file(&mut self, file: &File, run_args: Vec<String>) -> Result<(), Diag> {
         let mut deny_fs = false;
-        let mut _deny_net = false; // wired in P9 (sys.net)
+        let mut deny_net = false;
         let mut deny_env = false;
         let mut deny_clock = false;
         let mut deny_rand = false;
@@ -105,7 +105,7 @@ impl Evaluator {
         for arg in run_args {
             match arg.as_str() {
                 "--deny-fs" => deny_fs = true,
-                "--deny-net" => _deny_net = true,
+                "--deny-net" => deny_net = true,
                 "--deny-env" => deny_env = true,
                 "--deny-clock" => deny_clock = true,
                 "--deny-rand" => deny_rand = true,
@@ -159,6 +159,13 @@ impl Evaluator {
             }
         }
         sys_map.insert("rand".into(), Val::Record("SysRand".into(), Rc::new(RefCell::new(rand_map))));
+
+        let mut net_map = std::collections::HashMap::new();
+        net_map.insert(
+            "get".into(),
+            Val::BuiltinFn(if deny_net { "sys.net.denied" } else { "sys.net.get" }),
+        );
+        sys_map.insert("net".into(), Val::Record("SysNet".into(), Rc::new(RefCell::new(net_map))));
 
         self.global.borrow_mut().define(
             "sys".into(),
@@ -1156,6 +1163,17 @@ impl Evaluator {
             "sys.env.denied" => Ok(Val::Err("capability denied: env".into())),
             "sys.clock.denied" => Ok(Val::Err("capability denied: clock".into())),
             "sys.rand.denied" => Ok(Val::Err("capability denied: rand".into())),
+            "sys.net.denied" => Ok(Val::Err("capability denied: net".into())),
+            "sys.net.get" => {
+                if arg_vals.len() != 1 {
+                    return Err(Diag { code: "E0109", msg: "sys.net.get expects 1 arg".into(), line: callee.span.line, col: callee.span.col });
+                }
+                if let Val::Str(url) = &arg_vals[0] {
+                    Ok(http_get(url))
+                } else {
+                    Ok(Val::Err("url must be string".into()))
+                }
+            }
             "sys.fs.read" => {
                 if arg_vals.len() != 1 {
                     return Err(Diag { code: "E0109", msg: "sys.fs.read expects 1 arg".into(), line: callee.span.line, col: callee.span.col });
@@ -1568,4 +1586,89 @@ fn is_local_import(path: &str) -> bool {
 fn module_bind_name(path: &str) -> String {
     let last = path.rsplit('/').next().unwrap_or(path);
     last.strip_suffix(".heh").unwrap_or(last).to_string()
+}
+
+/// `sys.net.get(url)` — HTTP/1.1 over a std TcpStream for `http://`, delegating
+/// `https://` to the `curl` subprocess (std has no TLS). Returns `ok(body)` or
+/// `err(msg)`; never panics, fails closed on any error.
+fn http_get(url: &str) -> Val {
+    if let Some(rest) = url.strip_prefix("http://") {
+        http_get_plain(rest)
+    } else if url.starts_with("https://") {
+        https_get_via_curl(url)
+    } else {
+        Val::Err(format!("sys.net.get: unsupported URL scheme in '{}'", url))
+    }
+}
+
+fn http_get_plain(host_path: &str) -> Val {
+    use std::io::{Read, Write};
+    use std::time::Duration;
+
+    let (authority, path) = match host_path.find('/') {
+        Some(i) => (&host_path[..i], &host_path[i..]),
+        None => (host_path, "/"),
+    };
+    let (host, port) = match authority.rsplit_once(':') {
+        Some((h, p)) => match p.parse::<u16>() {
+            Ok(port) => (h.to_string(), port),
+            Err(_) => return Val::Err(format!("sys.net.get: bad port in '{}'", authority)),
+        },
+        None => (authority.to_string(), 80u16),
+    };
+
+    let addr = format!("{}:{}", host, port);
+    let stream = match std::net::TcpStream::connect(&addr) {
+        Ok(s) => s,
+        Err(e) => return Val::Err(format!("sys.net.get: connect failed: {}", e)),
+    };
+    let _ = stream.set_read_timeout(Some(Duration::from_secs(15)));
+    let _ = stream.set_write_timeout(Some(Duration::from_secs(15)));
+    let mut stream = stream;
+
+    let req = format!(
+        "GET {} HTTP/1.1\r\nHost: {}\r\nUser-Agent: heh\r\nAccept: */*\r\nConnection: close\r\n\r\n",
+        path, host
+    );
+    if let Err(e) = stream.write_all(req.as_bytes()) {
+        return Val::Err(format!("sys.net.get: write failed: {}", e));
+    }
+
+    let mut buf = Vec::new();
+    if let Err(e) = stream.read_to_end(&mut buf) {
+        return Val::Err(format!("sys.net.get: read failed: {}", e));
+    }
+
+    // Split headers from body on the first blank line.
+    let split = buf.windows(4).position(|w| w == b"\r\n\r\n");
+    let (head, body) = match split {
+        Some(i) => (&buf[..i], &buf[i + 4..]),
+        None => return Val::Err("sys.net.get: malformed response (no header terminator)".into()),
+    };
+    let status_line = String::from_utf8_lossy(head).lines().next().unwrap_or("").to_string();
+    let code = status_line.split_whitespace().nth(1).and_then(|c| c.parse::<u16>().ok());
+    match code {
+        Some(c) if (200..300).contains(&c) => Val::Ok(Box::new(Val::Str(String::from_utf8_lossy(body).into_owned()))),
+        Some(c) => Val::Err(format!("sys.net.get: HTTP {}", c)),
+        None => Val::Err(format!("sys.net.get: bad status line '{}'", status_line)),
+    }
+}
+
+fn https_get_via_curl(url: &str) -> Val {
+    // std has no TLS; delegate to curl via an arg-list (never a shell string).
+    match std::process::Command::new("curl")
+        .arg("-sS")
+        .arg("--fail")
+        .arg("--max-time")
+        .arg("30")
+        .arg(url)
+        .output()
+    {
+        Ok(out) if out.status.success() => Val::Ok(Box::new(Val::Str(String::from_utf8_lossy(&out.stdout).into_owned()))),
+        Ok(out) => {
+            let err = String::from_utf8_lossy(&out.stderr);
+            Val::Err(format!("sys.net.get: curl failed: {}", err.trim()))
+        }
+        Err(_) => Val::Err("sys.net.get: https requires the 'curl' program, which was not found".into()),
+    }
 }
