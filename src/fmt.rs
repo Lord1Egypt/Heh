@@ -263,6 +263,24 @@ fn format_block(block: &Block, depth: usize, out: &mut String, cm: &mut Comments
     }
 }
 
+/// Re-indent a statement that spans lines. A closure body is built at depth 1
+/// inside an expression, which has no idea how deeply the statement is nested;
+/// shifting every line after the first by the statement's own depth puts the
+/// body exactly one level in from its `let`.
+fn nest(rendered: &str, depth: usize) -> String {
+    if depth == 0 || !rendered.trim_end().contains('\n') {
+        return rendered.to_string();
+    }
+    let mut out = String::new();
+    for (i, line) in rendered.split_inclusive('\n').enumerate() {
+        if i > 0 && !line.trim().is_empty() {
+            out.push_str(&pad(depth));
+        }
+        out.push_str(line);
+    }
+    out
+}
+
 fn pad(depth: usize) -> String {
     INDENT.repeat(depth)
 }
@@ -271,19 +289,25 @@ fn format_stmt(stmt: &Statement, depth: usize, out: &mut String, cm: &mut Commen
     let p = pad(depth);
     let head_line = stmt_line(stmt);
     match stmt {
-        Statement::Let(l) => out.push_str(&format!("{}{}\n", p, format_let(l))),
+        Statement::Let(l) => out.push_str(&nest(&format!("{}{}\n", p, format_let(l)), depth)),
         Statement::Assign(a) => {
-            out.push_str(&format!(
-                "{}{} {} {}\n",
-                p,
-                format_lvalue(&a.target),
-                assign_op(&a.op),
-                format_expr(&a.rhs, 0)
+            out.push_str(&nest(
+                &format!(
+                    "{}{} {} {}\n",
+                    p,
+                    format_lvalue(&a.target),
+                    assign_op(&a.op),
+                    format_expr(&a.rhs, 0)
+                ),
+                depth,
             ));
         }
-        Statement::Expr(e) => out.push_str(&format!("{}{}\n", p, format_expr(e, 0))),
+        Statement::Expr(e) => out.push_str(&nest(&format!("{}{}\n", p, format_expr(e, 0)), depth)),
         Statement::Return(r) => match &r.expr {
-            Some(e) => out.push_str(&format!("{}return {}\n", p, format_expr(e, 0))),
+            Some(e) => out.push_str(&nest(
+                &format!("{}return {}\n", p, format_expr(e, 0)),
+                depth,
+            )),
             None => out.push_str(&format!("{}return\n", p)),
         },
         Statement::Break(_) => out.push_str(&format!("{}break\n", p)),

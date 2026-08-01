@@ -1,0 +1,6 @@
+# String building and method dispatch.
+mut acc = 0
+for i in 0..40_000
+    let s = "row-{i}"
+    acc += s.upper().len()
+sys.print(acc)

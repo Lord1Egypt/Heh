@@ -130,3 +130,38 @@ PR#. No entry = the step didn't happen. Mohamed reads this first when rating.
 - Lesson: conformance was verified by **running every claim in the spec**, not
   by reading code. `grep TODO` found 4 of the 22 gaps.
 - PR: pending (branch pushed for review)
+
+## 2026-08-01 — VM completion, recursion safety, benchmarks (Claude)
+- Branch: `feat/vm-complete`
+- What: The VM now encodes the whole language — closures (capturing the live VM
+  scope as the same `Val::Fn` a named function is), optional narrowing (real
+  block scopes + `TruncScopes` so `break`/`continue` out of a narrowed block
+  restore depth), and field/index assignment (`Dup`/`Dup2`/`SetField`/
+  `SetIndex`). `needs_tree_walker()` is gone and `--vm` is now the DEFAULT,
+  with `--tree-walk` as the escape hatch.
+- Shared code, not parallel code: `field_set`/`index_set`/`field_get`/
+  `index_get` and one `call_user` are used by both engines, so they cannot
+  drift. Fixing this removed an inlined duplicate call path in the tree-walker.
+- **Runaway recursion used to abort the process** ("fatal runtime error: stack
+  overflow", exit 134) instead of faulting. Programs now run on a 256 MB stack
+  with `MAX_CALL_DEPTH = 10_000`; both engines fault identically with E0202.
+  Error-corpus case added.
+- Found + fixed a formatter bug on the way: a closure nested inside a function
+  was emitted at a hardcoded depth, producing output that would not re-parse.
+- **Benchmarks (benches/run.sh, this laptop) — honest numbers:**
+  | bench | vm | tree-walk | cpython | vs tree | vs py |
+  |---|---|---|---|---|---|
+  | fib | 112ms | 254ms | 37ms | 2.27x | 0.33x |
+  | loop_sum | 714ms | 967ms | 223ms | 1.35x | 0.31x |
+  | strings | 52ms | 56ms | 53ms | 1.08x | 1.02x |
+  | maps | 206ms | 208ms | 58ms | 1.01x | 0.28x |
+  | bigint | 10ms | 11ms | 31ms | 1.10x | 3.10x |
+- **The P11 "≥5× CPython" gate is NOT met and this does not claim it.** The VM
+  beats the tree-walker everywhere and beats CPython only on bigint. The cause
+  is structural, not tuning: every variable access is a String-keyed HashMap
+  lookup up a `Scope` chain, and every integer heap-allocates a `Vec<u32>` —
+  there is no machine-word fast path, though SPEC §5.1 explicitly invites one.
+  Fixing those two is the 1.0.1 perf story; the harness is in place to measure it.
+- Verification: 58+ tests green including the VM differential over the whole
+  corpus, plus a direct 33-program vm-vs-tree-walk diff.
+- PR: pending

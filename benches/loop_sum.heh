@@ -1,0 +1,5 @@
+# Tight arithmetic loop — the interpreter's inner dispatch cost.
+mut total = 0
+for i in 0..2_000_000
+    total += i
+sys.print(total)

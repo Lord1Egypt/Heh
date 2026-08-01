@@ -1,0 +1,8 @@
+# Unbounded recursion is a fault with a diagnostic (SPEC §7.3), never a
+# native stack overflow.
+fn down(n: int) -> int
+    if n <= 0
+        return 0
+    1 + down(n - 1)
+
+sys.print(down(50_000))

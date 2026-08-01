@@ -1,0 +1,11 @@
+# Arbitrary-precision arithmetic — no overflow, ever (SPEC §5.1).
+fn factorial(n: int) -> int
+    mut acc = 1
+    for i in 1..=n
+        acc *= i
+    acc
+
+mut digits = 0
+for _round in 0..40
+    digits = str(factorial(300)).len()
+sys.print(digits)

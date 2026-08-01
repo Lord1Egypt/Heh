@@ -1,0 +1,12 @@
+# Map insert and lookup churn.
+mut m = {"seed": 0}
+mut hits = 0
+for i in 0..60_000
+    m["k{i % 500}"] = i
+for i in 0..60_000
+    match m.get("k{i % 500}")
+        some(v)
+            hits += 1
+        none
+            hits += 0
+sys.print(hits)
