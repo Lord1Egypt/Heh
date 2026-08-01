@@ -204,6 +204,12 @@ modulo by zero are a runtime **fault** (§7.3). `**` on two ints is exact and
 unbounded; a negative exponent is a fault, since `int` stays closed under `**`
 (use floats for fractional powers).
 
+> **Unary `-` binds tighter than `**`** (levels 2 and 3 above), so `-2 ** 4` is
+> `(-2) ** 4` = `16`. This is deliberate — one rule, no exception carved out for
+> one operator — but it is the opposite of Python and of ordinary mathematical
+> notation, where `-2**4` is `-16`. `heh fmt` keeps the parentheses in
+> `(-2) ** 4` for exactly this reason.
+
 ### 6.2 Bindings
 
 ```heh

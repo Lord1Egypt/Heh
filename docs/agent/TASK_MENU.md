@@ -135,7 +135,7 @@ This is what makes "it works" provable instead of hopeful.
   test in CI); VM ≥ 5× CPython on at least 3 of 4 benchmarks locally
   (record numbers in WORKLOG — benchmark gate is local, not CI).
 
-## P12 — v1.0 freeze  ⬜
+## P12 — v1.0 freeze  ✅ (done 2026-08-01 — see docs/agent/RESUME.md)
 - Spec audit: SPEC.md updated to match shipped reality **exactly** (every
   deviation reconciled — with Mohamed's approval per amendment), page budget
   confirmed; `docs/STDLIB.md` complete; README rewritten for users;

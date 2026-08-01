@@ -394,8 +394,12 @@ fn operand_mins(op: &BinOp) -> (u8, u8) {
 }
 
 fn format_expr(e: &Expr, min_prec: u8) -> String {
+    format_expr_in(e, min_prec, false)
+}
+
+fn format_expr_in(e: &Expr, min_prec: u8, keep_parens: bool) -> String {
     let raw = format_expr_raw(e);
-    if expr_prec(e) < min_prec {
+    if keep_parens || expr_prec(e) < min_prec {
         format!("({})", raw)
     } else {
         raw
@@ -418,7 +422,17 @@ fn format_expr_raw(e: &Expr) -> String {
                 }
                 return format!("{}{}{}", left, sym, format_expr(r, rmin));
             }
-            format!("{} {} {}", format_expr(l, lmin), bin_symbol(op), format_expr(r, rmin))
+            // Heh binds unary `-` tighter than `**` (SPEC §6.1), so `-2 ** 4`
+            // is `(-2) ** 4` — the opposite of Python and ordinary maths
+            // notation. Keep the parentheses a reader needs to see that.
+            let negated_base = matches!(op, BinOp::Pow)
+                && matches!(&l.kind, ExprKind::Unary(UnOp::Neg, _));
+            format!(
+                "{} {} {}",
+                format_expr_in(l, lmin, negated_base),
+                bin_symbol(op),
+                format_expr(r, rmin)
+            )
         }
         ExprKind::Unary(op, inner) => {
             let sym = match op { UnOp::Neg => "-", UnOp::Not => "not " };

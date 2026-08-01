@@ -5,6 +5,9 @@ sys.print(2 ** 10)
 sys.print(0 ** 0)
 sys.print((-2) ** 3)
 sys.print((-2) ** 4)
+# Unary `-` binds tighter than `**` (SPEC §6.1), unlike Python.
+sys.print(-2 ** 4)
+sys.print(-(2 ** 4))
 
 sys.print(7 // 2)
 sys.print(-7 // 2)
