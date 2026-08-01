@@ -1,18 +1,27 @@
 # NEEDS-MOHAMED — v1.0.0 publish checklist
 
-Everything below is **prepared and verified locally but deliberately not
-published.** Publishing needs your explicit go-ahead, one item at a time.
+**v1.0.0 SHIPPED 2026-08-01** with Mohamed's explicit approval.
 
-## Ready, waiting on you
+## Done
+
+| # | Action | State |
+|---|---|---|
+| 1 | Merge `feat/p12-v1-freeze` | ✅ PR #22 squash-merged, CI green |
+| 2 | Tag `v1.0.0` | ✅ pushed, on `main` @ 85b9747 |
+| 3 | GitHub Release v1.0.0 | ✅ live, notes from `docs/RELEASE_NOTES_v1.0.0.md` |
+| 4 | Release assets | ✅ linux x86_64 binary (1.1 MB, stripped), source tarball, SHA256SUMS |
+
+Assets were re-downloaded from the release and verified: checksums match, the
+binary runs, and the source tarball builds and passes all 58 tests.
+
+## Still open — needs a separate go-ahead
 
 | # | Action | State | Notes |
 |---|---|---|---|
-| 1 | Merge `feat/p12-v1-freeze` | PR open, tests green | Two commits: P12a (implementation fixes), P12b (freeze). |
-| 2 | Tag `v1.0.0` | not created | Tag after merge, on `main`. |
-| 3 | GitHub Release v1.0.0 | notes drafted | `docs/RELEASE_NOTES_v1.0.0.md`. |
-| 4 | Release binaries | buildable, not built | `cargo build --release` → 1.3 MB single binary. Cross-compiling for macOS/Windows needs targets installed. |
-| 5 | crates.io publish | **not attempted** | `Cargo.toml` has name/version/license/description. Would need `cargo publish` and a token. Say the word if you want it. |
-| 6 | Repo About / topics | unchanged | Web-UI only. |
+| 5 | crates.io publish | **not attempted** | `Cargo.toml` has name/version/license/description. Needs `cargo publish` + a token. |
+| 6 | macOS / Windows binaries | not built | Needs cross-compilation targets installed. |
+| 7 | Repo About / topics | unchanged | Web-UI only. |
+| 8 | Demo GIF for README | not made | Project standard prefers VHS. |
 
 ## Verified before handing this over
 
