@@ -151,6 +151,14 @@ impl Evaluator {
             Val::Record("Sys".into(), Rc::new(RefCell::new(sys_map))),
             false,
         );
+
+        // Bind std modules brought in by `use std/<name>`.
+        for u in &file.uses {
+            let bare = u.path.rsplit('/').next().unwrap_or(&u.path).to_string();
+            if let Some(record) = crate::modules::module_record(&u.path) {
+                self.global.borrow_mut().define(bare, record, false);
+            }
+        }
         
         let builtins = vec![
             "len", "upper", "lower", "trim", "split", "replace", "contains", "starts_with", "chars",

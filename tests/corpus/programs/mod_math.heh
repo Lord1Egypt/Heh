@@ -1,0 +1,8 @@
+# std/math — pure float math
+use std/math
+sys.print(math.sqrt(144.0))
+sys.print(math.abs(-7.5))
+sys.print(math.pow(2.0, 8.0))
+sys.print(math.floor(3.9))
+sys.print(math.ceil(3.1))
+sys.print(math.pow(math.sqrt(2.0), 2.0))

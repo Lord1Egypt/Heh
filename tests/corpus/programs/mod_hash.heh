@@ -1,0 +1,7 @@
+# std/hash — SHA-256 (FIPS 180-4 vectors) + CRC-32
+use std/hash
+sys.print(hash.sha256("abc"))
+sys.print(hash.sha256(""))
+sys.print(hash.sha256("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"))
+sys.print(hash.crc32("abc"))
+sys.print(hash.crc32(""))

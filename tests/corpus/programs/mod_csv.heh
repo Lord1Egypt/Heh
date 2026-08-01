@@ -1,0 +1,8 @@
+# std/csv — parse and write (RFC 4180 quoting)
+use std/csv
+let rows = csv.parse("name,age\nAda,36\n\"Grace, H\",45")
+sys.print(rows[1][0])
+sys.print(rows[2][0])
+sys.print(rows.len)
+let out = csv.write([["a", "b"], ["c,d", "e\"f"]])
+sys.print(out)

@@ -196,6 +196,11 @@ pub fn eval_builtin(name: &str, mut args: Vec<Val>) -> Result<Val, String> {
             }
         }
 
-        _ => Err(format!("unknown builtin '{}'", name))
+        _ => {
+            if let Some(res) = crate::modules::eval(name, args) {
+                return res;
+            }
+            Err(format!("unknown builtin '{}'", name))
+        }
     }
 }

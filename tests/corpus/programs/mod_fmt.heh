@@ -1,0 +1,8 @@
+# std/fmt — helpers native interpolation can't express
+use std/fmt
+sys.print(fmt.pad_left("42", 5, "0"))
+sys.print(fmt.pad_right("hi", 5, "."))
+sys.print(fmt.repeat("ab", 3))
+sys.print(fmt.hex(255))
+sys.print(fmt.fixed(3.14159, 2))
+sys.print(fmt.fixed(1.0, 3))
