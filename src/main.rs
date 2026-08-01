@@ -60,8 +60,13 @@ fn main() -> ExitCode {
             let iter = args.iter().skip(1);
             let mut path = None;
             let mut run_args = Vec::new();
+            let mut use_vm = false;
             for arg in iter {
-                if arg.starts_with("--deny-") {
+                if arg == "--vm" {
+                    use_vm = true;
+                } else if arg == "--tree-walk" {
+                    use_vm = false;
+                } else if arg.starts_with("--deny-") {
                     run_args.push(arg.clone());
                 } else if path.is_none() {
                     path = Some(arg.clone());
@@ -70,9 +75,9 @@ fn main() -> ExitCode {
                 }
             }
             if let Some(p) = path {
-                cmd_run(&p, run_args)
+                cmd_run(&p, run_args, use_vm)
             } else {
-                eprintln!("heh: usage: heh run <file.heh> [args...]");
+                eprintln!("heh: usage: heh run [--vm|--tree-walk] <file.heh> [args...]");
                 ExitCode::from(2)
             }
         }
@@ -160,7 +165,7 @@ fn cmd_ast(path: &str) -> ExitCode {
     }
 }
 
-fn cmd_run(path: &str, run_args: Vec<String>) -> ExitCode {
+fn cmd_run(path: &str, run_args: Vec<String>, use_vm: bool) -> ExitCode {
     let source = match std::fs::read_to_string(path) {
         Ok(s) => s,
         Err(e) => {
@@ -206,6 +211,27 @@ fn cmd_run(path: &str, run_args: Vec<String>) -> ExitCode {
     if let Err(e) = verify_lock(&base_dir) {
         eprintln!("fault: {e}");
         return ExitCode::FAILURE;
+    }
+
+    // The bytecode VM can't compile closures (map/filter callbacks); fall back
+    // to the tree-walker for such programs so behaviour is never lost.
+    let vm_ok = use_vm && !heh::compile::uses_closures(&ast);
+
+    if vm_ok {
+        let mut eval = heh::eval::Evaluator::with_base_dir(base_dir);
+        if let Err(d) = eval.prepare(&ast, run_args) {
+            eprintln!("{}", d.render(path, &source));
+            return ExitCode::FAILURE;
+        }
+        let program = heh::compile::compile(&ast);
+        let mut vm = heh::vm::Vm::new(eval);
+        return match vm.run(&program) {
+            Ok(_) => ExitCode::SUCCESS,
+            Err(d) => {
+                eprintln!("{}", d.render(path, &source));
+                ExitCode::FAILURE
+            }
+        };
     }
 
     let mut eval = heh::eval::Evaluator::with_base_dir(base_dir);

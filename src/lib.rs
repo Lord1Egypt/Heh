@@ -12,3 +12,5 @@ pub mod val;
 pub mod stdlib;
 pub mod modules;
 pub mod fmt;
+pub mod compile;
+pub mod vm;
