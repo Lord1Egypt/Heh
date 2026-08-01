@@ -1,0 +1,4 @@
+# Local file imports (P9): `use "./path.heh"` binds the file's namespace.
+use "./importlib/greet.heh"
+sys.print(greet.hello("Heh"))
+sys.print(greet.triple(14))

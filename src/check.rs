@@ -80,12 +80,11 @@ impl Checker {
             span: Span { line: 0, col: 0 },
         });
 
-        // Names brought into scope by `use std/<name>` are known modules.
+        // Names brought into scope by `use` (std modules or local imports).
         for u in &file.uses {
-            let bare = u.path.rsplit('/').next().unwrap_or(&u.path).to_string();
-            if crate::modules::module_record(&u.path).is_some() {
-                self.define(bare, Ty::Any, false);
-            }
+            let last = u.path.rsplit('/').next().unwrap_or(&u.path);
+            let bare = last.strip_suffix(".heh").unwrap_or(last).to_string();
+            self.define(bare, Ty::Any, false);
         }
         
         for item in &file.items {
