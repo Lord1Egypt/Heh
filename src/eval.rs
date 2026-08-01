@@ -563,9 +563,14 @@ impl Evaluator {
                     Val::Range(start, end, is_inc) => {
                         let mut current = *start;
                         let end = *end;
+                        // An unbounded range (`0..`) is encoded with a `none`
+                        // upper bound and iterates forever (until `break`).
+                        let unbounded = matches!(end, Val::None);
                         loop {
                             // Check loop bound
-                            let cond = if is_inc {
+                            let cond = if unbounded {
+                                true
+                            } else if is_inc {
                                 current.partial_cmp(&end) != Some(std::cmp::Ordering::Greater)
                             } else {
                                 current.partial_cmp(&end) == Some(std::cmp::Ordering::Less)

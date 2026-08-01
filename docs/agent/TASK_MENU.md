@@ -126,7 +126,7 @@ This is what makes "it works" provable instead of hopeful.
 - **Gate:** fmt round-trip over entire corpus; a sample `*_test.heh` suite
   passing + one deliberately failing (exit 1) in a unit test.
 
-## P11 — Bytecode VM  ⬜
+## P11 — Bytecode VM  🔧 (correctness gate met; opt-in --vm; perf/default follow-up)
 - `src/compile.rs` + `src/vm.rs`: compile AST → bytecode, stack VM;
   `heh run` uses the VM, `--tree-walk` keeps the old path for differential
   testing. `benches/` corpus (fib, string churn, map churn, bigint) with a

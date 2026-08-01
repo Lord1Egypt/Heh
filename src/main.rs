@@ -12,7 +12,7 @@ const USAGE: &str = "\
 heh — the immortal programming language 𓁨
 
 Usage:
-  heh run <file.heh> [args]   run a program (pass --deny-fs/-net/-env/-clock/-rand)
+  heh run <file.heh> [args]   run a program (--vm for the bytecode VM; pass --deny-fs/-net/-env/-clock/-rand)
   heh check <file.heh>        type-check without running
   heh test [dir]              run every fn test_*() in *_test.heh files
   heh fmt [--check] <file>    format a file in place (or check it is formatted)
