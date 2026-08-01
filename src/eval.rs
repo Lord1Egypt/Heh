@@ -361,9 +361,15 @@ impl Evaluator {
     }
 
     fn resolve_import_path(&self, path: &str) -> std::path::PathBuf {
-        let p = std::path::Path::new(path);
+        // Unquoted `use vendor/name` paths omit the extension; add it.
+        let with_ext = if path.ends_with(".heh") {
+            path.to_string()
+        } else {
+            format!("{path}.heh")
+        };
+        let p = std::path::PathBuf::from(&with_ext);
         if p.is_absolute() {
-            p.to_path_buf()
+            p
         } else {
             self.base_dir.join(p)
         }

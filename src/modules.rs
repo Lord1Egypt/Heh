@@ -11,6 +11,11 @@ use std::rc::Rc;
 /// The std module names that `use std/<name>` may bind.
 pub const MODULES: &[&str] = &["math", "fmt", "json", "csv", "hash", "regex", "debug"];
 
+/// SHA-256 of `data` as a lowercase hex string (used by the vendor lockfile).
+pub fn sha256_hex(data: &[u8]) -> String {
+    hex(&sha256(data))
+}
+
 /// Given a `use` path like "std/math" (or bare "math"), return the module's
 /// namespace record, or None if it is not a known std module.
 pub fn module_record(path: &str) -> Option<Val> {
