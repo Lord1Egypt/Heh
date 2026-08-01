@@ -1,7 +1,10 @@
 # RESUME.md
 
 # Current State
-**Phases 0–12 are complete. The language is at v1.0 and the spec is frozen.**
+**Phases 0–12 are complete. v1.0.0 is RELEASED and the spec is frozen.**
+
+GitHub Release v1.0.0 is live (stripped linux x86_64 binary, source tarball,
+SHA256SUMS — all re-downloaded and verified). `main` is clean, nothing open.
 
 `heh --version` → 1.0.0. Full `cargo test` green (58 tests). Fresh-clone build
 verified (zero crates, ~1.3 MB binary).
@@ -44,9 +47,9 @@ run the document.
 Nothing is open. The remaining work is optional and needs an explicit
 go-ahead where noted:
 
-1. **Publishing** — NOT done, needs Mohamed's explicit approval:
-   GitHub Release v1.0.0, release binaries/tarball, crates.io. Draft notes are
-   in `docs/RELEASE_NOTES_v1.0.0.md`.
+1. **Remaining publishing** — each needs its own go-ahead from Mohamed:
+   crates.io, macOS/Windows binaries (needs cross-compilation targets), repo
+   About/topics (web UI only). The GitHub Release itself is done.
 2. **VM follow-ups** (from P11) — perf benchmarks in `benches/`, and making
    `--vm` the default after soak testing. Note that `needs_tree_walker()` in
    `src/compile.rs` now routes three construct families to the tree-walker
