@@ -187,7 +187,7 @@ pub fn eval_builtin(name: &str, mut args: Vec<Val>) -> Result<Val, String> {
                 Val::Int(i) => Ok(Val::Int(i.clone())),
                 Val::Float(f) => {
                     if f.is_nan() || f.is_infinite() {
-                        return Err(format!("int({}) has no integer value", f));
+                        return Err(format!("int({}) has no integer value", Val::Float(*f)));
                     }
                     Ok(Val::Int(BigInt::from_f64_trunc(*f)))
                 }

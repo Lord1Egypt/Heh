@@ -246,11 +246,28 @@ impl PartialOrd for Val {
     }
 }
 
+/// Escape a string being printed inside quotes, so `err("say \"hi\"")` cannot
+/// be confused for a shorter string followed by junk.
+fn escape_in_quotes(s: &str) -> String {
+    s.replace('\\', "\\\\").replace('"', "\\\"")
+}
+
 impl fmt::Display for Val {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Val::Int(i) => write!(f, "{}", i),
-            Val::Float(fl) => write!(f, "{}", fl),
+            // A float always shows a decimal point (SPEC §5.2), so printed
+            // output distinguishes `3.0` from the int `3`. Never exponent
+            // notation: plain decimal is exact and needs no threshold rule.
+            Val::Float(fl) => {
+                if fl.is_nan() {
+                    write!(f, "nan")
+                } else if fl.is_finite() && fl.fract() == 0.0 {
+                    write!(f, "{:.1}", fl)
+                } else {
+                    write!(f, "{}", fl)
+                }
+            }
             Val::Bool(b) => write!(f, "{}", b),
             Val::Str(s) => write!(f, "{}", s),
             Val::Range(start, end, inc) => {
@@ -263,7 +280,7 @@ impl fmt::Display for Val {
             Val::Fn(..) => write!(f, "<fn>"),
             Val::BuiltinFn(n) => write!(f, "<builtin {}>", n),
             Val::Ok(inner) => write!(f, "ok({})", inner),
-            Val::Err(e) => write!(f, "err(\"{}\")", e),
+            Val::Err(e) => write!(f, "err(\"{}\")", escape_in_quotes(e)),
             Val::Some(inner) => write!(f, "some({})", inner),
             Val::List(l) => {
                 write!(f, "[")?;
@@ -274,7 +291,7 @@ impl fmt::Display for Val {
                     }
                     // In real Heh, lists print string elements with quotes, but we'll keep it simple for now
                     if let Val::Str(s) = v {
-                        write!(f, "\"{}\"", s)?;
+                        write!(f, "\"{}\"", escape_in_quotes(s))?;
                     } else {
                         write!(f, "{}", v)?;
                     }
@@ -296,7 +313,7 @@ impl fmt::Display for Val {
                         write!(f, "{}: ", k)?;
                     }
                     if let Val::Str(s) = v {
-                        write!(f, "\"{}\"", s)?;
+                        write!(f, "\"{}\"", escape_in_quotes(s))?;
                     } else {
                         write!(f, "{}", v)?;
                     }
@@ -314,7 +331,7 @@ impl fmt::Display for Val {
                     first = false;
                     write!(f, "{}: ", k)?;
                     if let Val::Str(s) = v {
-                        write!(f, "\"{}\"", s)?;
+                        write!(f, "\"{}\"", escape_in_quotes(s))?;
                     } else {
                         write!(f, "{}", v)?;
                     }

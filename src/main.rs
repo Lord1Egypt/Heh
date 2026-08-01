@@ -15,7 +15,7 @@ Usage:
   heh run <file.heh> [args]   run a program (--vm for the bytecode VM; pass --deny-fs/-net/-env/-clock/-rand)
   heh check <file.heh>        type-check without running
   heh test [dir]              run every fn test_*() in *_test.heh files
-  heh fmt [--check] <file>    format a file in place (or check it is formatted)
+  heh fmt [--check] <path>    format a file or directory tree in place
   heh get <url>               vendor a dependency into vendor/ and pin it in heh.lock
   heh ast <file.heh>          dump the parsed AST
   heh tokens <file.heh>       dump lexer output, one token per line
@@ -517,7 +517,44 @@ fn find_test_files(dir: &std::path::Path, out: &mut Vec<PathBuf>) -> std::io::Re
 // `heh fmt` — canonical formatter (rewrites in place, or --check)
 // --------------------------------------------------------------------------
 
+/// `heh fmt [--check] <path>` — a directory formats every `.heh` file under it
+/// (SPEC §13 writes the argument as a path, not a file).
 fn cmd_fmt(path: &str, check_mode: bool) -> ExitCode {
+    let target = std::path::Path::new(path);
+    if target.is_dir() {
+        let mut files = Vec::new();
+        if let Err(e) = find_heh_files(target, &mut files) {
+            eprintln!("heh fmt: cannot scan '{path}': {e}");
+            return ExitCode::FAILURE;
+        }
+        files.sort();
+        let mut worst = ExitCode::SUCCESS;
+        for file in files {
+            if cmd_fmt_file(&file.to_string_lossy(), check_mode) != ExitCode::SUCCESS {
+                worst = ExitCode::FAILURE;
+            }
+        }
+        return worst;
+    }
+    cmd_fmt_file(path, check_mode)
+}
+
+fn find_heh_files(dir: &std::path::Path, out: &mut Vec<PathBuf>) -> std::io::Result<()> {
+    for entry in std::fs::read_dir(dir)? {
+        let path = entry?.path();
+        if path.is_dir() {
+            if path.file_name().and_then(|n| n.to_str()) == Some(".git") {
+                continue;
+            }
+            find_heh_files(&path, out)?;
+        } else if path.extension().and_then(|e| e.to_str()) == Some("heh") {
+            out.push(path);
+        }
+    }
+    Ok(())
+}
+
+fn cmd_fmt_file(path: &str, check_mode: bool) -> ExitCode {
     let source = match std::fs::read_to_string(path) {
         Ok(s) => s,
         Err(e) => {
