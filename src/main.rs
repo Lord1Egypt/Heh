@@ -14,13 +14,14 @@ heh — the immortal programming language 𓁨
 Usage:
   heh run <file.heh> [args]   run a program (pass --deny-fs/-net/-env/-clock/-rand)
   heh check <file.heh>        type-check without running
+  heh test [dir]              run every fn test_*() in *_test.heh files
+  heh fmt [--check] <file>    format a file in place (or check it is formatted)
   heh get <url>               vendor a dependency into vendor/ and pin it in heh.lock
   heh ast <file.heh>          dump the parsed AST
   heh tokens <file.heh>       dump lexer output, one token per line
   heh --version               print the toolchain version
   heh --help                  print this help
 
-More subcommands arrive phase by phase: fmt, test.
 Spec: SPEC.md · Plan: docs/agent/TASK_MENU.md";
 
 fn main() -> ExitCode {
@@ -85,6 +86,22 @@ fn main() -> ExitCode {
         Some("test") => {
             let dir = args.get(1).map(String::as_str).unwrap_or(".");
             cmd_test(dir)
+        }
+        Some("fmt") => {
+            let mut check_mode = false;
+            let mut path = None;
+            for arg in args.iter().skip(1) {
+                if arg == "--check" {
+                    check_mode = true;
+                } else if path.is_none() {
+                    path = Some(arg.clone());
+                }
+            }
+            let Some(path) = path else {
+                eprintln!("heh: usage: heh fmt [--check] <file.heh>");
+                return ExitCode::from(2);
+            };
+            cmd_fmt(&path, check_mode)
         }
         Some(other) => {
             eprintln!("heh: unknown command '{other}' (see --help)");
@@ -468,4 +485,56 @@ fn find_test_files(dir: &std::path::Path, out: &mut Vec<PathBuf>) -> std::io::Re
         }
     }
     Ok(())
+}
+
+// --------------------------------------------------------------------------
+// `heh fmt` — canonical formatter (rewrites in place, or --check)
+// --------------------------------------------------------------------------
+
+fn cmd_fmt(path: &str, check_mode: bool) -> ExitCode {
+    let source = match std::fs::read_to_string(path) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("heh: cannot read '{path}': {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let tokens = match heh::lexer::lex(&source) {
+        Ok(t) => t,
+        Err(d) => {
+            eprintln!("{}", d.render(path, &source));
+            return ExitCode::FAILURE;
+        }
+    };
+    let ast = match heh::parser::Parser::new(&tokens).parse_file() {
+        Ok(a) => a,
+        Err(d) => {
+            eprintln!("{}", d.render(path, &source));
+            return ExitCode::FAILURE;
+        }
+    };
+
+    let formatted = heh::fmt::format_file(&ast);
+
+    if check_mode {
+        if formatted == source {
+            ExitCode::SUCCESS
+        } else {
+            eprintln!("{path}: not formatted (run `heh fmt {path}`)");
+            ExitCode::FAILURE
+        }
+    } else if formatted == source {
+        ExitCode::SUCCESS
+    } else {
+        match std::fs::write(path, &formatted) {
+            Ok(_) => {
+                println!("formatted {path}");
+                ExitCode::SUCCESS
+            }
+            Err(e) => {
+                eprintln!("heh: cannot write '{path}': {e}");
+                ExitCode::FAILURE
+            }
+        }
+    }
 }
