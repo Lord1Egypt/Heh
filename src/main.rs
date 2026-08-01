@@ -3,6 +3,7 @@
 //! Subcommands land phase by phase (see docs/agent/TASK_MENU.md):
 //! P1 tokens ✓ · then ast, run, check, fmt, test, get.
 
+use std::path::PathBuf;
 use std::process::ExitCode;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -80,6 +81,10 @@ fn main() -> ExitCode {
                 return ExitCode::from(2);
             };
             cmd_get(url)
+        }
+        Some("test") => {
+            let dir = args.get(1).map(String::as_str).unwrap_or(".");
+            cmd_test(dir)
         }
         Some(other) => {
             eprintln!("heh: unknown command '{other}' (see --help)");
@@ -349,6 +354,117 @@ fn verify_lock(base_dir: &std::path::Path) -> Result<(), String> {
         let actual = heh::modules::sha256_hex(&bytes);
         if actual != hash {
             return Err(format!("lock verification failed: '{rel}' has been modified (hash mismatch)"));
+        }
+    }
+    Ok(())
+}
+
+// --------------------------------------------------------------------------
+// `heh test` — discover *_test.heh, run pure `fn test_*()`, report results
+// --------------------------------------------------------------------------
+
+fn cmd_test(dir: &str) -> ExitCode {
+    let mut files = Vec::new();
+    if let Err(e) = find_test_files(std::path::Path::new(dir), &mut files) {
+        eprintln!("heh test: cannot scan '{dir}': {e}");
+        return ExitCode::FAILURE;
+    }
+    files.sort();
+    if files.is_empty() {
+        println!("no *_test.heh files found under '{dir}'");
+        return ExitCode::SUCCESS;
+    }
+
+    let mut total = 0usize;
+    let mut passed = 0usize;
+    for file in &files {
+        let rel = file.display();
+        let source = match std::fs::read_to_string(file) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("{rel}: cannot read: {e}");
+                return ExitCode::FAILURE;
+            }
+        };
+        let tokens = match heh::lexer::lex(&source) {
+            Ok(t) => t,
+            Err(d) => {
+                eprintln!("{}", d.render(&rel.to_string(), &source));
+                return ExitCode::FAILURE;
+            }
+        };
+        let ast = match heh::parser::Parser::new(&tokens).parse_file() {
+            Ok(a) => a,
+            Err(d) => {
+                eprintln!("{}", d.render(&rel.to_string(), &source));
+                return ExitCode::FAILURE;
+            }
+        };
+        let mut checker = heh::check::Checker::new();
+        checker.check_file(&ast);
+        if !checker.diags.is_empty() {
+            for d in &checker.diags {
+                eprintln!("{}", d.render(&rel.to_string(), &source));
+            }
+            return ExitCode::FAILURE;
+        }
+
+        let test_names: Vec<String> = ast
+            .items
+            .iter()
+            .filter_map(|item| match item {
+                heh::ast::TopItem::Fn(f) if f.name.starts_with("test_") => Some(f.name.clone()),
+                _ => None,
+            })
+            .collect();
+        if test_names.is_empty() {
+            continue;
+        }
+
+        let base_dir = file.parent().map(|p| p.to_path_buf()).unwrap_or_else(|| std::path::PathBuf::from("."));
+        let mut eval = heh::eval::Evaluator::with_base_dir(base_dir);
+        if let Err(d) = eval.load_defs(&ast) {
+            eprintln!("{}", d.render(&rel.to_string(), &source));
+            return ExitCode::FAILURE;
+        }
+
+        println!("{rel}:");
+        for name in test_names {
+            total += 1;
+            match eval.call_zero_arg_fn(&name) {
+                Ok(_) => {
+                    passed += 1;
+                    println!("  ok   {name}");
+                }
+                Err(d) => {
+                    println!("  FAIL {name} — {}", d.msg);
+                }
+            }
+        }
+    }
+
+    let failed = total - passed;
+    println!("\n{passed} passed, {failed} failed ({total} total)");
+    if failed == 0 {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    }
+}
+
+fn find_test_files(dir: &std::path::Path, out: &mut Vec<PathBuf>) -> std::io::Result<()> {
+    if !dir.is_dir() {
+        return Ok(());
+    }
+    for entry in std::fs::read_dir(dir)? {
+        let path = entry?.path();
+        if path.is_dir() {
+            if path.file_name().and_then(|n| n.to_str()) == Some(".git") {
+                continue;
+            }
+            find_test_files(&path, out)?;
+        } else if path.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.ends_with("_test.heh")) {
+            out.push(path);
         }
     }
     Ok(())
