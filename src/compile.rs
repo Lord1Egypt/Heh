@@ -54,6 +54,35 @@ pub enum Op {
     MatchArm(Pattern, usize),
     PopScrutinee,
     MatchFail(u32, u32),
+
+    // Stack shuffling, for assignment targets that need their container twice.
+    Dup,
+    Dup2,
+
+    // Field / index assignment (SPEC §14 `lvalue`). The container is already
+    // on the stack; these mutate it in place and leave nothing behind.
+    SetField(String, u32, u32),
+    SetIndex(u32, u32),
+
+    // Block scopes. Optional narrowing binds `x` to its unwrapped value for
+    // one branch only, so the VM needs the same nesting the tree-walker gets
+    // from child scopes. `TruncScopes` restores depth when `break`/`continue`
+    // jump out of a narrowed block without reaching its `PopScope`.
+    PushScope,
+    PopScope,
+    TruncScopes(usize),
+    NarrowOption(String),
+
+    // A closure captures the scope it is created in (SPEC §6.5).
+    MakeClosure(usize),
+}
+
+/// An anonymous function's parameters and body, kept as AST: a closure's body
+/// runs through the shared evaluator, exactly as a named function's does.
+#[derive(Clone, Debug)]
+pub struct ClosureDef {
+    pub params: Vec<String>,
+    pub body: Block,
 }
 
 #[derive(Clone, Debug)]
@@ -62,6 +91,7 @@ pub struct Chunk {
     pub params: Vec<String>,
     pub ops: Vec<Op>,
     pub consts: Vec<Const>,
+    pub closures: Vec<ClosureDef>,
 }
 
 pub struct Program {
@@ -73,7 +103,9 @@ pub struct Program {
 struct Loop {
     continue_addr: usize,
     break_jumps: Vec<usize>,
-    is_for: bool,
+    /// Block-scope depth at loop entry. `break`/`continue` restore it, since
+    /// they can jump out of a narrowed block before its `PopScope` runs.
+    scope_depth: usize,
 }
 
 struct Compiler<'a> {
@@ -81,6 +113,10 @@ struct Compiler<'a> {
     consts: Vec<Const>,
     fn_index: &'a std::collections::HashMap<String, usize>,
     loops: Vec<Loop>,
+    /// Closure bodies, referenced by `Op::MakeClosure(index)`.
+    closures: Vec<ClosureDef>,
+    /// Block scopes open at this point in the emitted code.
+    scope_depth: usize,
 }
 
 impl<'a> Compiler<'a> {
@@ -90,6 +126,8 @@ impl<'a> Compiler<'a> {
             consts: Vec::new(),
             fn_index,
             loops: Vec::new(),
+            closures: Vec::new(),
+            scope_depth: 0,
         }
     }
 
@@ -151,9 +189,10 @@ impl<'a> Compiler<'a> {
                 self.emit(Op::Define(l.name.clone(), l.is_mut));
             }
             Statement::Assign(a) => {
-                // Only bare-name targets reach here; `needs_tree_walker` sends
-                // field/index targets down the tree-walking path instead.
-                debug_assert!(a.target.tail.is_empty());
+                if !a.target.tail.is_empty() {
+                    self.compile_tail_assign(a);
+                    return;
+                }
                 self.compile_expr(&a.rhs);
                 let (line, col) = (a.span.line, a.span.col);
                 match a.op {
@@ -180,17 +219,81 @@ impl<'a> Compiler<'a> {
             Statement::Match(m) => self.compile_match(m, false),
             Statement::Return(r) => self.compile_return(r),
             Statement::Break(_) => {
-                if let Some(lp) = self.loops.last_mut() {
-                    if lp.is_for {
-                        // break must discard the active iterator before leaving
-                    }
+                let depth = self.loops.last().unwrap().scope_depth;
+                if self.scope_depth > depth {
+                    self.emit(Op::TruncScopes(depth));
                 }
                 let idx = self.emit(Op::Jump(0));
                 self.loops.last_mut().unwrap().break_jumps.push(idx);
             }
             Statement::Continue(_) => {
-                let target = self.loops.last().unwrap().continue_addr;
+                let lp = self.loops.last().unwrap();
+                let (depth, target) = (lp.scope_depth, lp.continue_addr);
+                if self.scope_depth > depth {
+                    self.emit(Op::TruncScopes(depth));
+                }
                 self.emit(Op::Jump(target));
+            }
+        }
+    }
+
+    /// `p.x = v`, `l[i] = v`, and any nesting (SPEC §14 `lvalue`). Walks to
+    /// the container owning the final step, leaves it on the stack, then
+    /// mutates it in place. Compound forms re-read the slot first, so the
+    /// container (and an index) are duplicated rather than re-evaluated —
+    /// evaluating an index expression twice could run its side effects twice.
+    fn compile_tail_assign(&mut self, a: &AssignStmt) {
+        let (line, col) = (a.span.line, a.span.col);
+        let (last, path) = a
+            .target
+            .tail
+            .split_last()
+            .expect("caller checked the tail is non-empty");
+
+        self.emit(Op::Load(a.target.name.clone()));
+        for step in path {
+            match step {
+                LValueTail::Field(f) => {
+                    self.emit(Op::Field(f.clone(), line, col));
+                }
+                LValueTail::Index(idx) => {
+                    self.compile_expr(idx);
+                    self.emit(Op::Index(line, col));
+                }
+            }
+        }
+
+        let op = match a.op {
+            AssignOp::Eq => None,
+            AssignOp::AddEq => Some(BinOp::Add),
+            AssignOp::SubEq => Some(BinOp::Sub),
+            AssignOp::MulEq => Some(BinOp::Mul),
+            AssignOp::DivEq => Some(BinOp::Div),
+        };
+
+        match last {
+            LValueTail::Field(f) => {
+                if let Some(binop) = op.clone() {
+                    self.emit(Op::Dup);
+                    self.emit(Op::Field(f.clone(), line, col));
+                    self.compile_expr(&a.rhs);
+                    self.emit(Op::Binop(binop, line, col));
+                } else {
+                    self.compile_expr(&a.rhs);
+                }
+                self.emit(Op::SetField(f.clone(), line, col));
+            }
+            LValueTail::Index(idx) => {
+                self.compile_expr(idx);
+                if let Some(binop) = op {
+                    self.emit(Op::Dup2);
+                    self.emit(Op::Index(line, col));
+                    self.compile_expr(&a.rhs);
+                    self.emit(Op::Binop(binop, line, col));
+                } else {
+                    self.compile_expr(&a.rhs);
+                }
+                self.emit(Op::SetIndex(line, col));
             }
         }
     }
@@ -211,13 +314,37 @@ impl<'a> Compiler<'a> {
         // then
         self.compile_expr(&i.cond);
         let jf = self.emit(Op::JumpIfFalse(0, i.cond.span.line, i.cond.span.col));
-        if value {
-            self.compile_block_value(&i.then_block);
-        } else {
-            self.compile_block_stmt(&i.then_block);
+
+        // Optional narrowing (SPEC §6.4), matching the tree-walker exactly:
+        // `if x != none` unwraps x for the then-branch only, so it needs a
+        // scope; `if x == none` unwraps it on the false path, for everything
+        // after the `if`, which is the enclosing scope.
+        let narrow = crate::check::none_comparison(&i.cond);
+        match narrow {
+            Some((name, true)) => {
+                let name = name.to_string();
+                self.in_scope(|c| {
+                    c.emit(Op::NarrowOption(name));
+                    if value {
+                        c.compile_block_value(&i.then_block);
+                    } else {
+                        c.compile_block_stmt(&i.then_block);
+                    }
+                });
+            }
+            _ => {
+                if value {
+                    self.compile_block_value(&i.then_block);
+                } else {
+                    self.compile_block_stmt(&i.then_block);
+                }
+            }
         }
         end_jumps.push(self.emit(Op::Jump(0)));
         self.patch_jump(jf, self.here());
+        if let Some((name, false)) = narrow {
+            self.emit(Op::NarrowOption(name.to_string()));
+        }
         // elifs
         for (cond, block) in &i.elifs {
             self.compile_expr(cond);
@@ -253,7 +380,7 @@ impl<'a> Compiler<'a> {
         self.loops.push(Loop {
             continue_addr: cond_addr,
             break_jumps: Vec::new(),
-            is_for: false,
+            scope_depth: self.scope_depth,
         });
         self.compile_block_stmt(&w.body);
         self.emit(Op::Jump(cond_addr));
@@ -273,7 +400,7 @@ impl<'a> Compiler<'a> {
         self.loops.push(Loop {
             continue_addr: next_addr,
             break_jumps: Vec::new(),
-            is_for: true,
+            scope_depth: self.scope_depth,
         });
         self.compile_block_stmt(&f.body);
         self.emit(Op::Jump(next_addr));
@@ -417,12 +544,16 @@ impl<'a> Compiler<'a> {
                 }
                 self.emit(Op::ConcatStr(parts.len()));
             }
-            ExprKind::Closure(..) => {
-                // Closures are not compiled to bytecode (they only appear as
-                // map/filter callbacks, which run via the evaluator). Emitting a
-                // Load of a sentinel keeps the compiler total; the VM refuses to
-                // compile programs containing closures (see Program::compile).
-                self.emit(Op::PushNone);
+            ExprKind::Closure(params, _ret, body) => {
+                // A closure becomes the same `Val::Fn` a named function is, so
+                // it captures the live VM scope and later calls run through the
+                // shared evaluator (SPEC §6.5).
+                let idx = self.closures.len();
+                self.closures.push(ClosureDef {
+                    params: params.iter().map(|p| p.name.clone()).collect(),
+                    body: body.clone(),
+                });
+                self.emit(Op::MakeClosure(idx));
             }
             ExprKind::Call(callee, args) => self.compile_call(callee, args, line, col),
         }
@@ -519,70 +650,18 @@ impl<'a> Compiler<'a> {
             params,
             ops: self.ops,
             consts: self.consts,
+            closures: self.closures,
         }
     }
-}
 
-/// Does this program use anything the bytecode VM cannot reproduce exactly?
-/// Two constructs qualify: closures (no compilation path) and optional
-/// narrowing (`if x != none`), whose unwrap is scoped to the then-branch while
-/// VM chunks share one flat scope. `heh run --vm` falls back to the
-/// tree-walker for such programs so output stays byte-identical either way.
-pub fn needs_tree_walker(file: &File) -> bool {
-    fn expr_has(e: &Expr) -> bool {
-        match &e.kind {
-            ExprKind::Closure(..) => true,
-            ExprKind::Binary(_, a, b) => expr_has(a) || expr_has(b),
-            ExprKind::Unary(_, a) => expr_has(a),
-            ExprKind::Call(c, args) => {
-                expr_has(c)
-                    || args.iter().any(|a| match a {
-                        CallArg::Positional(e) | CallArg::Named(_, e) => expr_has(e),
-                    })
-            }
-            ExprKind::Field(a, _) => expr_has(a),
-            ExprKind::Index(a, b) => expr_has(a) || expr_has(b),
-            ExprKind::List(xs) => xs.iter().any(expr_has),
-            ExprKind::Map(ps) => ps.iter().any(|(k, v)| expr_has(k) || expr_has(v)),
-            ExprKind::Record(_, fs) => fs.iter().any(|(_, v)| expr_has(v)),
-            ExprKind::Try(a, _) => expr_has(a),
-            ExprKind::InterpStr(parts) => parts
-                .iter()
-                .any(|p| matches!(p, InterpPart::Expr(e) if expr_has(e))),
-            _ => false,
-        }
+    /// Open a block scope, run `body`, close it again.
+    fn in_scope(&mut self, body: impl FnOnce(&mut Self)) {
+        self.emit(Op::PushScope);
+        self.scope_depth += 1;
+        body(self);
+        self.scope_depth -= 1;
+        self.emit(Op::PopScope);
     }
-    fn block_has(b: &Block) -> bool {
-        b.stmts.iter().any(stmt_has)
-    }
-    fn stmt_has(s: &Statement) -> bool {
-        match s {
-            Statement::Expr(e) => expr_has(e),
-            Statement::Let(l) => expr_has(&l.init),
-            // A field/index target (`p.x = v`, `l[i] = v`) has no VM encoding;
-            // the compiler below only ever assigns to a bare name.
-            Statement::Assign(a) => !a.target.tail.is_empty() || expr_has(&a.rhs),
-            // `if x != none` narrows only inside the then-branch.
-            Statement::If(i) => {
-                matches!(crate::check::none_comparison(&i.cond), Some((_, true)))
-                    || expr_has(&i.cond)
-                    || block_has(&i.then_block)
-                    || i.elifs.iter().any(|(c, b)| expr_has(c) || block_has(b))
-                    || i.else_block.as_ref().is_some_and(block_has)
-            }
-            Statement::While(w) => expr_has(&w.cond) || block_has(&w.body),
-            Statement::For(f) => expr_has(&f.iter) || block_has(&f.body),
-            Statement::Match(m) => expr_has(&m.expr) || m.arms.iter().any(|a| block_has(&a.body)),
-            Statement::Return(r) => r.expr.as_ref().is_some_and(expr_has),
-            _ => false,
-        }
-    }
-    file.items.iter().any(|item| match item {
-        TopItem::Fn(f) => block_has(&f.body),
-        TopItem::Stmt(s) => stmt_has(s),
-        TopItem::Let(l) => expr_has(&l.init),
-        TopItem::Type(_) => false,
-    })
 }
 
 /// Compile a whole file to a `Program`.

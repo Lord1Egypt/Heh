@@ -12,7 +12,7 @@ const USAGE: &str = "\
 heh — the immortal programming language 𓁨
 
 Usage:
-  heh run <file.heh> [args]   run a program (--vm for the bytecode VM; pass --deny-fs/-net/-env/-clock/-rand)
+  heh run <file.heh> [args]   run a program (--tree-walk for the reference evaluator; pass --deny-fs/-net/-env/-clock/-rand)
   heh check <file.heh>        type-check without running
   heh test [dir]              run every fn test_*() in *_test.heh files
   heh fmt [--check] <path>    format a file or directory tree in place
@@ -24,7 +24,23 @@ Usage:
 
 Spec: SPEC.md · Plan: docs/agent/TASK_MENU.md";
 
+/// Both engines recurse on the native stack, so Heh programs get a dedicated
+/// thread with a large one. `MAX_CALL_DEPTH` then faults on runaway recursion
+/// well before this runs out — a clean diagnostic instead of a core dump.
+const INTERPRETER_STACK: usize = 256 * 1024 * 1024;
+
 fn main() -> ExitCode {
+    match std::thread::Builder::new()
+        .stack_size(INTERPRETER_STACK)
+        .spawn(run_cli)
+    {
+        Ok(handle) => handle.join().unwrap_or(ExitCode::FAILURE),
+        // No thread available: run inline rather than refusing to start.
+        Err(_) => run_cli(),
+    }
+}
+
+fn run_cli() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
         Some("--version") | Some("-V") => {
@@ -60,7 +76,7 @@ fn main() -> ExitCode {
             let iter = args.iter().skip(1);
             let mut path = None;
             let mut run_args = Vec::new();
-            let mut use_vm = false;
+            let mut use_vm = true;
             for arg in iter {
                 if arg == "--vm" {
                     use_vm = true;
@@ -213,11 +229,7 @@ fn cmd_run(path: &str, run_args: Vec<String>, use_vm: bool) -> ExitCode {
         return ExitCode::FAILURE;
     }
 
-    // Some constructs have no exact VM encoding; fall back to the tree-walker
-    // for those programs so behaviour is never lost (see needs_tree_walker).
-    let vm_ok = use_vm && !heh::compile::needs_tree_walker(&ast);
-
-    if vm_ok {
+    if use_vm {
         let mut eval = heh::eval::Evaluator::with_base_dir(base_dir);
         if let Err(d) = eval.prepare(&ast, run_args) {
             eprintln!("{}", d.render(path, &source));

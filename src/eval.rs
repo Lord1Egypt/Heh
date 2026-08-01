@@ -62,7 +62,16 @@ pub struct Evaluator {
     pub base_dir: std::path::PathBuf,
     /// Canonical paths currently being loaded, for cycle detection (E0030).
     loading: Vec<std::path::PathBuf>,
+    /// User-function calls currently on the stack. Both engines recurse in
+    /// Rust, so unbounded Heh recursion would abort the process on a native
+    /// stack overflow; this turns it into an ordinary fault instead (§7.3).
+    pub call_depth: usize,
 }
+
+/// How deep Heh calls may nest. `heh` runs programs on a 256 MB stack, and
+/// this limit is set to fault well before that runs out on either engine —
+/// the tree-walker uses the deeper native frames of the two.
+pub const MAX_CALL_DEPTH: usize = 10_000;
 
 pub enum Flow {
     Return(Val),
@@ -76,6 +85,7 @@ impl Evaluator {
             global: Rc::new(RefCell::new(Scope::new(None))),
             base_dir: std::path::PathBuf::from("."),
             loading: Vec::new(),
+            call_depth: 0,
         }
     }
 
@@ -84,6 +94,7 @@ impl Evaluator {
             global: Rc::new(RefCell::new(Scope::new(None))),
             base_dir,
             loading: Vec::new(),
+            call_depth: 0,
         }
     }
 }
@@ -536,13 +547,6 @@ impl Evaluator {
         rhs: Val,
         env: Rc<RefCell<Scope>>,
     ) -> Result<Val, Diag> {
-        let err = |msg: String| Diag {
-            code: "E0102",
-            msg,
-            line: a.span.line,
-            col: a.span.col,
-        };
-
         let mut container = env.borrow().get(&a.target.name).ok_or_else(|| Diag {
             code: "E0103",
             msg: format!("undefined variable '{}'", a.target.name),
@@ -557,14 +561,28 @@ impl Evaluator {
             .split_last()
             .expect("caller checked tail is non-empty");
         for step in path {
-            container = self.read_step(container, step, env.clone(), a)?;
+            container = match step {
+                LValueTail::Field(f) => self.field_get(container, f, a.span.line, a.span.col)?,
+                LValueTail::Index(idx) => {
+                    let key = self.eval_expr(idx, env.clone())?;
+                    self.index_get(container, key, a.span.line, a.span.col)?
+                }
+            };
         }
 
         // Compound assignment needs the old value first.
         let val = match a.op {
             AssignOp::Eq => rhs,
             _ => {
-                let cur = self.read_step(container.clone(), last, env.clone(), a)?;
+                let cur = match last {
+                    LValueTail::Field(f) => {
+                        self.field_get(container.clone(), f, a.span.line, a.span.col)?
+                    }
+                    LValueTail::Index(idx) => {
+                        let key = self.eval_expr(idx, env.clone())?;
+                        self.index_get(container.clone(), key, a.span.line, a.span.col)?
+                    }
+                };
                 let op = match a.op {
                     AssignOp::AddEq => BinOp::Add,
                     AssignOp::SubEq => BinOp::Sub,
@@ -576,103 +594,92 @@ impl Evaluator {
             }
         };
 
-        match (container, last) {
-            (Val::Record(name, fields), LValueTail::Field(f)) => {
-                if !fields.borrow().contains_key(f) {
-                    return Err(err(format!("record '{}' has no field '{}'", name, f)));
-                }
-                fields.borrow_mut().insert(f.clone(), val);
-            }
-            (Val::List(items), LValueTail::Index(idx)) => {
-                let idx_val = self.eval_expr(idx, env)?;
-                let Val::Int(i) = idx_val else {
-                    return Err(err("list index must be an int".into()));
-                };
-                let mut items = items.borrow_mut();
-                match i.to_usize() {
-                    Some(n) if n < items.len() => items[n] = val,
-                    _ => {
-                        return Err(Diag {
-                            code: "E0106",
-                            msg: "index out of bounds".into(),
-                            line: a.span.line,
-                            col: a.span.col,
-                        })
-                    }
-                }
-            }
-            (Val::Map(m), LValueTail::Index(key)) => {
-                let key_val = self.eval_expr(key, env)?;
-                m.borrow_mut().insert(key_val, val);
-            }
-            (other, LValueTail::Field(f)) => {
-                return Err(err(format!(
-                    "cannot set field '{}' on {}",
-                    f,
-                    other.type_name()
-                )))
-            }
-            (other, LValueTail::Index(_)) => {
-                return Err(err(format!(
-                    "cannot index-assign into {}",
-                    other.type_name()
-                )))
+        match last {
+            LValueTail::Field(f) => self.field_set(container, f, val, a.span.line, a.span.col)?,
+            LValueTail::Index(idx) => {
+                let key = self.eval_expr(idx, env)?;
+                self.index_set(container, key, val, a.span.line, a.span.col)?;
             }
         }
         Ok(Val::None)
     }
 
-    /// Read one lvalue step (`.field` or `[i]`) while walking to the target.
-    fn read_step(
+    /// Set a record field in place. Shared by the tree-walker and the VM, so
+    /// both engines cannot drift on what assignment means.
+    pub fn field_set(
         &mut self,
-        container: Val,
-        step: &LValueTail,
-        env: Rc<RefCell<Scope>>,
-        a: &AssignStmt,
-    ) -> Result<Val, Diag> {
-        let err = |msg: String| Diag {
-            code: "E0102",
-            msg,
-            line: a.span.line,
-            col: a.span.col,
-        };
-        match (container, step) {
-            (Val::Record(name, fields), LValueTail::Field(f)) => fields
-                .borrow()
-                .get(f)
-                .cloned()
-                .ok_or_else(|| err(format!("record '{}' has no field '{}'", name, f))),
-            (Val::List(items), LValueTail::Index(idx)) => {
-                let idx_val = self.eval_expr(idx, env)?;
-                let Val::Int(i) = idx_val else {
-                    return Err(err("list index must be an int".into()));
+        obj: Val,
+        field: &str,
+        val: Val,
+        line: u32,
+        col: u32,
+    ) -> Result<(), Diag> {
+        match obj {
+            Val::Record(name, fields) => {
+                if !fields.borrow().contains_key(field) {
+                    return Err(Diag {
+                        code: "E0102",
+                        msg: format!("record '{}' has no field '{}'", name, field),
+                        line,
+                        col,
+                    });
+                }
+                fields.borrow_mut().insert(field.to_string(), val);
+                Ok(())
+            }
+            other => Err(Diag {
+                code: "E0102",
+                msg: format!("cannot set field '{}' on {}", field, other.type_name()),
+                line,
+                col,
+            }),
+        }
+    }
+
+    /// Set a list slot or map entry in place. A list index must already exist
+    /// (out of bounds is a fault); a map key is created on demand.
+    pub fn index_set(
+        &mut self,
+        obj: Val,
+        key: Val,
+        val: Val,
+        line: u32,
+        col: u32,
+    ) -> Result<(), Diag> {
+        match obj {
+            Val::List(items) => {
+                let Val::Int(i) = key else {
+                    return Err(Diag {
+                        code: "E0102",
+                        msg: "list index must be an int".into(),
+                        line,
+                        col,
+                    });
                 };
-                let items = items.borrow();
+                let mut items = items.borrow_mut();
                 match i.to_usize() {
-                    Some(n) if n < items.len() => Ok(items[n].clone()),
+                    Some(n) if n < items.len() => {
+                        items[n] = val;
+                        Ok(())
+                    }
                     _ => Err(Diag {
                         code: "E0106",
                         msg: "index out of bounds".into(),
-                        line: a.span.line,
-                        col: a.span.col,
+                        line,
+                        col,
                     }),
                 }
             }
-            (Val::Map(m), LValueTail::Index(key)) => {
-                let key_val = self.eval_expr(key, env)?;
-                m.borrow()
-                    .get(&key_val)
-                    .cloned()
-                    .ok_or_else(|| err(format!("key not found: {}", key_val)))
+            Val::Map(m) => {
+                m.borrow_mut().insert(key, val);
+                Ok(())
             }
-            (other, LValueTail::Field(f)) => Err(err(format!(
-                "cannot read field '{}' from {}",
-                f,
-                other.type_name()
-            ))),
-            (other, LValueTail::Index(_)) => {
-                Err(err(format!("cannot index into {}", other.type_name())))
-            }
+            other => Err(Diag {
+                code: "E0102",
+                msg: format!("cannot index-assign into {}", other.type_name()),
+                line,
+                col,
+            }),
         }
     }
 
@@ -1108,41 +1115,16 @@ impl Evaluator {
                             Ok(Val::Enum(name, arg_vals))
                         }
                     }
-                    Val::Fn(params, body, closure_env) => {
-                        if params.len() != arg_vals.len() {
-                            return Err(Diag {
-                                code: "E0109",
-                                msg: format!(
-                                    "expected {} args, got {}",
-                                    params.len(),
-                                    arg_vals.len()
-                                ),
-                                line: callee.span.line,
-                                col: callee.span.col,
-                            });
-                        }
-                        let call_env = Rc::new(RefCell::new(Scope::new(Some(closure_env))));
-                        for (p, v) in params.into_iter().zip(arg_vals) {
-                            call_env.borrow_mut().define(p, v, false);
-                        }
-                        match self.eval_block(&body, call_env) {
-                            Ok(Ok(v)) => Ok(v),
-                            Ok(Err(Flow::Return(v))) => Ok(v),
-                            Ok(Err(_)) => Err(Diag {
-                                code: "E0110",
-                                msg: "break/continue outside loop".into(),
-                                line: callee.span.line,
-                                col: callee.span.col,
-                            }),
-                            Err(d) => {
-                                if d.code == "E_TRY_PROPAGATE" {
-                                    Ok(Val::Err(d.msg))
-                                } else {
-                                    Err(d)
-                                }
-                            }
-                        }
-                    }
+                    // One call path for both engines, so the arity check and
+                    // the recursion guard cannot drift between them.
+                    Val::Fn(params, body, closure_env) => self.call_user(
+                        params,
+                        body,
+                        closure_env,
+                        arg_vals,
+                        callee.span.line,
+                        callee.span.col,
+                    ),
                     Val::BuiltinFn(name) => self.call_builtin(name, arg_vals, callee),
                     _ => Err(Diag {
                         code: "E0111",
@@ -2133,6 +2115,31 @@ impl Evaluator {
                 col,
             });
         }
+        if self.call_depth >= MAX_CALL_DEPTH {
+            return Err(Diag {
+                code: "E0202",
+                msg: format!(
+                    "call stack too deep (limit {MAX_CALL_DEPTH}) — is this recursion unbounded?"
+                ),
+                line,
+                col,
+            });
+        }
+        self.call_depth += 1;
+        let result = self.call_user_inner(params, body, closure_env, args, line, col);
+        self.call_depth -= 1;
+        result
+    }
+
+    fn call_user_inner(
+        &mut self,
+        params: Vec<String>,
+        body: Block,
+        closure_env: Rc<RefCell<Scope>>,
+        args: Vec<Val>,
+        line: u32,
+        col: u32,
+    ) -> Result<Val, Diag> {
         let call_env = Rc::new(RefCell::new(Scope::new(Some(closure_env))));
         for (p, v) in params.into_iter().zip(args) {
             call_env.borrow_mut().define(p, v, false);

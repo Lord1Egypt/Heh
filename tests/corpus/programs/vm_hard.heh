@@ -1,0 +1,51 @@
+# The constructs the bytecode VM used to punt on: closures with capture,
+# optional narrowing (including jumping out of a narrowed block), and nested
+# field/index assignment. Both engines must agree here (tests/vm.rs).
+type P
+    x: int
+    tags: list[str]
+
+fn find(l: list[int], want: int) -> int?
+    for i in 0..l.len()
+        if l[i] == want
+            return some(i)
+    none
+
+fn main(sys: Sys)
+    # closures, including capture and use as a callback
+    mut bump = 100
+    let shift = fn(x: int) -> int
+        x + bump
+    sys.print([1, 2, 3].map(shift))
+
+    # narrowing that breaks out of a loop from inside the narrowed block
+    mut seen = 0
+    for k in [1, 2, 3]
+        let idx = find([9, 2], k)
+        if idx != none
+            seen = idx
+            break
+    sys.print(seen)
+
+    # narrowing whose then-branch continues
+    mut hits = 0
+    for k in [1, 2, 3]
+        let idx = find([2, 3], k)
+        if idx == none
+            continue
+        hits += idx + 1
+    sys.print(hits)
+
+    # nested lvalue assignment, compound forms, map insert
+    let p = P(x: 1, tags: ["a", "b"])
+    p.x += 41
+    p.tags[1] = "z"
+    sys.print(p.x)
+    sys.print(p.tags)
+    mut m = {"a": 1}
+    m["b"] = 2
+    m["a"] *= 10
+    sys.print(m)
+    mut grid = [[1, 2], [3, 4]]
+    grid[1][0] += 100
+    sys.print(grid)
