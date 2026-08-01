@@ -257,6 +257,47 @@ impl Evaluator {
         Ok(())
     }
 
+    /// Install a file's `use`s, builtins, and top-level functions without any
+    /// `sys` binding (used by `heh test`: test functions must be pure).
+    pub fn load_defs(&mut self, file: &File) -> Result<(), Diag> {
+        self.install_defs(file)
+    }
+
+    /// Call a zero-argument function by name and return its value. A fault
+    /// (e.g. a failed `debug.assert`) surfaces as `Err`. Used by `heh test`.
+    pub fn call_zero_arg_fn(&mut self, name: &str) -> Result<Val, Diag> {
+        let f = self.global.borrow().get(name);
+        match f {
+            Some(Val::Fn(params, body, env)) => {
+                if !params.is_empty() {
+                    return Err(Diag {
+                        code: "E0109",
+                        msg: format!("test function '{}' must take no arguments", name),
+                        line: 1,
+                        col: 1,
+                    });
+                }
+                let call_env = Rc::new(RefCell::new(Scope::new(Some(env))));
+                match self.eval_block(&body, call_env) {
+                    Ok(Ok(v)) | Ok(Err(Flow::Return(v))) => Ok(v),
+                    Ok(Err(_)) => Err(Diag {
+                        code: "E0110",
+                        msg: "break/continue outside loop".into(),
+                        line: 1,
+                        col: 1,
+                    }),
+                    Err(d) => Err(d),
+                }
+            }
+            _ => Err(Diag {
+                code: "E0011",
+                msg: format!("no function named '{}'", name),
+                line: 1,
+                col: 1,
+            }),
+        }
+    }
+
     /// Resolve `use` declarations, register builtin methods, and define the
     /// file's top-level functions in the current global scope. Shared by
     /// `eval_file` and imported modules (imported modules never see `sys`).
