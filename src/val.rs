@@ -6,6 +6,90 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
+/// A `map[K, V]` — insertion-ordered, as SPEC §5.4 requires. A plain HashMap
+/// would iterate in a per-process random order, which makes otherwise
+/// deterministic programs print differently on every run.
+///
+/// Entries live in a Vec (the order of record) with a HashMap from key to slot
+/// for O(1) lookup. Removal is O(n) because it has to close the gap; that is
+/// the rare operation and it keeps the structure free of tombstones.
+#[derive(Debug, Clone, Default)]
+pub struct OrderedMap {
+    entries: Vec<(Val, Val)>,
+    index: HashMap<Val, usize>,
+}
+
+impl OrderedMap {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
+    pub fn get(&self, key: &Val) -> Option<&Val> {
+        self.index.get(key).map(|&i| &self.entries[i].1)
+    }
+
+    /// Insert or overwrite. Overwriting keeps the key's original position, the
+    /// same way Python dicts do.
+    pub fn insert(&mut self, key: Val, val: Val) {
+        match self.index.get(&key) {
+            Some(&i) => self.entries[i].1 = val,
+            None => {
+                self.index.insert(key.clone(), self.entries.len());
+                self.entries.push((key, val));
+            }
+        }
+    }
+
+    pub fn remove(&mut self, key: &Val) -> Option<Val> {
+        let i = self.index.remove(key)?;
+        let (_, val) = self.entries.remove(i);
+        for slot in self.index.values_mut() {
+            if *slot > i {
+                *slot -= 1;
+            }
+        }
+        Some(val)
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&Val, &Val)> {
+        self.entries.iter().map(|(k, v)| (k, v))
+    }
+
+    pub fn keys(&self) -> impl Iterator<Item = &Val> {
+        self.entries.iter().map(|(k, _)| k)
+    }
+
+    pub fn values(&self) -> impl Iterator<Item = &Val> {
+        self.entries.iter().map(|(_, v)| v)
+    }
+}
+
+impl PartialEq for OrderedMap {
+    /// Maps compare by content, not by insertion order — `{"a": 1, "b": 2}`
+    /// equals `{"b": 2, "a": 1}` even though they print differently.
+    fn eq(&self, other: &Self) -> bool {
+        self.len() == other.len() && self.iter().all(|(k, v)| other.get(k) == Some(v))
+    }
+}
+
+impl FromIterator<(Val, Val)> for OrderedMap {
+    fn from_iter<I: IntoIterator<Item = (Val, Val)>>(iter: I) -> Self {
+        let mut map = Self::new();
+        for (k, v) in iter {
+            map.insert(k, v);
+        }
+        map
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Val {
     Int(BigInt),
@@ -23,11 +107,31 @@ pub enum Val {
     Err(String),
     Some(Box<Val>),
     List(Rc<RefCell<Vec<Val>>>),
-    Map(Rc<RefCell<HashMap<Val, Val>>>),
+    Map(Rc<RefCell<OrderedMap>>),
     Record(String, Rc<RefCell<HashMap<String, Val>>>),
     Enum(String, Vec<Val>),
     BoundMethod(Box<Val>, String),
     None,
+}
+
+impl Val {
+    /// The value's type as it appears in diagnostics.
+    pub fn type_name(&self) -> &'static str {
+        match self {
+            Val::Int(_) => "int",
+            Val::Float(_) => "float",
+            Val::Bool(_) => "bool",
+            Val::Str(_) => "str",
+            Val::Range(..) => "range",
+            Val::Fn(..) | Val::BuiltinFn(_) | Val::BoundMethod(..) => "fn",
+            Val::Ok(_) | Val::Err(_) => "result",
+            Val::Some(_) | Val::None => "option",
+            Val::List(_) => "list",
+            Val::Map(_) => "map",
+            Val::Record(..) => "record",
+            Val::Enum(..) => "enum",
+        }
+    }
 }
 
 impl PartialEq for Val {

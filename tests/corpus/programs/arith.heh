@@ -1,0 +1,27 @@
+# Arithmetic (SPEC §5.1, §5.2, §6.1): unbounded `**`, floor `//`, Python-sign
+# `%`, and the explicit int/float conversions.
+sys.print(2 ** 200)
+sys.print(2 ** 10)
+sys.print(0 ** 0)
+sys.print((-2) ** 3)
+sys.print((-2) ** 4)
+
+sys.print(7 // 2)
+sys.print(-7 // 2)
+sys.print(7 // -2)
+sys.print(-7 // -2)
+sys.print(-6 // 3)
+
+sys.print(7 % 3)
+sys.print(-7 % 3)
+sys.print(7 % -3)
+sys.print(-7 % -3)
+sys.print(-6 % 3)
+
+sys.print(7 / 2)
+
+sys.print(int(3.9))
+sys.print(int(-3.9))
+sys.print(int(2.0 ** 80.0))
+sys.print(float(3))
+sys.print(int(3.9) + 1)

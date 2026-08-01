@@ -103,26 +103,22 @@ pub fn eval_builtin(name: &str, mut args: Vec<Val>) -> Result<Val, String> {
                 Err("pop expects list".into())
             }
         }
+        // The non-faulting lookups: both return `T?` (SPEC §7.3), so a missing
+        // index or key is `none` rather than a fault.
         "get" => {
             if args.len() != 2 { return Err("get expects 2 args".into()); }
             match (&args[0], &args[1]) {
                 (Val::List(l), Val::Int(i)) => {
                     let b = l.borrow();
-                    if i.sign { return Ok(Val::Err("negative index".into())); }
-                    let idx = i.limbs[0] as usize;
-                    if idx < b.len() {
-                        Ok(Val::Ok(Box::new(b[idx].clone())))
-                    } else {
-                        Ok(Val::Err("index out of bounds".into()))
+                    match i.to_usize() {
+                        Some(idx) if idx < b.len() => Ok(Val::Some(Box::new(b[idx].clone()))),
+                        _ => Ok(Val::None),
                     }
                 }
-                (Val::Map(m), k) => {
-                    if let Some(v) = m.borrow().get(k) {
-                        Ok(Val::Ok(Box::new(v.clone())))
-                    } else {
-                        Ok(Val::Err("key not found".into()))
-                    }
-                }
+                (Val::Map(m), k) => match m.borrow().get(k) {
+                    Some(v) => Ok(Val::Some(Box::new(v.clone()))),
+                    None => Ok(Val::None),
+                },
                 _ => Err("get expects list/int or map/any".into())
             }
         }
@@ -182,6 +178,59 @@ pub fn eval_builtin(name: &str, mut args: Vec<Val>) -> Result<Val, String> {
         "str" => {
             if args.len() != 1 { return Err("str expects 1 arg".into()); }
             Ok(Val::Str(args[0].to_string()))
+        }
+        // Explicit numeric conversion (SPEC §5.2) — int and float never mix
+        // implicitly, so these are the only bridge between them.
+        "int" => {
+            if args.len() != 1 { return Err("int expects 1 arg".into()); }
+            match &args[0] {
+                Val::Int(i) => Ok(Val::Int(i.clone())),
+                Val::Float(f) => {
+                    if f.is_nan() || f.is_infinite() {
+                        return Err(format!("int({}) has no integer value", f));
+                    }
+                    Ok(Val::Int(BigInt::from_f64_trunc(*f)))
+                }
+                _ => Err("int expects int or float".into()),
+            }
+        }
+        "float" => {
+            if args.len() != 1 { return Err("float expects 1 arg".into()); }
+            match &args[0] {
+                Val::Float(f) => Ok(Val::Float(*f)),
+                Val::Int(i) => Ok(Val::Float(i.to_f64())),
+                _ => Err("float expects int or float".into()),
+            }
+        }
+        // `list(0..10)` materializes a finite range (SPEC §5.5); an unbounded
+        // range would never terminate, so it is rejected rather than hung on.
+        "list" => {
+            if args.len() != 1 { return Err("list expects 1 arg".into()); }
+            match &args[0] {
+                Val::List(l) => Ok(Val::List(Rc::new(RefCell::new(l.borrow().clone())))),
+                Val::Str(s) => {
+                    let chars: Vec<Val> = s.chars().map(|c| Val::Str(c.to_string())).collect();
+                    Ok(Val::List(Rc::new(RefCell::new(chars))))
+                }
+                Val::Map(m) => {
+                    let keys: Vec<Val> = m.borrow().keys().cloned().collect();
+                    Ok(Val::List(Rc::new(RefCell::new(keys))))
+                }
+                Val::Range(start, end, inclusive) => {
+                    let (Val::Int(from), Val::Int(to)) = (start.as_ref(), end.as_ref()) else {
+                        return Err("list() needs a bounded range of ints".into());
+                    };
+                    let one = BigInt::from_u64(1);
+                    let mut items = Vec::new();
+                    let mut cur = from.clone();
+                    while cur < *to || (*inclusive && cur == *to) {
+                        items.push(Val::Int(cur.clone()));
+                        cur = &cur + &one;
+                    }
+                    Ok(Val::List(Rc::new(RefCell::new(items))))
+                }
+                _ => Err("list expects a range, str, map, or list".into()),
+            }
         }
         "int_of" => {
             if args.len() != 1 { return Err("int_of expects 1 arg".into()); }

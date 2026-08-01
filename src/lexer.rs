@@ -119,11 +119,29 @@ const OPS1: [&str; 18] = [
     "+", "-", "*", "/", "%", "<", ">", "=", "(", ")", "[", "]", "{", "}", ",", ":", ".", "?",
 ];
 
+/// A `#` comment, kept aside so `heh fmt` can put it back. Comments are not
+/// tokens — nothing downstream of the lexer sees them except the formatter.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Comment {
+    pub line: u32,
+    pub col: u32,
+    pub text: String,
+    /// True when the comment is alone on its line (no code before it).
+    pub own_line: bool,
+}
+
 pub fn lex(source: &str) -> Result<Vec<Token>, Diag> {
+    lex_with_comments(source).map(|(tokens, _)| tokens)
+}
+
+/// Lex, also returning every comment in source order (for `heh fmt`).
+pub fn lex_with_comments(source: &str) -> Result<(Vec<Token>, Vec<Comment>), Diag> {
     // SPEC §2: \r\n is normalized to \n. A leading BOM is tolerated.
     let source = source.replace("\r\n", "\n");
     let source = source.strip_prefix('\u{feff}').unwrap_or(&source);
-    Lexer::new(source).run()
+    let mut lexer = Lexer::new(source);
+    let tokens = lexer.run()?;
+    Ok((tokens, std::mem::take(&mut lexer.comments)))
 }
 
 /// Stable dump format used by `heh tokens` and the golden tests:
@@ -189,6 +207,7 @@ struct Lexer {
     open: Vec<(char, u32, u32)>,
     toks: Vec<Token>,
     interp_depth: u32,
+    comments: Vec<Comment>,
 }
 
 impl Lexer {
@@ -202,6 +221,7 @@ impl Lexer {
             open: Vec::new(),
             toks: Vec::new(),
             interp_depth: 0,
+            comments: Vec::new(),
         }
     }
 
@@ -238,7 +258,7 @@ impl Lexer {
         })
     }
 
-    fn run(mut self) -> Result<Vec<Token>, Diag> {
+    fn run(&mut self) -> Result<Vec<Token>, Diag> {
         loop {
             // Start of a physical line with all brackets closed: measure indentation.
             let ind_line = self.line;
@@ -287,7 +307,7 @@ impl Lexer {
             self.push(TokenKind::Dedent, self.line, 1);
         }
         self.push(TokenKind::Eof, self.line, self.col);
-        Ok(self.toks)
+        Ok(std::mem::take(&mut self.toks))
     }
 
     fn layout(&mut self, w: u32, line: u32) -> Result<(), Diag> {
@@ -393,12 +413,22 @@ impl Lexer {
     }
 
     fn skip_comment(&mut self) {
+        let (line, col) = (self.line, self.col);
+        // Alone on its line if only whitespace precedes it.
+        let own_line = self.chars[..self.i]
+            .iter()
+            .rev()
+            .take_while(|&&c| c != '\n')
+            .all(|c| c.is_whitespace());
+        let mut text = String::new();
         while let Some(c) = self.cur() {
             if c == '\n' {
                 break;
             }
+            text.push(c);
             self.advance();
         }
+        self.comments.push(Comment { line, col, text: text.trim_end().to_string(), own_line });
     }
 
     fn read_token(&mut self) -> Result<Token, Diag> {

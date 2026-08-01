@@ -1,9 +1,0 @@
---- src/check.rs
-+++ src/check.rs
-@@ -498,6 +498,7 @@
-             }
-             ExprKind::Field(base, field_name) => {
-                 let base_ty = self.check_expr(base);
-+                println!("Field base_ty for {}: {:?}", field_name, base_ty);
-                 match base_ty {
-                     Ty::Record(name) => {

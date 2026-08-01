@@ -146,6 +146,9 @@ impl<'a> Compiler<'a> {
                 self.emit(Op::Define(l.name.clone(), l.is_mut));
             }
             Statement::Assign(a) => {
+                // Only bare-name targets reach here; `needs_tree_walker` sends
+                // field/index targets down the tree-walking path instead.
+                debug_assert!(a.target.tail.is_empty());
                 self.compile_expr(&a.rhs);
                 let (line, col) = (a.span.line, a.span.col);
                 match a.op {
@@ -442,9 +445,12 @@ impl<'a> Compiler<'a> {
     }
 }
 
-/// Does this program use closures anywhere? The VM can't compile them, so
-/// `heh run` falls back to the tree-walker for such programs.
-pub fn uses_closures(file: &File) -> bool {
+/// Does this program use anything the bytecode VM cannot reproduce exactly?
+/// Two constructs qualify: closures (no compilation path) and optional
+/// narrowing (`if x != none`), whose unwrap is scoped to the then-branch while
+/// VM chunks share one flat scope. `heh run --vm` falls back to the
+/// tree-walker for such programs so output stays byte-identical either way.
+pub fn needs_tree_walker(file: &File) -> bool {
     fn expr_has(e: &Expr) -> bool {
         match &e.kind {
             ExprKind::Closure(..) => true,
@@ -466,8 +472,12 @@ pub fn uses_closures(file: &File) -> bool {
         match s {
             Statement::Expr(e) => expr_has(e),
             Statement::Let(l) => expr_has(&l.init),
-            Statement::Assign(a) => expr_has(&a.rhs),
-            Statement::If(i) => expr_has(&i.cond) || block_has(&i.then_block) || i.elifs.iter().any(|(c, b)| expr_has(c) || block_has(b)) || i.else_block.as_ref().is_some_and(block_has),
+            // A field/index target (`p.x = v`, `l[i] = v`) has no VM encoding;
+            // the compiler below only ever assigns to a bare name.
+            Statement::Assign(a) => !a.target.tail.is_empty() || expr_has(&a.rhs),
+            // `if x != none` narrows only inside the then-branch.
+            Statement::If(i) => matches!(crate::check::none_comparison(&i.cond), Some((_, true)))
+                || expr_has(&i.cond) || block_has(&i.then_block) || i.elifs.iter().any(|(c, b)| expr_has(c) || block_has(b)) || i.else_block.as_ref().is_some_and(block_has),
             Statement::While(w) => expr_has(&w.cond) || block_has(&w.body),
             Statement::For(f) => expr_has(&f.iter) || block_has(&f.body),
             Statement::Match(m) => expr_has(&m.expr) || m.arms.iter().any(|a| block_has(&a.body)),
@@ -506,18 +516,17 @@ pub fn compile(file: &File) -> Program {
 
     let main = fn_index.get("main").copied();
 
-    // Top-level statements (script mode) — skipped when a `main` exists.
+    // Top-level `let` constants run in both modes (SPEC §11 allows them
+    // alongside `fn main`); bare statements are script mode only.
     let mut top = Compiler::new(&fn_index);
-    if main.is_none() {
-        for item in &file.items {
-            match item {
-                TopItem::Stmt(s) => top.compile_stmt_discard(s),
-                TopItem::Let(l) => {
-                    top.compile_expr(&l.init);
-                    top.emit(Op::Define(l.name.clone(), l.is_mut));
-                }
-                _ => {}
+    for item in &file.items {
+        match item {
+            TopItem::Let(l) => {
+                top.compile_expr(&l.init);
+                top.emit(Op::Define(l.name.clone(), l.is_mut));
             }
+            TopItem::Stmt(s) if main.is_none() => top.compile_stmt_discard(s),
+            _ => {}
         }
     }
     let top_level = top.finish("<top>".into(), Vec::new());

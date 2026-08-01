@@ -1,0 +1,30 @@
+# Field and index assignment (SPEC §14 `lvalue`). Records, lists, and maps are
+# reference values, so `let` binds the reference while the contents stay
+# mutable (§5.4).
+
+type Point
+    x: int
+    tags: list[str]
+
+fn main(sys: Sys)
+    let p = Point(x: 1, tags: ["a", "b"])
+    sys.print(p.x)
+    p.x = 5
+    sys.print(p.x)
+    p.x += 3
+    sys.print(p.x)
+
+    mut l = [1, 2, 3]
+    l[0] = 9
+    sys.print(l)
+    l[1] += 10
+    sys.print(l)
+
+    mut m = {"a": 1}
+    m["b"] = 2
+    m["a"] += 100
+    sys.print(m)
+
+    # Nested: an index step through a field.
+    p.tags[0] = "z"
+    sys.print(p.tags)

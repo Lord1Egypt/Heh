@@ -395,6 +395,18 @@ impl<'a> Parser<'a> {
         Ok(Block { span, stmts })
     }
 
+    /// Consume the NEWLINE that ends a statement. A statement whose expression
+    /// ends in an indented block — `let double = fn(x: int) -> int` and its
+    /// body (SPEC §6.5) — has already had that NEWLINE folded into the block's
+    /// DEDENT, so the statement is complete without one.
+    fn expect_stmt_end(&mut self, ctx: &'static str) -> Result<(), Diag> {
+        if matches!(self.tokens.get(self.pos.wrapping_sub(1)).map(|t| &t.kind), Some(TokenKind::Dedent)) {
+            return Ok(());
+        }
+        self.expect(&TokenKind::Newline, ctx)?;
+        Ok(())
+    }
+
     fn parse_let_stmt(&mut self) -> Result<LetStmt, Diag> {
         let mut is_mut = false;
         let t = if self.advance_if_kw(Kw::Mut) {
@@ -411,7 +423,7 @@ impl<'a> Parser<'a> {
         let (name, _) = self.expect_ident("variable name")?;
         self.expect_op("=", "'=' after variable name")?;
         let init = self.parse_expr()?;
-        self.expect(&TokenKind::Newline, "newline after let statement")?;
+        self.expect_stmt_end("newline after let statement")?;
         Ok(LetStmt {
             span,
             is_mut,
@@ -474,7 +486,7 @@ impl<'a> Parser<'a> {
             self.advance(); // consume op
             let lvalue = self.expr_to_lvalue(expr)?;
             let rhs = self.parse_expr()?;
-            self.expect(&TokenKind::Newline, "newline after assignment")?;
+            self.expect_stmt_end("newline after assignment")?;
             Ok(Statement::Assign(AssignStmt {
                 span: lvalue.span.clone(),
                 target: lvalue,
@@ -482,7 +494,7 @@ impl<'a> Parser<'a> {
                 rhs,
             }))
         } else {
-            self.expect(&TokenKind::Newline, "newline after expression statement")?;
+            self.expect_stmt_end("newline after expression statement")?;
             Ok(Statement::Expr(expr))
         }
     }
@@ -703,7 +715,7 @@ impl<'a> Parser<'a> {
         if self.peek_kind() != Some(&TokenKind::Newline) {
             expr = Some(self.parse_expr()?);
         }
-        self.expect(&TokenKind::Newline, "newline after return")?;
+        self.expect_stmt_end("newline after return")?;
         Ok(ReturnStmt { span, expr })
     }
 

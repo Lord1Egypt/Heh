@@ -209,6 +209,40 @@ impl BigInt {
     pub fn is_zero(&self) -> bool {
         self.limbs.is_empty()
     }
+
+    /// Truncate a finite float towards zero into an exact integer. Callers must
+    /// reject nan/inf first — those have no integer value at all.
+    pub fn from_f64_trunc(f: f64) -> Self {
+        let neg = f < 0.0;
+        let mut mag = f.abs().trunc();
+        let mut out = Self::zero();
+        let mut scale = Self::from_u64(1);
+        // Peel 32 bits at a time off the bottom so huge floats stay exact.
+        const CHUNK: f64 = 4294967296.0;
+        while mag >= 1.0 {
+            let rem = (mag % CHUNK) as u64;
+            out = &out + &(&Self::from_u64(rem) * &scale);
+            scale = &scale * &Self::from_u64(CHUNK as u64);
+            mag = (mag / CHUNK).trunc();
+        }
+        out.sign = neg && !out.is_zero();
+        out
+    }
+
+    /// Value as a `usize`, or `None` when negative or too large to index with.
+    pub fn to_usize(&self) -> Option<usize> {
+        if self.sign {
+            return None;
+        }
+        if self.limbs.len() > 2 {
+            return None;
+        }
+        let mut v: u64 = 0;
+        for (i, &limb) in self.limbs.iter().enumerate() {
+            v |= (limb as u64) << (32 * i);
+        }
+        usize::try_from(v).ok()
+    }
 }
 
 impl PartialEq for BigInt {
@@ -407,13 +441,6 @@ impl BigInt {
         }
 
         q.sign = self.sign != other.sign;
-        if !q.limbs.is_empty() {
-            // Apply Heh/Python sign rules for modulo/floor div
-            // Wait! The division operator in Heh:
-            // // is floor division. % is sign-follows-divisor.
-            // But this function just returns truncating division + remainder.
-        }
-
         a.sign = self.sign;
         if q.is_zero() {
             q.sign = false;
@@ -466,6 +493,36 @@ impl BigInt {
             sign: self.sign,
             limbs,
         }
+    }
+
+    /// Floor division and Python-style modulo (SPEC §6.1): the quotient rounds
+    /// towards negative infinity and the remainder takes the divisor's sign.
+    /// `div_mod` truncates, so adjust by one whenever the remainder is nonzero
+    /// and the operands' signs differ.
+    pub fn div_mod_floor(&self, other: &Self) -> (Self, Self) {
+        let (q, r) = self.div_mod(other);
+        if r.is_zero() || self.sign == other.sign {
+            return (q, r);
+        }
+        (&q - &Self::from_u64(1), &r + other)
+    }
+
+    /// `self ** exp` by square-and-multiply. `exp` must be non-negative.
+    pub fn pow(&self, exp: &Self) -> Self {
+        let mut result = Self::from_u64(1);
+        let mut base = self.clone();
+        let mut e = exp.clone();
+        e.sign = false;
+        while !e.is_zero() {
+            if e.limbs[0] & 1 == 1 {
+                result = &result * &base;
+            }
+            e = e.shr_1();
+            if !e.is_zero() {
+                base = &base * &base;
+            }
+        }
+        result
     }
 
     fn set_bit(mut self, bit: usize) -> Self {

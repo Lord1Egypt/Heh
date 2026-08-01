@@ -57,6 +57,11 @@ impl Checker {
         self.define("int_of".to_string(), Ty::Any, false);
         self.define("float_of".to_string(), Ty::Any, false);
         self.define("str".to_string(), Ty::Any, false);
+        // The explicit conversions (SPEC §5.2, §5.5). These carry real result
+        // types so `int(x) + 1` still checks as int arithmetic.
+        self.define("int".to_string(), Ty::Fn(vec![Ty::Any], Box::new(Ty::Int)), false);
+        self.define("float".to_string(), Ty::Fn(vec![Ty::Any], Box::new(Ty::Float)), false);
+        self.define("list".to_string(), Ty::Any, false);
         self.define("print".to_string(), Ty::Any, false); // In case they use it directly
         self.define("exit".to_string(), Ty::Any, false);
         self.define("len".to_string(), Ty::Any, false);
@@ -91,10 +96,14 @@ impl Checker {
             match item {
                 TopItem::Type(t) => {
                     self.types.insert(t.name.clone(), t.clone());
-                    // Add type constructor to funcs (for Enums and Records)
-                    // We can just treat them as Ty::Any for now, or build proper Fn type
-                    self.define(t.name.clone(), Ty::Any, false); // Constructor
-                    
+                    // The constructor carries the type it builds, so
+                    // `P(x: 1).x` and `p.x = 2` both know `p` is a record.
+                    let built = match t.kind {
+                        TypeDeclKind::Record(_) => Ty::Record(t.name.clone()),
+                        TypeDeclKind::Enum(_) => Ty::Enum(t.name.clone()),
+                    };
+                    self.define(t.name.clone(), built, false);
+
                     if let TypeDeclKind::Enum(variants) = &t.kind {
                         for v in variants {
                             self.define(v.name.clone(), Ty::Enum(t.name.clone()), false);
@@ -249,7 +258,8 @@ impl Checker {
                     }
                 }
                 
-                if !lhs_ty.is_error() && !rhs_ty.is_error() && lhs_ty != rhs_ty {
+                if !lhs_ty.is_error() && !rhs_ty.is_error()
+                    && lhs_ty != Ty::Any && rhs_ty != Ty::Any && lhs_ty != rhs_ty {
                     self.diags.push(Diag { code: "E0040", msg: "type mismatch in assignment".into(), line: a.span.line, col: a.span.col });
                 }
             }
@@ -258,7 +268,35 @@ impl Checker {
                 if !cond_ty.is_error() && cond_ty != Ty::Bool && cond_ty != Ty::Any {
                     self.diags.push(Diag { code: "E0041", msg: "if condition must be bool".into(), line: i.cond.span.line, col: i.cond.span.col });
                 }
-                self.check_block(&i.then_block);
+
+                // Optional narrowing (SPEC §6.4). `if x != none` narrows x to T
+                // inside the then-branch; `if x == none` followed by a jump out
+                // narrows x to T for everything after the if.
+                let narrowing = none_comparison(&i.cond).and_then(|(name, is_neq)| {
+                    match self.lookup(name) {
+                        Some((Ty::Optional(inner), is_mut)) => Some((name.to_string(), is_neq, *inner, is_mut)),
+                        _ => None,
+                    }
+                });
+
+                match &narrowing {
+                    Some((name, true, inner, is_mut)) => {
+                        self.push_scope();
+                        self.define(name.clone(), inner.clone(), *is_mut);
+                        for stmt in &i.then_block.stmts {
+                            self.check_stmt(stmt);
+                        }
+                        self.pop_scope();
+                    }
+                    _ => self.check_block(&i.then_block),
+                }
+
+                if let Some((name, false, inner, is_mut)) = narrowing {
+                    if block_diverges(&i.then_block) {
+                        self.define(name, inner, is_mut);
+                    }
+                }
+
                 for (elif_cond, elif_block) in &i.elifs {
                     let elif_cond_ty = self.check_expr(elif_cond);
                     if !elif_cond_ty.is_error() && elif_cond_ty != Ty::Bool && elif_cond_ty != Ty::Any {
@@ -281,10 +319,12 @@ impl Checker {
                 let iter_ty = self.check_expr(&f.iter);
                 let elem_ty = match iter_ty {
                     Ty::List(inner) => *inner,
+                    // Iterating a map yields its keys (SPEC §6.3).
+                    Ty::Map(key, _) => *key,
                     Ty::Str => Ty::Str,
-                    Ty::Error => Ty::Error,
+                    Ty::Any | Ty::Error => Ty::Any,
                     _ => {
-                        self.diags.push(Diag { code: "E0042", msg: "can only iterate over list or str".into(), line: f.iter.span.line, col: f.iter.span.col });
+                        self.diags.push(Diag { code: "E0042", msg: "can only iterate over a list, map, str, or range".into(), line: f.iter.span.line, col: f.iter.span.col });
                         Ty::Error
                     }
                 };
@@ -424,7 +464,9 @@ impl Checker {
                                 Ty::Error
                             }
                         }
-                        Ty::Error => Ty::Error,
+                        // Any = not statically known (e.g. through a closure);
+                        // the evaluator checks these at runtime.
+                        Ty::Any | Ty::Error => curr_ty,
                         _ => {
                             self.diags.push(Diag { code: "E0054", msg: "field access on non-record".into(), line: lval.span.line, col: lval.span.col });
                             Ty::Error
@@ -435,18 +477,18 @@ impl Checker {
                     let idx_ty = self.check_expr(idx_expr);
                     curr_ty = match curr_ty {
                         Ty::List(inner) => {
-                            if !idx_ty.is_error() && idx_ty != Ty::Int {
+                            if !idx_ty.is_error() && idx_ty != Ty::Any && idx_ty != Ty::Int {
                                 self.diags.push(Diag { code: "E0055", msg: "list index must be int".into(), line: lval.span.line, col: lval.span.col });
                             }
                             *inner
                         }
                         Ty::Map(k, v) => {
-                            if !idx_ty.is_error() && idx_ty != *k {
+                            if !idx_ty.is_error() && idx_ty != Ty::Any && idx_ty != *k {
                                 self.diags.push(Diag { code: "E0056", msg: "map index type mismatch".into(), line: lval.span.line, col: lval.span.col });
                             }
                             *v
                         }
-                        Ty::Error => Ty::Error,
+                        Ty::Any | Ty::Error => curr_ty,
                         _ => {
                             self.diags.push(Diag { code: "E0057", msg: "index on non-collection".into(), line: lval.span.line, col: lval.span.col });
                             Ty::Error
@@ -526,8 +568,13 @@ impl Checker {
                         }
                     }
                     BinOp::Range | BinOp::RangeInc => {
-                        if l_ty == Ty::Int && r_ty == Ty::Int {
-                            Ty::List(Box::new(Ty::Int)) // technically an iterator but Heh uses lists for range loops usually? wait, it just produces a range object... we can represent as Any for now.
+                        // An unbounded range (`0..`) carries a `none` upper
+                        // bound, so only the start pins the element type.
+                        let bounded = r_ty == Ty::Int || matches!(right.kind, ExprKind::Literal(Literal::None));
+                        if l_ty == Ty::Int && bounded {
+                            Ty::List(Box::new(Ty::Int))
+                        } else if l_ty == Ty::Any || r_ty == Ty::Any {
+                            Ty::Any
                         } else {
                             Ty::Error
                         }
@@ -629,19 +676,19 @@ impl Checker {
                 let idx_ty = self.check_expr(idx);
                 match base_ty {
                     Ty::List(inner) => {
-                        if !idx_ty.is_error() && idx_ty != Ty::Int {
+                        if !idx_ty.is_error() && idx_ty != Ty::Any && idx_ty != Ty::Int {
                             self.diags.push(Diag { code: "E0055", msg: "list index must be int".into(), line: e.span.line, col: e.span.col });
                         }
                         *inner
                     }
                     Ty::Map(k, v) => {
-                        if !idx_ty.is_error() && idx_ty != *k {
+                        if !idx_ty.is_error() && idx_ty != Ty::Any && idx_ty != *k {
                             self.diags.push(Diag { code: "E0056", msg: "map index type mismatch".into(), line: e.span.line, col: e.span.col });
                         }
                         *v
                     }
                     Ty::Str => {
-                        if !idx_ty.is_error() && idx_ty != Ty::Int {
+                        if !idx_ty.is_error() && idx_ty != Ty::Any && idx_ty != Ty::Int {
                             self.diags.push(Diag { code: "E0055", msg: "str index must be int".into(), line: e.span.line, col: e.span.col });
                         }
                         Ty::Str
@@ -706,4 +753,31 @@ impl Checker {
             }
         }
     }
+}
+
+/// Recognise the two `none` comparisons that drive optional narrowing
+/// (SPEC §6.4): returns the compared variable and whether the test was `!=`.
+/// Either operand order is accepted.
+pub fn none_comparison(cond: &Expr) -> Option<(&str, bool)> {
+    let ExprKind::Binary(op, left, right) = &cond.kind else { return None };
+    let is_neq = match op {
+        BinOp::Neq => true,
+        BinOp::Eq => false,
+        _ => return None,
+    };
+    let is_none = |e: &Expr| matches!(&e.kind, ExprKind::Literal(Literal::None));
+    match (&left.kind, &right.kind) {
+        (ExprKind::Ident(name), _) if is_none(right) => Some((name.as_str(), is_neq)),
+        (_, ExprKind::Ident(name)) if is_none(left) => Some((name.as_str(), is_neq)),
+        _ => None,
+    }
+}
+
+/// Whether a block always leaves the enclosing block — the condition under
+/// which `if x == none` narrows `x` for the statements that follow it.
+fn block_diverges(b: &Block) -> bool {
+    matches!(
+        b.stmts.last(),
+        Some(Statement::Return(_) | Statement::Break(_) | Statement::Continue(_))
+    )
 }

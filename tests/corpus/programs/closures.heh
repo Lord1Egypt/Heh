@@ -1,0 +1,15 @@
+# Anonymous functions are values and close over their environment (SPEC §6.5).
+let double = fn(x: int) -> int
+    x * 2
+
+let add = fn(a: int, b: int) -> int
+    a + b
+
+mut offset = 10
+let shifted = fn(x: int) -> int
+    x + offset
+
+sys.print(double(21))
+sys.print(add(2, 3))
+sys.print(shifted(1))
+sys.print([1, 2, 3].map(double))

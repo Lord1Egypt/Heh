@@ -1,4 +1,4 @@
-# std/json — parse and write (object keys sorted on write)
+# std/json — parse and write (maps are insertion-ordered, so this round-trips)
 use std/json
 let doc = try json.parse("\{\"name\": \"Ada\", \"age\": 36, \"tags\": [\"math\", \"first\"], \"active\": true, \"note\": null}") else exit
 sys.print(json.write(doc))

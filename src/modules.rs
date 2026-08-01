@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 /// The std module names that `use std/<name>` may bind.
-pub const MODULES: &[&str] = &["math", "fmt", "json", "csv", "hash", "regex", "debug"];
+pub const MODULES: &[&str] = &["math", "fmt", "json", "csv", "hash", "regex", "time", "debug"];
 
 /// SHA-256 of `data` as a lowercase hex string (used by the vendor lockfile).
 pub fn sha256_hex(data: &[u8]) -> String {
@@ -27,6 +27,7 @@ pub fn module_record(path: &str) -> Option<Val> {
         "csv" => &["csv.parse", "csv.write"],
         "hash" => &["hash.sha256", "hash.crc32"],
         "regex" => &["regex.is_match", "regex.find"],
+        "time" => &["time.parts", "time.format", "time.from_parts", "time.is_leap", "time.days_in_month"],
         "debug" => &["debug.fault", "debug.assert"],
         _ => return None,
     };
@@ -134,6 +135,48 @@ fn dispatch(name: &str, args: Vec<Val>) -> Result<Val, String> {
         }
 
         // ---- std/regex ------------------------------------------------------
+        // ---- std/time (pure: the instant is always an argument) -------------
+        "time.parts" => {
+            need(&args, 1, "time.parts")?;
+            Ok(time_parts(millis_arg(&args[0], "parts")?))
+        }
+        "time.format" => {
+            need(&args, 1, "time.format")?;
+            Ok(Val::Str(time_format(millis_arg(&args[0], "format")?)))
+        }
+        "time.is_leap" => {
+            need(&args, 1, "time.is_leap")?;
+            Ok(Val::Bool(is_leap(millis_arg(&args[0], "is_leap")?)))
+        }
+        "time.days_in_month" => {
+            need(&args, 2, "time.days_in_month")?;
+            let y = millis_arg(&args[0], "days_in_month")?;
+            let m = millis_arg(&args[1], "days_in_month")?;
+            match days_in_month(y, m) {
+                0 => Ok(Val::Err(format!("time.days_in_month: month {} is not 1..=12", m))),
+                n => Ok(Val::Ok(Box::new(Val::Int(BigInt::from_i64(n))))),
+            }
+        }
+        "time.from_parts" => {
+            need(&args, 6, "time.from_parts")?;
+            let mut v = [0i64; 6];
+            for (i, slot) in v.iter_mut().enumerate() {
+                *slot = millis_arg(&args[i], "from_parts")?;
+            }
+            let [y, mo, d, h, mi, s] = v;
+            if !(1..=12).contains(&mo) {
+                return Ok(Val::Err(format!("time.from_parts: month {} is not 1..=12", mo)));
+            }
+            if d < 1 || d > days_in_month(y, mo) {
+                return Ok(Val::Err(format!("time.from_parts: day {} is out of range for {}-{:02}", d, y, mo)));
+            }
+            if !(0..24).contains(&h) || !(0..60).contains(&mi) || !(0..60).contains(&s) {
+                return Ok(Val::Err("time.from_parts: hour/minute/second out of range".into()));
+            }
+            let ms = days_from_civil(y, mo, d) * 86_400_000 + h * 3_600_000 + mi * 60_000 + s * 1_000;
+            Ok(Val::Ok(Box::new(Val::Int(BigInt::from_i64(ms)))))
+        }
+
         "regex.is_match" => {
             need(&args, 2, "is_match")?;
             let (pat, text) = two_strs(&args, "is_match")?;
@@ -178,6 +221,108 @@ fn dispatch(name: &str, args: Vec<Val>) -> Result<Val, String> {
 // --------------------------------------------------------------------------
 // helpers
 // --------------------------------------------------------------------------
+
+// ---- std/time ------------------------------------------------------------
+//
+// Pure calendar arithmetic on the same unix-millisecond int that
+// `sys.clock.now()` returns. Reading the clock is a capability (SPEC §10), so
+// nothing here observes the current time — you pass the instant in.
+// Everything is proleptic-Gregorian UTC; there are no timezones by design.
+
+/// Days since 1970-01-01 from a y/m/d, and its inverse. Both are exact for the
+/// whole int64 range (Howard Hinnant's civil-calendar algorithms).
+fn days_from_civil(y: i64, m: i64, d: i64) -> i64 {
+    let y = if m <= 2 { y - 1 } else { y };
+    let era = if y >= 0 { y } else { y - 399 } / 400;
+    let yoe = y - era * 400;
+    let mp = (m + 9) % 12;
+    let doy = (153 * mp + 2) / 5 + d - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    era * 146097 + doe - 719468
+}
+
+fn civil_from_days(z: i64) -> (i64, i64, i64) {
+    let z = z + 719468;
+    let era = if z >= 0 { z } else { z - 146096 } / 146097;
+    let doe = z - era * 146097;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    let y = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    (if m <= 2 { y + 1 } else { y }, m, d)
+}
+
+fn is_leap(y: i64) -> bool {
+    (y % 4 == 0 && y % 100 != 0) || y % 400 == 0
+}
+
+fn days_in_month(y: i64, m: i64) -> i64 {
+    match m {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+        4 | 6 | 9 | 11 => 30,
+        2 if is_leap(y) => 29,
+        2 => 28,
+        _ => 0,
+    }
+}
+
+/// Split unix millis into (days since epoch, milliseconds into that day).
+/// Both parts floor, so instants before 1970 decompose correctly.
+fn split_epoch_millis(ms: i64) -> (i64, i64) {
+    const DAY: i64 = 86_400_000;
+    (ms.div_euclid(DAY), ms.rem_euclid(DAY))
+}
+
+fn time_parts(ms: i64) -> Val {
+    let (days, rem) = split_epoch_millis(ms);
+    let (y, mo, d) = civil_from_days(days);
+    let mut map = crate::val::OrderedMap::new();
+    let mut put = |k: &str, v: i64| {
+        map.insert(Val::Str(k.to_string()), Val::Int(BigInt::from_i64(v)));
+    };
+    put("year", y);
+    put("month", mo);
+    put("day", d);
+    put("hour", rem / 3_600_000);
+    put("minute", rem / 60_000 % 60);
+    put("second", rem / 1_000 % 60);
+    put("milli", rem % 1_000);
+    // 1970-01-01 was a Thursday; 0 = Monday … 6 = Sunday.
+    put("weekday", (days + 3).rem_euclid(7));
+    put("yearday", days - days_from_civil(y, 1, 1) + 1);
+    Val::Map(Rc::new(RefCell::new(map)))
+}
+
+fn time_format(ms: i64) -> String {
+    let (days, rem) = split_epoch_millis(ms);
+    let (y, mo, d) = civil_from_days(days);
+    format!(
+        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
+        y,
+        mo,
+        d,
+        rem / 3_600_000,
+        rem / 60_000 % 60,
+        rem / 1_000 % 60
+    )
+}
+
+/// An `int` argument as an exact i64 (time values never need bignum range).
+fn millis_arg(v: &Val, who: &str) -> Result<i64, String> {
+    match v {
+        Val::Int(i) => {
+            let mut mag = i.clone();
+            mag.sign = false;
+            match mag.to_usize().and_then(|u| i64::try_from(u).ok()) {
+                Some(n) => Ok(if i.sign { -n } else { n }),
+                None => Err(format!("time.{}: value out of range", who)),
+            }
+        }
+        _ => Err(format!("time.{}: expects int", who)),
+    }
+}
 
 fn need(args: &[Val], n: usize, who: &str) -> Result<(), String> {
     if args.len() != n { Err(format!("{} expects {} arg(s)", who, n)) } else { Ok(()) }
@@ -286,7 +431,7 @@ impl<'a> JsonParser<'a> {
 
     fn object(&mut self) -> Result<Val, String> {
         self.bump(); // {
-        let map: Rc<RefCell<HashMap<Val, Val>>> = Rc::new(RefCell::new(HashMap::new()));
+        let map: Rc<RefCell<crate::val::OrderedMap>> = Rc::new(RefCell::new(crate::val::OrderedMap::new()));
         self.skip_ws();
         if self.peek() == Some('}') { self.bump(); return Ok(Val::Map(map)); }
         loop {
@@ -428,14 +573,14 @@ fn json_write_into(v: &Val, out: &mut String) -> Result<(), String> {
             out.push(']');
         }
         Val::Map(m) => {
-            // Sort keys for deterministic output.
+            // Maps are insertion-ordered (SPEC §5.4), so writing them in that
+            // order is both deterministic and round-trip faithful.
             let borrowed = m.borrow();
             let mut entries: Vec<(String, &Val)> = Vec::new();
             for (k, val) in borrowed.iter() {
                 let key = match k { Val::Str(s) => s.clone(), other => other.to_string() };
                 entries.push((key, val));
             }
-            entries.sort_by(|a, b| a.0.cmp(&b.0));
             out.push('{');
             for (i, (k, val)) in entries.iter().enumerate() {
                 if i > 0 { out.push(','); }

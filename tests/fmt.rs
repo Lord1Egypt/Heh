@@ -11,8 +11,7 @@ fn parse(src: &str) -> Option<ast::File> {
 }
 
 /// Remove `line:col` tokens from an AST dump. The formatter legitimately
-/// changes line numbers (it drops comments and reflows), so structural
-/// equality must ignore spans.
+/// changes line numbers when it reflows, so structural equality ignores spans.
 fn strip_spans(dump: &str) -> String {
     let chars: Vec<char> = dump.chars().collect();
     let mut out = String::new();
@@ -40,13 +39,30 @@ fn strip_spans(dump: &str) -> String {
     out
 }
 
+fn parse_with_comments(src: &str) -> Option<(ast::File, Vec<lexer::Comment>)> {
+    let (toks, comments) = lexer::lex_with_comments(src).ok()?;
+    Some((Parser::new(&toks).parse_file().ok()?, comments))
+}
+
 fn check_one(path: &Path) {
     let src = fs::read_to_string(path).unwrap();
     let name = path.display();
 
-    let Some(ast1) = parse(&src) else { return }; // skip intentional parse-error fixtures
+    // skip intentional parse-error fixtures
+    let Some((ast1, comments)) = parse_with_comments(&src) else { return };
 
-    let f1 = fmt::format_file(&ast1);
+    let f1 = fmt::format_file_with_comments(&ast1, comments.clone());
+
+    // Formatting must never lose a comment (SPEC §13: fmt is canonical, and a
+    // formatter that eats comments is not something anyone can run on a repo).
+    for c in &comments {
+        assert!(
+            f1.contains(c.text.trim()),
+            "fmt dropped comment {:?} from {name}\n--- formatted ---\n{f1}",
+            c.text
+        );
+    }
+
     let ast2 = parse(&f1).unwrap_or_else(|| panic!("formatted {name} does not re-parse:\n{f1}"));
 
     assert_eq!(
@@ -55,7 +71,8 @@ fn check_one(path: &Path) {
         "fmt changed the AST of {name}\n--- formatted ---\n{f1}"
     );
 
-    let f2 = fmt::format_file(&ast2);
+    let (ast2b, comments2) = parse_with_comments(&f1).unwrap();
+    let f2 = fmt::format_file_with_comments(&ast2b, comments2);
     assert_eq!(f1, f2, "fmt is not idempotent for {name}\n--- pass1 ---\n{f1}\n--- pass2 ---\n{f2}");
 }
 

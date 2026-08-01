@@ -151,15 +151,17 @@ impl Evaluator {
         sys_map.insert("env".into(), Val::Record("SysEnv".into(), Rc::new(RefCell::new(env_map))));
 
         let mut clock_map = std::collections::HashMap::new();
-        if deny_clock {
-            clock_map.insert("now".into(), Val::BuiltinFn("sys.clock.denied"));
-        } else {
-            clock_map.insert("now".into(), Val::BuiltinFn("sys.clock.now"));
+        for func in ["now", "sleep"] {
+            if deny_clock {
+                clock_map.insert(func.into(), Val::BuiltinFn("sys.clock.denied"));
+            } else {
+                clock_map.insert(func.into(), Val::BuiltinFn(Box::leak(format!("sys.clock.{}", func).into_boxed_str())));
+            }
         }
         sys_map.insert("clock".into(), Val::Record("SysClock".into(), Rc::new(RefCell::new(clock_map))));
 
         let mut rand_map = std::collections::HashMap::new();
-        for func in ["bytes", "int"] {
+        for func in ["bytes", "int", "float"] {
             if deny_rand {
                 rand_map.insert(func.into(), Val::BuiltinFn("sys.rand.denied"));
             } else {
@@ -189,9 +191,22 @@ impl Evaluator {
 
     /// Execute a file previously set up with `prepare`: run `main` if present,
     /// otherwise the top-level statements (script mode).
+    /// `try` that escapes the top level is a program error, not a propagation.
     fn run_prepared(&mut self, file: &File) -> Result<(), Diag> {
         // Check for main
         let main_fn = self.global.borrow().get("main");
+
+        // SPEC §11 allows top-level `let` constants in a file that also defines
+        // `fn main`; bind them before main runs. Script mode instead evaluates
+        // them below, interleaved with statements in source order.
+        if main_fn.is_some() {
+            for item in &file.items {
+                if let TopItem::Let(l) = item {
+                    self.eval_let(l, self.global.clone()).map_err(rewrite_top_level_try)?;
+                }
+            }
+        }
+
         if let Some(Val::Fn(params, body, env)) = main_fn {
             let call_env = Rc::new(RefCell::new(Scope::new(Some(env))));
             // Pass sys if it expects a param
@@ -252,17 +267,7 @@ impl Evaluator {
                     }
                 },
                 TopItem::Let(l) => {
-                    if let Err(d) = self.eval_let(l, self.global.clone()) {
-                        if d.code == "E_TRY_PROPAGATE" || d.code == "E_TRY_PROPAGATE_NONE" {
-                            return Err(Diag {
-                                code: "E0114",
-                                msg: "try propagated outside result-returning function".into(),
-                                line: 1,
-                                col: 1,
-                            });
-                        }
-                        return Err(d);
-                    }
+                    self.eval_let(l, self.global.clone()).map_err(rewrite_top_level_try)?;
                 }
                 TopItem::Fn(_) | TopItem::Type(_) => {}
             }
@@ -336,7 +341,7 @@ impl Evaluator {
         let builtins = [
             "len", "upper", "lower", "trim", "split", "replace", "contains", "starts_with", "chars",
             "push", "pop", "get", "sort", "map", "filter", "join", "set", "remove", "keys", "values",
-            "int_of", "str",
+            "int_of", "str", "int", "float", "list",
         ];
         for b in builtins {
             self.global.borrow_mut().define(b.into(), Val::BuiltinFn(b), false);
@@ -445,6 +450,133 @@ impl Evaluator {
         Ok(Ok(last_val))
     }
 
+    /// `p.x = v`, `l[i] = v`, and any nesting of the two (SPEC §14 `lvalue`).
+    /// Records, lists, and maps are reference values, so this walks to the
+    /// container that owns the last step and mutates it in place — the `let` /
+    /// `mut` distinction governs rebinding the name, not deep mutation (§5.4).
+    fn assign_into_tail(
+        &mut self,
+        a: &AssignStmt,
+        rhs: Val,
+        env: Rc<RefCell<Scope>>,
+    ) -> Result<Val, Diag> {
+        let err = |msg: String| Diag { code: "E0102", msg, line: a.span.line, col: a.span.col };
+
+        let mut container = env.borrow().get(&a.target.name).ok_or_else(|| Diag {
+            code: "E0103",
+            msg: format!("undefined variable '{}'", a.target.name),
+            line: a.span.line,
+            col: a.span.col,
+        })?;
+
+        // Walk every step but the last; those are plain reads.
+        let (last, path) = a.target.tail.split_last().expect("caller checked tail is non-empty");
+        for step in path {
+            container = self.read_step(container, step, env.clone(), a)?;
+        }
+
+        // Compound assignment needs the old value first.
+        let val = match a.op {
+            AssignOp::Eq => rhs,
+            _ => {
+                let cur = self.read_step(container.clone(), last, env.clone(), a)?;
+                let op = match a.op {
+                    AssignOp::AddEq => BinOp::Add,
+                    AssignOp::SubEq => BinOp::Sub,
+                    AssignOp::MulEq => BinOp::Mul,
+                    AssignOp::DivEq => BinOp::Div,
+                    AssignOp::Eq => unreachable!(),
+                };
+                self.eval_binop(op, cur, rhs, a.span.clone())?
+            }
+        };
+
+        match (container, last) {
+            (Val::Record(name, fields), LValueTail::Field(f)) => {
+                if !fields.borrow().contains_key(f) {
+                    return Err(err(format!("record '{}' has no field '{}'", name, f)));
+                }
+                fields.borrow_mut().insert(f.clone(), val);
+            }
+            (Val::List(items), LValueTail::Index(idx)) => {
+                let idx_val = self.eval_expr(idx, env)?;
+                let Val::Int(i) = idx_val else {
+                    return Err(err("list index must be an int".into()));
+                };
+                let mut items = items.borrow_mut();
+                match i.to_usize() {
+                    Some(n) if n < items.len() => items[n] = val,
+                    _ => {
+                        return Err(Diag {
+                            code: "E0106",
+                            msg: "index out of bounds".into(),
+                            line: a.span.line,
+                            col: a.span.col,
+                        })
+                    }
+                }
+            }
+            (Val::Map(m), LValueTail::Index(key)) => {
+                let key_val = self.eval_expr(key, env)?;
+                m.borrow_mut().insert(key_val, val);
+            }
+            (other, LValueTail::Field(f)) => {
+                return Err(err(format!("cannot set field '{}' on {}", f, other.type_name())))
+            }
+            (other, LValueTail::Index(_)) => {
+                return Err(err(format!("cannot index-assign into {}", other.type_name())))
+            }
+        }
+        Ok(Val::None)
+    }
+
+    /// Read one lvalue step (`.field` or `[i]`) while walking to the target.
+    fn read_step(
+        &mut self,
+        container: Val,
+        step: &LValueTail,
+        env: Rc<RefCell<Scope>>,
+        a: &AssignStmt,
+    ) -> Result<Val, Diag> {
+        let err = |msg: String| Diag { code: "E0102", msg, line: a.span.line, col: a.span.col };
+        match (container, step) {
+            (Val::Record(name, fields), LValueTail::Field(f)) => fields
+                .borrow()
+                .get(f)
+                .cloned()
+                .ok_or_else(|| err(format!("record '{}' has no field '{}'", name, f))),
+            (Val::List(items), LValueTail::Index(idx)) => {
+                let idx_val = self.eval_expr(idx, env)?;
+                let Val::Int(i) = idx_val else {
+                    return Err(err("list index must be an int".into()));
+                };
+                let items = items.borrow();
+                match i.to_usize() {
+                    Some(n) if n < items.len() => Ok(items[n].clone()),
+                    _ => Err(Diag {
+                        code: "E0106",
+                        msg: "index out of bounds".into(),
+                        line: a.span.line,
+                        col: a.span.col,
+                    }),
+                }
+            }
+            (Val::Map(m), LValueTail::Index(key)) => {
+                let key_val = self.eval_expr(key, env)?;
+                m.borrow()
+                    .get(&key_val)
+                    .cloned()
+                    .ok_or_else(|| err(format!("key not found: {}", key_val)))
+            }
+            (other, LValueTail::Field(f)) => {
+                Err(err(format!("cannot read field '{}' from {}", f, other.type_name())))
+            }
+            (other, LValueTail::Index(_)) => {
+                Err(err(format!("cannot index into {}", other.type_name())))
+            }
+        }
+    }
+
     fn eval_stmt(
         &mut self,
         stmt: &Statement,
@@ -462,12 +594,7 @@ impl Evaluator {
                 let val = self.eval_expr(&a.rhs, env.clone())?;
                 let target = &a.target.name;
                 if !a.target.tail.is_empty() {
-                    return Err(Diag {
-                        code: "E0102",
-                        msg: "field/index assignment not yet supported".into(),
-                        line: a.span.line,
-                        col: a.span.col,
-                    });
+                    return self.assign_into_tail(a, val, env).map(Ok);
                 }
 
                 let final_val = match a.op {
@@ -522,12 +649,36 @@ impl Evaluator {
             Statement::If(i) => {
                 let cond_val = self.eval_expr(&i.cond, env.clone())?;
                 let b = self.expect_bool(cond_val, i.cond.span.clone())?;
+
+                // Optional narrowing (SPEC §6.4) is a runtime unwrap as well as
+                // a type-level one: the checker gives the binding type `T` here,
+                // so the value must be the `T`, not a `some(T)` wrapper.
+                //   `if x != none` → narrow inside the then-branch
+                //   `if x == none` (false) → narrow for everything after
+                let narrow = crate::check::none_comparison(&i.cond)
+                    .filter(|&(_, is_neq)| is_neq == b)
+                    .and_then(|(name, _)| match env.borrow().get(name) {
+                        Some(Val::Some(inner)) => Some((name.to_string(), *inner)),
+                        _ => None,
+                    });
+
                 if b {
-                    match self.eval_block(&i.then_block, env.clone())? {
+                    let then_env = match narrow {
+                        Some((name, inner)) => {
+                            let scoped = Rc::new(RefCell::new(Scope::new(Some(env.clone()))));
+                            scoped.borrow_mut().define(name, inner, false);
+                            scoped
+                        }
+                        None => env.clone(),
+                    };
+                    match self.eval_block(&i.then_block, then_env)? {
                         Ok(v) => return Ok(Ok(v)),
                         Err(f) => return Ok(Err(f)),
                     }
                 } else {
+                    if let Some((name, inner)) = narrow {
+                        env.borrow_mut().define(name, inner, false);
+                    }
                     for (elif_cond, elif_block) in &i.elifs {
                         let elif_val = self.eval_expr(elif_cond, env.clone())?;
                         if self.expect_bool(elif_val, elif_cond.span.clone())? {
@@ -602,8 +753,23 @@ impl Evaluator {
                             current = next;
                         }
                     }
-                    Val::List(l) => {
-                        let items = l.borrow().clone();
+                    // Lists, maps (by key), and strs (by char) all iterate over
+                    // a snapshot, so mutating the collection inside the loop
+                    // cannot invalidate the iteration (SPEC §6.3).
+                    other => {
+                        let items = match other {
+                            Val::List(l) => l.borrow().clone(),
+                            Val::Map(m) => m.borrow().keys().cloned().collect(),
+                            Val::Str(s) => s.chars().map(|c| Val::Str(c.to_string())).collect(),
+                            _ => {
+                                return Err(Diag {
+                                    code: "E0104",
+                                    msg: "not iterable (expected a list, map, str, or range)".into(),
+                                    line: f.iter.span.line,
+                                    col: f.iter.span.col,
+                                })
+                            }
+                        };
                         for item in items {
                             let loop_env = Rc::new(RefCell::new(Scope::new(Some(env.clone()))));
                             loop_env.borrow_mut().define(f.name.clone(), item, false);
@@ -614,14 +780,6 @@ impl Evaluator {
                                 Err(Flow::Return(v)) => return Ok(Err(Flow::Return(v))),
                             }
                         }
-                    }
-                    _ => {
-                        return Err(Diag {
-                            code: "E0104",
-                            msg: "not iterable".into(),
-                            line: f.iter.span.line,
-                            col: f.iter.span.col,
-                        })
                     }
                 }
             }
@@ -959,26 +1117,8 @@ impl Evaluator {
                             Ok(Val::BoundMethod(Box::new(obj.clone()), f.clone()))
                         }
                     }
-                    Val::Str(ref s) => {
-                        if f == "len" {
-                            Ok(Val::Int(BigInt::from_i64(s.chars().count() as i64)))
-                        } else {
-                            Ok(Val::BoundMethod(Box::new(obj.clone()), f.clone()))
-                        }
-                    }
-                    Val::List(ref l) => {
-                        if f == "len" {
-                            Ok(Val::Int(BigInt::from_i64(l.borrow().len() as i64)))
-                        } else {
-                            Ok(Val::BoundMethod(Box::new(obj.clone()), f.clone()))
-                        }
-                    }
-                    Val::Map(ref m) => {
-                        if f == "len" {
-                            Ok(Val::Int(BigInt::from_i64(m.borrow().len() as i64)))
-                        } else {
-                            Ok(Val::BoundMethod(Box::new(obj.clone()), f.clone()))
-                        }
+                    Val::Str(_) | Val::List(_) | Val::Map(_) => {
+                        Ok(Val::BoundMethod(Box::new(obj.clone()), f.clone()))
                     }
                     _ => Ok(Val::BoundMethod(Box::new(obj.clone()), f.clone())),
                 }
@@ -1031,7 +1171,7 @@ impl Evaluator {
             }
             ExprKind::Map(entries) => {
                 #[allow(clippy::mutable_key_type)]
-                let mut map = std::collections::HashMap::new();
+                let mut map = crate::val::OrderedMap::new();
                 for (k, v) in entries {
                     map.insert(
                         self.eval_expr(k, env.clone())?,
@@ -1158,7 +1298,7 @@ impl Evaluator {
                             col: span.col,
                         });
                     }
-                    let (q, _) = a.div_mod(&b);
+                    let (q, _) = a.div_mod_floor(&b);
                     Ok(Val::Int(q))
                 }
                 _ => Err(Diag {
@@ -1178,7 +1318,7 @@ impl Evaluator {
                             col: span.col,
                         });
                     }
-                    let (_, r) = a.div_mod(&b);
+                    let (_, r) = a.div_mod_floor(&b);
                     Ok(Val::Int(r))
                 }
                 _ => Err(Diag {
@@ -1190,7 +1330,19 @@ impl Evaluator {
             },
             BinOp::Pow => match (left, right) {
                 (Val::Float(a), Val::Float(b)) => Ok(Val::Float(a.powf(b))),
-                // Int pow not implemented yet
+                (Val::Int(a), Val::Int(b)) => {
+                    // A negative exponent has no integer answer; the spec keeps
+                    // `int` closed under `**`, so this is a fault, not a float.
+                    if b < crate::bignum::BigInt::zero() {
+                        return Err(Diag {
+                            code: "E0201",
+                            msg: "negative exponent in '**' (use floats for fractional powers)".into(),
+                            line: span.line,
+                            col: span.col,
+                        });
+                    }
+                    Ok(Val::Int(a.pow(&b)))
+                }
                 _ => Err(Diag {
                     code: "E0104",
                     msg: "type mismatch in '**'".into(),
@@ -1409,8 +1561,35 @@ impl Evaluator {
             "sys.clock.now" => {
                 let now = std::time::SystemTime::now();
                 match now.duration_since(std::time::UNIX_EPOCH) {
-                    Ok(d) => Ok(Val::Float(d.as_secs_f64())),
+                    // SPEC §10: unix milliseconds as an int, never a float.
+                    Ok(d) => Ok(Val::Int(crate::bignum::BigInt::from_u64(d.as_millis() as u64))),
                     Err(_) => Ok(Val::Err("time went backwards".into())),
+                }
+            }
+            "sys.clock.sleep" => {
+                if arg_vals.len() != 1 {
+                    return Err(Diag { code: "E0109", msg: "sys.clock.sleep expects 1 arg".into(), line: callee.span.line, col: callee.span.col });
+                }
+                let Val::Int(ms) = &arg_vals[0] else {
+                    return Ok(Val::Err("sys.clock.sleep expects an int of milliseconds".into()));
+                };
+                // A negative or absurd duration sleeps not at all rather than
+                // wedging the program forever.
+                let ms = ms.to_usize().unwrap_or(0);
+                std::thread::sleep(std::time::Duration::from_millis(ms as u64));
+                Ok(Val::None)
+            }
+            "sys.rand.float" => {
+                use std::io::Read;
+                let mut buf = [0u8; 8];
+                match std::fs::File::open("/dev/urandom").and_then(|mut f| f.read_exact(&mut buf)) {
+                    // 53 bits of entropy scaled into [0.0, 1.0) — every f64 in
+                    // that interval with an exact 53-bit mantissa is reachable.
+                    Ok(_) => {
+                        let bits = u64::from_ne_bytes(buf) >> 11;
+                        Ok(Val::Float(bits as f64 / (1u64 << 53) as f64))
+                    }
+                    Err(e) => Ok(Val::Err(e.to_string())),
                 }
             }
             "sys.rand.bytes" => {
@@ -1716,17 +1895,8 @@ impl Evaluator {
                 if let Some(v) = r.borrow().get(f) { Ok(v.clone()) }
                 else { Ok(Val::BoundMethod(Box::new(obj.clone()), f.to_string())) }
             }
-            Val::Str(ref s) => {
-                if f == "len" { Ok(Val::Int(BigInt::from_i64(s.chars().count() as i64))) }
-                else { Ok(Val::BoundMethod(Box::new(obj.clone()), f.to_string())) }
-            }
-            Val::List(ref l) => {
-                if f == "len" { Ok(Val::Int(BigInt::from_i64(l.borrow().len() as i64))) }
-                else { Ok(Val::BoundMethod(Box::new(obj.clone()), f.to_string())) }
-            }
-            Val::Map(ref m) => {
-                if f == "len" { Ok(Val::Int(BigInt::from_i64(m.borrow().len() as i64))) }
-                else { Ok(Val::BoundMethod(Box::new(obj.clone()), f.to_string())) }
+            Val::Str(_) | Val::List(_) | Val::Map(_) => {
+                Ok(Val::BoundMethod(Box::new(obj.clone()), f.to_string()))
             }
             _ => Ok(Val::BoundMethod(Box::new(obj.clone()), f.to_string())),
         }
@@ -1851,4 +2021,18 @@ fn https_get_via_curl(url: &str) -> Val {
         }
         Err(_) => Val::Err("sys.net.get: https requires the 'curl' program, which was not found".into()),
     }
+}
+
+/// A `try` that propagates out of top-level code has no function to return
+/// from; report that rather than leaking the internal propagation signal.
+fn rewrite_top_level_try(d: Diag) -> Diag {
+    if d.code == "E_TRY_PROPAGATE" || d.code == "E_TRY_PROPAGATE_NONE" {
+        return Diag {
+            code: "E0114",
+            msg: "try propagated outside result-returning function".into(),
+            line: d.line,
+            col: d.col,
+        };
+    }
+    d
 }

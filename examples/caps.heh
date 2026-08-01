@@ -2,7 +2,7 @@
 # do I/O. Run with `heh run caps.heh --deny-fs` to watch the read fail closed.
 
 fn summarize(text: str) -> str          # pure: no sys, no I/O possible
-    "{text.split("\n").len} lines, {text.len} chars"
+    "{text.split("\n").len()} lines, {text.len()} chars"
 
 fn main(sys: Sys)
     let text = try sys.fs.read("notes.txt") else exit

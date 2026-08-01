@@ -1,0 +1,19 @@
+# std/time — pure UTC calendar arithmetic over unix millis. Reading the clock
+# is a capability (SPEC §10), so every instant here is passed in explicitly.
+use std/time
+
+sys.print(time.format(0))
+sys.print(time.format(1785600000000))
+sys.print(time.format(-86400000))
+sys.print(time.parts(1785600000000))
+
+sys.print(time.is_leap(2024))
+sys.print(time.is_leap(1900))
+sys.print(time.is_leap(2000))
+
+sys.print(time.days_in_month(2024, 2))
+sys.print(time.days_in_month(2023, 2))
+sys.print(time.days_in_month(2023, 13))
+
+sys.print(time.from_parts(2026, 8, 1, 12, 30, 45))
+sys.print(time.from_parts(2026, 2, 30, 0, 0, 0))

@@ -213,9 +213,9 @@ fn cmd_run(path: &str, run_args: Vec<String>, use_vm: bool) -> ExitCode {
         return ExitCode::FAILURE;
     }
 
-    // The bytecode VM can't compile closures (map/filter callbacks); fall back
-    // to the tree-walker for such programs so behaviour is never lost.
-    let vm_ok = use_vm && !heh::compile::uses_closures(&ast);
+    // Some constructs have no exact VM encoding; fall back to the tree-walker
+    // for those programs so behaviour is never lost (see needs_tree_walker).
+    let vm_ok = use_vm && !heh::compile::needs_tree_walker(&ast);
 
     if vm_ok {
         let mut eval = heh::eval::Evaluator::with_base_dir(base_dir);
@@ -525,7 +525,8 @@ fn cmd_fmt(path: &str, check_mode: bool) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let tokens = match heh::lexer::lex(&source) {
+    // Comments live outside the AST, so formatting needs them alongside it.
+    let (tokens, comments) = match heh::lexer::lex_with_comments(&source) {
         Ok(t) => t,
         Err(d) => {
             eprintln!("{}", d.render(path, &source));
@@ -540,7 +541,7 @@ fn cmd_fmt(path: &str, check_mode: bool) -> ExitCode {
         }
     };
 
-    let formatted = heh::fmt::format_file(&ast);
+    let formatted = heh::fmt::format_file_with_comments(&ast, comments);
 
     if check_mode {
         if formatted == source {

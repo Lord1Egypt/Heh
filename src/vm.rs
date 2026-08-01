@@ -122,7 +122,7 @@ impl Vm {
                 Op::MakeMap(n) => {
                     let flat = pop_n(&mut stack, *n * 2);
                     #[allow(clippy::mutable_key_type)]
-                    let mut map = HashMap::new();
+                    let mut map = crate::val::OrderedMap::new();
                     let mut it = flat.into_iter();
                     while let (Some(k), Some(v)) = (it.next(), it.next()) {
                         map.insert(k, v);
@@ -233,7 +233,12 @@ impl Vm {
                             iters.push(IterState::Range { next: *start, end, inclusive });
                         }
                         Val::List(l) => iters.push(IterState::List { items: l.borrow().clone(), idx: 0 }),
-                        _ => return Err(Diag { code: "E0104", msg: "not iterable".into(), line: *line, col: *col }),
+                        Val::Map(m) => iters.push(IterState::List { items: m.borrow().keys().cloned().collect(), idx: 0 }),
+                        Val::Str(s) => iters.push(IterState::List {
+                            items: s.chars().map(|c| Val::Str(c.to_string())).collect(),
+                            idx: 0,
+                        }),
+                        _ => return Err(Diag { code: "E0104", msg: "not iterable (expected a list, map, str, or range)".into(), line: *line, col: *col }),
                     }
                 }
                 Op::ForNext(var, end_addr) => {
