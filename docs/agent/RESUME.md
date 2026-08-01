@@ -1,7 +1,15 @@
 # RESUME.md
 
 # Current State
-Phases 0–10 are complete and merged.
+Phases 0–11 are complete and merged.
+- **P11** bytecode VM: `src/compile.rs` (AST→bytecode) + `src/vm.rs` (stack VM),
+  opt-in via `heh run --vm`. Byte-identical to the tree-walker across the whole
+  corpus + examples (differential test `tests/vm.rs`). Fixed a real tree-walker
+  bug along the way: unbounded ranges (`0..`) never iterated. Follow-ups:
+  perf benchmarks (≥5× CPython gate is local/aspirational) and flipping `--vm`
+  to the default after soak-testing.
+
+Earlier phases:
 - **P7** stdlib: str/list/map methods + pure modules (math, fmt, json, csv,
   hash [SHA-256 FIPS + CRC32], regex [non-backtracking], debug).
 - **P8** capabilities: full `sys` (fs/env/clock/rand/net/input/args) with

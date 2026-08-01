@@ -96,6 +96,14 @@ impl Default for Evaluator {
 
 impl Evaluator {
     pub fn eval_file(&mut self, file: &File, run_args: Vec<String>) -> Result<(), Diag> {
+        self.prepare(file, run_args)?;
+        self.run_prepared(file)
+    }
+
+    /// Set up the global scope (sys capabilities, std modules, builtins, and
+    /// top-level function definitions) without executing `main`/top-level.
+    /// Shared by `eval_file` and the bytecode VM (`heh run --vm`).
+    pub fn prepare(&mut self, file: &File, run_args: Vec<String>) -> Result<(), Diag> {
         let mut deny_fs = false;
         let mut deny_net = false;
         let mut deny_env = false;
@@ -176,7 +184,12 @@ impl Evaluator {
         // Resolve `use` declarations, register builtins, and define top-level
         // functions (shared with imported modules).
         self.install_defs(file)?;
+        Ok(())
+    }
 
+    /// Execute a file previously set up with `prepare`: run `main` if present,
+    /// otherwise the top-level statements (script mode).
+    fn run_prepared(&mut self, file: &File) -> Result<(), Diag> {
         // Check for main
         let main_fn = self.global.borrow().get("main");
         if let Some(Val::Fn(params, body, env)) = main_fn {
@@ -550,9 +563,14 @@ impl Evaluator {
                     Val::Range(start, end, is_inc) => {
                         let mut current = *start;
                         let end = *end;
+                        // An unbounded range (`0..`) is encoded with a `none`
+                        // upper bound and iterates forever (until `break`).
+                        let unbounded = matches!(end, Val::None);
                         loop {
                             // Check loop bound
-                            let cond = if is_inc {
+                            let cond = if unbounded {
+                                true
+                            } else if is_inc {
                                 current.partial_cmp(&end) != Some(std::cmp::Ordering::Greater)
                             } else {
                                 current.partial_cmp(&end) == Some(std::cmp::Ordering::Less)
@@ -1045,7 +1063,7 @@ impl Evaluator {
         }
     }
 
-    fn expect_bool(&self, val: Val, span: Span) -> Result<bool, Diag> {
+    pub fn expect_bool(&self, val: Val, span: Span) -> Result<bool, Diag> {
         if let Val::Bool(b) = val {
             Ok(b)
         } else {
@@ -1058,7 +1076,7 @@ impl Evaluator {
         }
     }
 
-    fn eval_binop(&self, op: BinOp, left: Val, right: Val, span: Span) -> Result<Val, Diag> {
+    pub fn eval_binop(&self, op: BinOp, left: Val, right: Val, span: Span) -> Result<Val, Diag> {
         match op {
             BinOp::Eq => Ok(Val::Bool(left == right)),
             BinOp::Neq => Ok(Val::Bool(left != right)),
@@ -1545,7 +1563,7 @@ impl Evaluator {
         }
     }
 
-    fn match_pattern(&self, val: &Val, pat: &Pattern) -> Option<Vec<(String, Val)>> {
+    pub fn match_pattern(&self, val: &Val, pat: &Pattern) -> Option<Vec<(String, Val)>> {
         match pat {
             Pattern::Wildcard(_) => Some(vec![]),
             Pattern::Literal(lit) => {
@@ -1615,6 +1633,121 @@ impl Evaluator {
                 }
                 None
             }
+        }
+    }
+}
+
+/// VM-support surface: the same value operations the tree-walker uses, exposed
+/// so `src/vm.rs` produces byte-identical results. These mirror the matching
+/// arms of `eval_expr`/`eval_stmt`; the differential test guards against drift.
+impl Evaluator {
+    /// Dispatch a builtin by name (span is only used for error messages).
+    pub fn run_builtin(&mut self, name: &str, args: Vec<Val>, line: u32, col: u32) -> Result<Val, Diag> {
+        let dummy = Expr { span: Span { line, col }, kind: ExprKind::Ident(String::new()) };
+        self.call_builtin(name, args, &dummy)
+    }
+
+    /// Run a user function value (`Val::Fn`) with already-evaluated args.
+    pub fn call_user(&mut self, params: Vec<String>, body: Block, closure_env: Rc<RefCell<Scope>>, args: Vec<Val>, line: u32, col: u32) -> Result<Val, Diag> {
+        if params.len() != args.len() {
+            return Err(Diag { code: "E0109", msg: format!("expected {} args, got {}", params.len(), args.len()), line, col });
+        }
+        let call_env = Rc::new(RefCell::new(Scope::new(Some(closure_env))));
+        for (p, v) in params.into_iter().zip(args) {
+            call_env.borrow_mut().define(p, v, false);
+        }
+        match self.eval_block(&body, call_env) {
+            Ok(Ok(v)) => Ok(v),
+            Ok(Err(Flow::Return(v))) => Ok(v),
+            Ok(Err(_)) => Err(Diag { code: "E0110", msg: "break/continue outside loop".into(), line, col }),
+            Err(d) => {
+                if d.code == "E_TRY_PROPAGATE" { Ok(Val::Err(d.msg)) } else { Err(d) }
+            }
+        }
+    }
+
+    /// Apply an already-evaluated callee to already-evaluated args, mirroring
+    /// the `Call` dispatch in `eval_expr` (BoundMethod / enum-or-record ctor /
+    /// user fn / builtin). `named` holds field names when the args were named.
+    pub fn apply_callee(&mut self, callee_val: Val, arg_vals: Vec<Val>, named: Option<Vec<String>>, line: u32, col: u32) -> Result<Val, Diag> {
+        match callee_val {
+            Val::BoundMethod(obj, method) => {
+                if let Val::Float(f) = *obj {
+                    if method == "sqrt" && arg_vals.is_empty() {
+                        return Ok(Val::Float(f.sqrt()));
+                    }
+                }
+                let mut new_args = vec![*obj];
+                new_args.extend(arg_vals);
+                let func_val = self.global.borrow().get(&method).ok_or(Diag {
+                    code: "E0111", msg: format!("method '{}' not found", method), line, col,
+                })?;
+                match func_val {
+                    Val::Fn(params, body, closure_env) => self.call_user(params, body, closure_env, new_args, line, col),
+                    Val::BuiltinFn(name) => self.run_builtin(name, new_args, line, col),
+                    _ => Err(Diag { code: "E0111", msg: "not callable".into(), line, col }),
+                }
+            }
+            Val::Enum(name, empty) if empty.is_empty() => {
+                if let Some(field_names) = named {
+                    let mut map = std::collections::HashMap::new();
+                    for (k, v) in field_names.into_iter().zip(arg_vals) {
+                        map.insert(k, v);
+                    }
+                    Ok(Val::Record(name, Rc::new(RefCell::new(map))))
+                } else {
+                    Ok(Val::Enum(name, arg_vals))
+                }
+            }
+            Val::Fn(params, body, closure_env) => self.call_user(params, body, closure_env, arg_vals, line, col),
+            Val::BuiltinFn(name) => self.run_builtin(name, arg_vals, line, col),
+            _ => Err(Diag { code: "E0111", msg: "not callable".into(), line, col }),
+        }
+    }
+
+    /// Field access, mirroring the `Field` arm of `eval_expr`.
+    pub fn field_get(&mut self, obj: Val, f: &str, line: u32, col: u32) -> Result<Val, Diag> {
+        match obj {
+            Val::Err(s) => {
+                if f == "msg" { Ok(Val::Str(s)) }
+                else { Err(Diag { code: "E0105", msg: format!("no field '{}' on error", f), line, col }) }
+            }
+            Val::Record(_, ref r) => {
+                if let Some(v) = r.borrow().get(f) { Ok(v.clone()) }
+                else { Ok(Val::BoundMethod(Box::new(obj.clone()), f.to_string())) }
+            }
+            Val::Str(ref s) => {
+                if f == "len" { Ok(Val::Int(BigInt::from_i64(s.chars().count() as i64))) }
+                else { Ok(Val::BoundMethod(Box::new(obj.clone()), f.to_string())) }
+            }
+            Val::List(ref l) => {
+                if f == "len" { Ok(Val::Int(BigInt::from_i64(l.borrow().len() as i64))) }
+                else { Ok(Val::BoundMethod(Box::new(obj.clone()), f.to_string())) }
+            }
+            Val::Map(ref m) => {
+                if f == "len" { Ok(Val::Int(BigInt::from_i64(m.borrow().len() as i64))) }
+                else { Ok(Val::BoundMethod(Box::new(obj.clone()), f.to_string())) }
+            }
+            _ => Ok(Val::BoundMethod(Box::new(obj.clone()), f.to_string())),
+        }
+    }
+
+    /// Index access, mirroring the `Index` arm of `eval_expr`.
+    pub fn index_get(&mut self, obj_val: Val, idx_val: Val, line: u32, col: u32) -> Result<Val, Diag> {
+        match obj_val {
+            Val::List(l) => {
+                if let Val::Int(i) = idx_val {
+                    let b = l.borrow();
+                    let idx = i.to_f64() as usize;
+                    if idx < b.len() { return Ok(b[idx].clone()); }
+                }
+                Err(Diag { code: "E0106", msg: "index out of bounds".into(), line, col })
+            }
+            Val::Map(m) => {
+                if let Some(v) = m.borrow().get(&idx_val) { Ok(v.clone()) }
+                else { Err(Diag { code: "E0106", msg: "key not found".into(), line, col }) }
+            }
+            _ => Err(Diag { code: "E0106", msg: "not indexable".into(), line, col }),
         }
     }
 }
