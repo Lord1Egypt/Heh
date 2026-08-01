@@ -428,7 +428,12 @@ impl Lexer {
             text.push(c);
             self.advance();
         }
-        self.comments.push(Comment { line, col, text: text.trim_end().to_string(), own_line });
+        self.comments.push(Comment {
+            line,
+            col,
+            text: text.trim_end().to_string(),
+            own_line,
+        });
     }
 
     fn read_token(&mut self) -> Result<Token, Diag> {

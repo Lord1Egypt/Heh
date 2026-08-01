@@ -28,11 +28,20 @@ fn test_runner_passes_and_ignores_non_tests() {
     )
     .unwrap();
 
-    let out = Command::new(heh()).args(["test", dir.to_str().unwrap()]).output().unwrap();
+    let out = Command::new(heh())
+        .args(["test", dir.to_str().unwrap()])
+        .output()
+        .unwrap();
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert!(out.status.success(), "expected success, got: {stdout}");
-    assert!(stdout.contains("2 passed, 0 failed"), "summary wrong: {stdout}");
-    assert!(!stdout.contains("helper"), "non-test fn should be ignored: {stdout}");
+    assert!(
+        stdout.contains("2 passed, 0 failed"),
+        "summary wrong: {stdout}"
+    );
+    assert!(
+        !stdout.contains("helper"),
+        "non-test fn should be ignored: {stdout}"
+    );
 
     let _ = fs::remove_dir_all(&dir);
 }
@@ -48,12 +57,24 @@ fn test_runner_reports_failures_and_exits_nonzero() {
     )
     .unwrap();
 
-    let out = Command::new(heh()).args(["test", dir.to_str().unwrap()]).output().unwrap();
+    let out = Command::new(heh())
+        .args(["test", dir.to_str().unwrap()])
+        .output()
+        .unwrap();
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert!(!out.status.success(), "expected failure exit code");
-    assert!(stdout.contains("FAIL test_bad"), "should report failing test: {stdout}");
-    assert!(stdout.contains("one is two"), "should show assert message: {stdout}");
-    assert!(stdout.contains("1 passed, 1 failed"), "summary wrong: {stdout}");
+    assert!(
+        stdout.contains("FAIL test_bad"),
+        "should report failing test: {stdout}"
+    );
+    assert!(
+        stdout.contains("one is two"),
+        "should show assert message: {stdout}"
+    );
+    assert!(
+        stdout.contains("1 passed, 1 failed"),
+        "summary wrong: {stdout}"
+    );
 
     let _ = fs::remove_dir_all(&dir);
 }
@@ -61,7 +82,10 @@ fn test_runner_reports_failures_and_exits_nonzero() {
 #[test]
 fn test_runner_handles_no_tests() {
     let dir = fresh_dir("empty");
-    let out = Command::new(heh()).args(["test", dir.to_str().unwrap()]).output().unwrap();
+    let out = Command::new(heh())
+        .args(["test", dir.to_str().unwrap()])
+        .output()
+        .unwrap();
     assert!(out.status.success());
     assert!(String::from_utf8_lossy(&out.stdout).contains("no *_test.heh"));
     let _ = fs::remove_dir_all(&dir);

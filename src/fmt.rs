@@ -162,7 +162,13 @@ fn format_fn(f: &FnDecl, out: &mut String, cm: &mut Comments) {
     }
     sig.push_str(&f.name);
     sig.push('(');
-    sig.push_str(&f.params.iter().map(format_param).collect::<Vec<_>>().join(", "));
+    sig.push_str(
+        &f.params
+            .iter()
+            .map(format_param)
+            .collect::<Vec<_>>()
+            .join(", "),
+    );
     sig.push(')');
     if let Some(rt) = &f.ret_type {
         sig.push_str(" -> ");
@@ -190,7 +196,12 @@ fn format_type(t: &TypeDecl, out: &mut String) {
                     if v.fields.is_empty() {
                         v.name.clone()
                     } else {
-                        let fields = v.fields.iter().map(format_field).collect::<Vec<_>>().join(", ");
+                        let fields = v
+                            .fields
+                            .iter()
+                            .map(format_field)
+                            .collect::<Vec<_>>()
+                            .join(", ");
                         format!("{}({})", v.name, fields)
                     }
                 })
@@ -216,12 +227,20 @@ fn format_type_expr(t: &TypeExpr) -> String {
             if args.is_empty() {
                 name.clone()
             } else {
-                let a = args.iter().map(format_type_expr).collect::<Vec<_>>().join(", ");
+                let a = args
+                    .iter()
+                    .map(format_type_expr)
+                    .collect::<Vec<_>>()
+                    .join(", ");
                 format!("{}[{}]", name, a)
             }
         }
         TypeExprKind::Fn(args, ret) => {
-            let a = args.iter().map(format_type_expr).collect::<Vec<_>>().join(", ");
+            let a = args
+                .iter()
+                .map(format_type_expr)
+                .collect::<Vec<_>>()
+                .join(", ");
             match ret {
                 Some(r) => format!("fn({}) -> {}", a, format_type_expr(r)),
                 None => format!("fn({})", a),
@@ -254,7 +273,13 @@ fn format_stmt(stmt: &Statement, depth: usize, out: &mut String, cm: &mut Commen
     match stmt {
         Statement::Let(l) => out.push_str(&format!("{}{}\n", p, format_let(l))),
         Statement::Assign(a) => {
-            out.push_str(&format!("{}{} {} {}\n", p, format_lvalue(&a.target), assign_op(&a.op), format_expr(&a.rhs, 0)));
+            out.push_str(&format!(
+                "{}{} {} {}\n",
+                p,
+                format_lvalue(&a.target),
+                assign_op(&a.op),
+                format_expr(&a.rhs, 0)
+            ));
         }
         Statement::Expr(e) => out.push_str(&format!("{}{}\n", p, format_expr(e, 0))),
         Statement::Return(r) => match &r.expr {
@@ -284,7 +309,12 @@ fn format_stmt(stmt: &Statement, depth: usize, out: &mut String, cm: &mut Commen
             format_block(&w.body, depth + 1, out, cm);
         }
         Statement::For(f) => {
-            out.push_str(&format!("{}for {} in {}\n", p, f.name, format_expr(&f.iter, 0)));
+            out.push_str(&format!(
+                "{}for {} in {}\n",
+                p,
+                f.name,
+                format_expr(&f.iter, 0)
+            ));
             attach_trailing(out, cm.trailing_on(head_line));
             format_block(&f.body, depth + 1, out, cm);
         }
@@ -292,13 +322,20 @@ fn format_stmt(stmt: &Statement, depth: usize, out: &mut String, cm: &mut Commen
             out.push_str(&format!("{}match {}\n", p, format_expr(&m.expr, 0)));
             attach_trailing(out, cm.trailing_on(head_line));
             for arm in &m.arms {
-                out.push_str(&format!("{}{}\n", pad(depth + 1), format_pattern(&arm.pattern)));
+                out.push_str(&format!(
+                    "{}{}\n",
+                    pad(depth + 1),
+                    format_pattern(&arm.pattern)
+                ));
                 format_block(&arm.body, depth + 2, out, cm);
             }
         }
     }
     // Single-line statements carry any comment that shared their line.
-    if !matches!(stmt, Statement::If(_) | Statement::While(_) | Statement::For(_) | Statement::Match(_)) {
+    if !matches!(
+        stmt,
+        Statement::If(_) | Statement::While(_) | Statement::For(_) | Statement::Match(_)
+    ) {
         attach_trailing(out, cm.trailing_on(head_line));
     }
 }
@@ -425,8 +462,8 @@ fn format_expr_raw(e: &Expr) -> String {
             // Heh binds unary `-` tighter than `**` (SPEC §6.1), so `-2 ** 4`
             // is `(-2) ** 4` — the opposite of Python and ordinary maths
             // notation. Keep the parentheses a reader needs to see that.
-            let negated_base = matches!(op, BinOp::Pow)
-                && matches!(&l.kind, ExprKind::Unary(UnOp::Neg, _));
+            let negated_base =
+                matches!(op, BinOp::Pow) && matches!(&l.kind, ExprKind::Unary(UnOp::Neg, _));
             format!(
                 "{} {} {}",
                 format_expr_in(l, lmin, negated_base),
@@ -435,29 +472,48 @@ fn format_expr_raw(e: &Expr) -> String {
             )
         }
         ExprKind::Unary(op, inner) => {
-            let sym = match op { UnOp::Neg => "-", UnOp::Not => "not " };
+            let sym = match op {
+                UnOp::Neg => "-",
+                UnOp::Not => "not ",
+            };
             format!("{}{}", sym, format_expr(inner, 9))
         }
         ExprKind::Call(callee, args) => {
-            let a = args.iter().map(format_call_arg).collect::<Vec<_>>().join(", ");
+            let a = args
+                .iter()
+                .map(format_call_arg)
+                .collect::<Vec<_>>()
+                .join(", ");
             format!("{}({})", format_expr(callee, 9), a)
         }
         ExprKind::Field(obj, name) => format!("{}.{}", format_expr(obj, 9), name),
         ExprKind::Index(obj, idx) => format!("{}[{}]", format_expr(obj, 9), format_expr(idx, 0)),
         ExprKind::List(items) => {
-            let a = items.iter().map(|i| format_expr(i, 0)).collect::<Vec<_>>().join(", ");
+            let a = items
+                .iter()
+                .map(|i| format_expr(i, 0))
+                .collect::<Vec<_>>()
+                .join(", ");
             format!("[{}]", a)
         }
         ExprKind::Map(pairs) => {
             if pairs.is_empty() {
                 "{}".to_string()
             } else {
-                let a = pairs.iter().map(|(k, v)| format!("{}: {}", format_expr(k, 0), format_expr(v, 0))).collect::<Vec<_>>().join(", ");
+                let a = pairs
+                    .iter()
+                    .map(|(k, v)| format!("{}: {}", format_expr(k, 0), format_expr(v, 0)))
+                    .collect::<Vec<_>>()
+                    .join(", ");
                 format!("{{{}}}", a)
             }
         }
         ExprKind::Record(name, fields) => {
-            let a = fields.iter().map(|(f, v)| format!("{}: {}", f, format_expr(v, 0))).collect::<Vec<_>>().join(", ");
+            let a = fields
+                .iter()
+                .map(|(f, v)| format!("{}: {}", f, format_expr(v, 0)))
+                .collect::<Vec<_>>()
+                .join(", ");
             format!("{}{{{}}}", name, a)
         }
         ExprKind::Try(inner, else_exit) => {
@@ -468,7 +524,11 @@ fn format_expr_raw(e: &Expr) -> String {
             }
         }
         ExprKind::Closure(params, ret, body) => {
-            let ps = params.iter().map(format_param).collect::<Vec<_>>().join(", ");
+            let ps = params
+                .iter()
+                .map(format_param)
+                .collect::<Vec<_>>()
+                .join(", ");
             let mut s = format!("fn({})", ps);
             if let Some(r) = ret {
                 s.push_str(&format!(" -> {}", format_type_expr(r)));

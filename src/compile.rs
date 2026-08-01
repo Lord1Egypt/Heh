@@ -38,7 +38,7 @@ pub enum Op {
     ConcatStr(usize),
     Field(String, u32, u32),
     Index(u32, u32),
-    CallUser(usize, usize, u32, u32),               // fn index, argc
+    CallUser(usize, usize, u32, u32), // fn index, argc
     CallValue(usize, Option<Vec<String>>, u32, u32), // argc, named field names
     Sqrt,
     Try(bool, u32, u32),
@@ -85,7 +85,12 @@ struct Compiler<'a> {
 
 impl<'a> Compiler<'a> {
     fn new(fn_index: &'a std::collections::HashMap<String, usize>) -> Self {
-        Compiler { ops: Vec::new(), consts: Vec::new(), fn_index, loops: Vec::new() }
+        Compiler {
+            ops: Vec::new(),
+            consts: Vec::new(),
+            fn_index,
+            loops: Vec::new(),
+        }
     }
 
     fn emit(&mut self, op: Op) -> usize {
@@ -152,11 +157,21 @@ impl<'a> Compiler<'a> {
                 self.compile_expr(&a.rhs);
                 let (line, col) = (a.span.line, a.span.col);
                 match a.op {
-                    AssignOp::Eq => { self.emit(Op::Assign(a.target.name.clone(), line, col)); }
-                    AssignOp::AddEq => { self.emit(Op::OpAssign(a.target.name.clone(), BinOp::Add, line, col)); }
-                    AssignOp::SubEq => { self.emit(Op::OpAssign(a.target.name.clone(), BinOp::Sub, line, col)); }
-                    AssignOp::MulEq => { self.emit(Op::OpAssign(a.target.name.clone(), BinOp::Mul, line, col)); }
-                    AssignOp::DivEq => { self.emit(Op::OpAssign(a.target.name.clone(), BinOp::Div, line, col)); }
+                    AssignOp::Eq => {
+                        self.emit(Op::Assign(a.target.name.clone(), line, col));
+                    }
+                    AssignOp::AddEq => {
+                        self.emit(Op::OpAssign(a.target.name.clone(), BinOp::Add, line, col));
+                    }
+                    AssignOp::SubEq => {
+                        self.emit(Op::OpAssign(a.target.name.clone(), BinOp::Sub, line, col));
+                    }
+                    AssignOp::MulEq => {
+                        self.emit(Op::OpAssign(a.target.name.clone(), BinOp::Mul, line, col));
+                    }
+                    AssignOp::DivEq => {
+                        self.emit(Op::OpAssign(a.target.name.clone(), BinOp::Div, line, col));
+                    }
                 }
             }
             Statement::If(i) => self.compile_if(i, false),
@@ -183,7 +198,9 @@ impl<'a> Compiler<'a> {
     fn compile_return(&mut self, r: &ReturnStmt) {
         match &r.expr {
             Some(e) => self.compile_expr(e),
-            None => { self.emit(Op::PushNone); }
+            None => {
+                self.emit(Op::PushNone);
+            }
         }
         self.emit(Op::Return);
     }
@@ -194,20 +211,32 @@ impl<'a> Compiler<'a> {
         // then
         self.compile_expr(&i.cond);
         let jf = self.emit(Op::JumpIfFalse(0, i.cond.span.line, i.cond.span.col));
-        if value { self.compile_block_value(&i.then_block); } else { self.compile_block_stmt(&i.then_block); }
+        if value {
+            self.compile_block_value(&i.then_block);
+        } else {
+            self.compile_block_stmt(&i.then_block);
+        }
         end_jumps.push(self.emit(Op::Jump(0)));
         self.patch_jump(jf, self.here());
         // elifs
         for (cond, block) in &i.elifs {
             self.compile_expr(cond);
             let jf = self.emit(Op::JumpIfFalse(0, cond.span.line, cond.span.col));
-            if value { self.compile_block_value(block); } else { self.compile_block_stmt(block); }
+            if value {
+                self.compile_block_value(block);
+            } else {
+                self.compile_block_stmt(block);
+            }
             end_jumps.push(self.emit(Op::Jump(0)));
             self.patch_jump(jf, self.here());
         }
         // else
         if let Some(else_block) = &i.else_block {
-            if value { self.compile_block_value(else_block); } else { self.compile_block_stmt(else_block); }
+            if value {
+                self.compile_block_value(else_block);
+            } else {
+                self.compile_block_stmt(else_block);
+            }
         } else if value {
             self.emit(Op::PushNone);
         }
@@ -221,7 +250,11 @@ impl<'a> Compiler<'a> {
         let cond_addr = self.here();
         self.compile_expr(&w.cond);
         let exit = self.emit(Op::JumpIfFalse(0, w.cond.span.line, w.cond.span.col));
-        self.loops.push(Loop { continue_addr: cond_addr, break_jumps: Vec::new(), is_for: false });
+        self.loops.push(Loop {
+            continue_addr: cond_addr,
+            break_jumps: Vec::new(),
+            is_for: false,
+        });
         self.compile_block_stmt(&w.body);
         self.emit(Op::Jump(cond_addr));
         let lp = self.loops.pop().unwrap();
@@ -237,7 +270,11 @@ impl<'a> Compiler<'a> {
         self.emit(Op::ForStart(f.iter.span.line, f.iter.span.col));
         let next_addr = self.here();
         let for_next = self.emit(Op::ForNext(f.name.clone(), 0)); // patched to end-of-iter
-        self.loops.push(Loop { continue_addr: next_addr, break_jumps: Vec::new(), is_for: true });
+        self.loops.push(Loop {
+            continue_addr: next_addr,
+            break_jumps: Vec::new(),
+            is_for: true,
+        });
         self.compile_block_stmt(&f.body);
         self.emit(Op::Jump(next_addr));
         let lp = self.loops.pop().unwrap();
@@ -260,9 +297,13 @@ impl<'a> Compiler<'a> {
         let mut end_jumps = Vec::new();
         for arm in &m.arms {
             let test = self.emit(Op::MatchArm(arm.pattern.clone(), 0)); // jump to next arm on no-match
-            // matched: scrutinee still on stack under bindings; run body then pop scrutinee
+                                                                        // matched: scrutinee still on stack under bindings; run body then pop scrutinee
             self.emit(Op::PopScrutinee);
-            if value { self.compile_block_value(&arm.body); } else { self.compile_block_stmt(&arm.body); }
+            if value {
+                self.compile_block_value(&arm.body);
+            } else {
+                self.compile_block_stmt(&arm.body);
+            }
             end_jumps.push(self.emit(Op::Jump(0)));
             self.patch_match_arm(test, self.here());
         }
@@ -290,45 +331,51 @@ impl<'a> Compiler<'a> {
                 let idx = self.konst(c);
                 self.emit(Op::PushConst(idx));
             }
-            ExprKind::Ident(id) => { self.emit(Op::Load(id.clone())); }
-            ExprKind::Binary(op, l, r) => {
-                match op {
-                    BinOp::And => {
-                        self.compile_expr(l);
-                        let jf = self.emit(Op::TestBoolJumpFalse(0, l.span.line, l.span.col));
-                        self.compile_expr(r);
-                        self.emit(Op::ToBool(r.span.line, r.span.col));
-                        let done = self.emit(Op::Jump(0));
-                        self.patch_test(jf, self.here());
-                        self.emit(Op::PushBool(false));
-                        self.patch_jump(done, self.here());
-                    }
-                    BinOp::Or => {
-                        self.compile_expr(l);
-                        let jt = self.emit(Op::TestBoolJumpTrue(0, l.span.line, l.span.col));
-                        self.compile_expr(r);
-                        self.emit(Op::ToBool(r.span.line, r.span.col));
-                        let done = self.emit(Op::Jump(0));
-                        self.patch_test(jt, self.here());
-                        self.emit(Op::PushBool(true));
-                        self.patch_jump(done, self.here());
-                    }
-                    _ => {
-                        self.compile_expr(l);
-                        self.compile_expr(r);
-                        self.emit(Op::Binop(op.clone(), line, col));
-                    }
-                }
+            ExprKind::Ident(id) => {
+                self.emit(Op::Load(id.clone()));
             }
+            ExprKind::Binary(op, l, r) => match op {
+                BinOp::And => {
+                    self.compile_expr(l);
+                    let jf = self.emit(Op::TestBoolJumpFalse(0, l.span.line, l.span.col));
+                    self.compile_expr(r);
+                    self.emit(Op::ToBool(r.span.line, r.span.col));
+                    let done = self.emit(Op::Jump(0));
+                    self.patch_test(jf, self.here());
+                    self.emit(Op::PushBool(false));
+                    self.patch_jump(done, self.here());
+                }
+                BinOp::Or => {
+                    self.compile_expr(l);
+                    let jt = self.emit(Op::TestBoolJumpTrue(0, l.span.line, l.span.col));
+                    self.compile_expr(r);
+                    self.emit(Op::ToBool(r.span.line, r.span.col));
+                    let done = self.emit(Op::Jump(0));
+                    self.patch_test(jt, self.here());
+                    self.emit(Op::PushBool(true));
+                    self.patch_jump(done, self.here());
+                }
+                _ => {
+                    self.compile_expr(l);
+                    self.compile_expr(r);
+                    self.emit(Op::Binop(op.clone(), line, col));
+                }
+            },
             ExprKind::Unary(op, inner) => {
                 self.compile_expr(inner);
                 match op {
-                    UnOp::Neg => { self.emit(Op::Neg(inner.span.line, inner.span.col)); }
-                    UnOp::Not => { self.emit(Op::Not(inner.span.line, inner.span.col)); }
+                    UnOp::Neg => {
+                        self.emit(Op::Neg(inner.span.line, inner.span.col));
+                    }
+                    UnOp::Not => {
+                        self.emit(Op::Not(inner.span.line, inner.span.col));
+                    }
                 }
             }
             ExprKind::List(items) => {
-                for it in items { self.compile_expr(it); }
+                for it in items {
+                    self.compile_expr(it);
+                }
                 self.emit(Op::MakeList(items.len()));
             }
             ExprKind::Map(pairs) => {
@@ -340,7 +387,9 @@ impl<'a> Compiler<'a> {
             }
             ExprKind::Record(name, fields) => {
                 let names: Vec<String> = fields.iter().map(|(n, _)| n.clone()).collect();
-                for (_, v) in fields { self.compile_expr(v); }
+                for (_, v) in fields {
+                    self.compile_expr(v);
+                }
                 self.emit(Op::MakeRecord(name.clone(), names));
             }
             ExprKind::Field(obj, f) => {
@@ -385,10 +434,26 @@ impl<'a> Compiler<'a> {
             if args.len() == 1 {
                 if let CallArg::Positional(a) = &args[0] {
                     match name.as_str() {
-                        "ok" => { self.compile_expr(a); self.emit(Op::WrapOk); return; }
-                        "err" => { self.compile_expr(a); self.emit(Op::WrapErr); return; }
-                        "some" => { self.compile_expr(a); self.emit(Op::WrapSome); return; }
-                        "sqrt" => { self.compile_expr(a); self.emit(Op::Sqrt); return; }
+                        "ok" => {
+                            self.compile_expr(a);
+                            self.emit(Op::WrapOk);
+                            return;
+                        }
+                        "err" => {
+                            self.compile_expr(a);
+                            self.emit(Op::WrapErr);
+                            return;
+                        }
+                        "some" => {
+                            self.compile_expr(a);
+                            self.emit(Op::WrapSome);
+                            return;
+                        }
+                        "sqrt" => {
+                            self.compile_expr(a);
+                            self.emit(Op::Sqrt);
+                            return;
+                        }
                         _ => {}
                     }
                 }
@@ -433,15 +498,28 @@ impl<'a> Compiler<'a> {
         }
     }
     fn patch_for_next(&mut self, at: usize, target: usize) {
-        if let Op::ForNext(_, t) = &mut self.ops[at] { *t = target; } else { panic!("patch_for_next"); }
+        if let Op::ForNext(_, t) = &mut self.ops[at] {
+            *t = target;
+        } else {
+            panic!("patch_for_next");
+        }
     }
     fn patch_match_arm(&mut self, at: usize, target: usize) {
-        if let Op::MatchArm(_, t) = &mut self.ops[at] { *t = target; } else { panic!("patch_match_arm"); }
+        if let Op::MatchArm(_, t) = &mut self.ops[at] {
+            *t = target;
+        } else {
+            panic!("patch_match_arm");
+        }
     }
 
     fn finish(mut self, name: String, params: Vec<String>) -> Chunk {
         self.emit(Op::Return);
-        Chunk { name, params, ops: self.ops, consts: self.consts }
+        Chunk {
+            name,
+            params,
+            ops: self.ops,
+            consts: self.consts,
+        }
     }
 }
 
@@ -456,18 +534,27 @@ pub fn needs_tree_walker(file: &File) -> bool {
             ExprKind::Closure(..) => true,
             ExprKind::Binary(_, a, b) => expr_has(a) || expr_has(b),
             ExprKind::Unary(_, a) => expr_has(a),
-            ExprKind::Call(c, args) => expr_has(c) || args.iter().any(|a| match a { CallArg::Positional(e) | CallArg::Named(_, e) => expr_has(e) }),
+            ExprKind::Call(c, args) => {
+                expr_has(c)
+                    || args.iter().any(|a| match a {
+                        CallArg::Positional(e) | CallArg::Named(_, e) => expr_has(e),
+                    })
+            }
             ExprKind::Field(a, _) => expr_has(a),
             ExprKind::Index(a, b) => expr_has(a) || expr_has(b),
             ExprKind::List(xs) => xs.iter().any(expr_has),
             ExprKind::Map(ps) => ps.iter().any(|(k, v)| expr_has(k) || expr_has(v)),
             ExprKind::Record(_, fs) => fs.iter().any(|(_, v)| expr_has(v)),
             ExprKind::Try(a, _) => expr_has(a),
-            ExprKind::InterpStr(parts) => parts.iter().any(|p| matches!(p, InterpPart::Expr(e) if expr_has(e))),
+            ExprKind::InterpStr(parts) => parts
+                .iter()
+                .any(|p| matches!(p, InterpPart::Expr(e) if expr_has(e))),
             _ => false,
         }
     }
-    fn block_has(b: &Block) -> bool { b.stmts.iter().any(stmt_has) }
+    fn block_has(b: &Block) -> bool {
+        b.stmts.iter().any(stmt_has)
+    }
     fn stmt_has(s: &Statement) -> bool {
         match s {
             Statement::Expr(e) => expr_has(e),
@@ -476,8 +563,13 @@ pub fn needs_tree_walker(file: &File) -> bool {
             // the compiler below only ever assigns to a bare name.
             Statement::Assign(a) => !a.target.tail.is_empty() || expr_has(&a.rhs),
             // `if x != none` narrows only inside the then-branch.
-            Statement::If(i) => matches!(crate::check::none_comparison(&i.cond), Some((_, true)))
-                || expr_has(&i.cond) || block_has(&i.then_block) || i.elifs.iter().any(|(c, b)| expr_has(c) || block_has(b)) || i.else_block.as_ref().is_some_and(block_has),
+            Statement::If(i) => {
+                matches!(crate::check::none_comparison(&i.cond), Some((_, true)))
+                    || expr_has(&i.cond)
+                    || block_has(&i.then_block)
+                    || i.elifs.iter().any(|(c, b)| expr_has(c) || block_has(b))
+                    || i.else_block.as_ref().is_some_and(block_has)
+            }
             Statement::While(w) => expr_has(&w.cond) || block_has(&w.body),
             Statement::For(f) => expr_has(&f.iter) || block_has(&f.body),
             Statement::Match(m) => expr_has(&m.expr) || m.arms.iter().any(|a| block_has(&a.body)),
@@ -531,5 +623,9 @@ pub fn compile(file: &File) -> Program {
     }
     let top_level = top.finish("<top>".into(), Vec::new());
 
-    Program { functions, main, top_level }
+    Program {
+        functions,
+        main,
+        top_level,
+    }
 }

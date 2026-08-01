@@ -49,7 +49,9 @@ fn check_one(path: &Path) {
     let name = path.display();
 
     // skip intentional parse-error fixtures
-    let Some((ast1, comments)) = parse_with_comments(&src) else { return };
+    let Some((ast1, comments)) = parse_with_comments(&src) else {
+        return;
+    };
 
     let f1 = fmt::format_file_with_comments(&ast1, comments.clone());
 
@@ -73,11 +75,16 @@ fn check_one(path: &Path) {
 
     let (ast2b, comments2) = parse_with_comments(&f1).unwrap();
     let f2 = fmt::format_file_with_comments(&ast2b, comments2);
-    assert_eq!(f1, f2, "fmt is not idempotent for {name}\n--- pass1 ---\n{f1}\n--- pass2 ---\n{f2}");
+    assert_eq!(
+        f1, f2,
+        "fmt is not idempotent for {name}\n--- pass1 ---\n{f1}\n--- pass2 ---\n{f2}"
+    );
 }
 
 fn walk(dir: &str) {
-    let Ok(entries) = fs::read_dir(dir) else { return };
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
     for entry in entries.flatten() {
         let path = entry.path();
         if path.is_dir() {

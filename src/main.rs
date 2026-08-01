@@ -278,7 +278,7 @@ fn cmd_check(path: &str) -> ExitCode {
         }
         return ExitCode::FAILURE;
     }
-    
+
     ExitCode::SUCCESS
 }
 
@@ -297,14 +297,28 @@ fn cmd_get(url: &str) -> ExitCode {
     }
 
     let fetch = if url.ends_with(".git") {
-        let name = url.rsplit('/').next().unwrap_or("dep").trim_end_matches(".git");
+        let name = url
+            .rsplit('/')
+            .next()
+            .unwrap_or("dep")
+            .trim_end_matches(".git");
         let dest = vendor.join(name);
         let _ = std::fs::remove_dir_all(&dest);
-        run_tool("git", &["clone", "--depth", "1", url, dest.to_str().unwrap_or("")])
+        run_tool(
+            "git",
+            &["clone", "--depth", "1", url, dest.to_str().unwrap_or("")],
+        )
     } else {
-        let name = url.rsplit('/').next().filter(|s| !s.is_empty()).unwrap_or("dep.heh");
+        let name = url
+            .rsplit('/')
+            .next()
+            .filter(|s| !s.is_empty())
+            .unwrap_or("dep.heh");
         let dest = vendor.join(name);
-        run_tool("curl", &["-sSL", "--fail", "-o", dest.to_str().unwrap_or(""), url])
+        run_tool(
+            "curl",
+            &["-sSL", "--fail", "-o", dest.to_str().unwrap_or(""), url],
+        )
     };
     if let Err(e) = fetch {
         eprintln!("heh get: {e}");
@@ -326,8 +340,13 @@ fn cmd_get(url: &str) -> ExitCode {
 fn run_tool(program: &str, args: &[&str]) -> Result<(), String> {
     match std::process::Command::new(program).args(args).output() {
         Ok(out) if out.status.success() => Ok(()),
-        Ok(out) => Err(format!("{program} failed: {}", String::from_utf8_lossy(&out.stderr).trim())),
-        Err(_) => Err(format!("'{program}' not found (required to fetch this dependency)")),
+        Ok(out) => Err(format!(
+            "{program} failed: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        )),
+        Err(_) => Err(format!(
+            "'{program}' not found (required to fetch this dependency)"
+        )),
     }
 }
 
@@ -348,7 +367,10 @@ fn collect_files(
     root: &std::path::Path,
     out: &mut Vec<(String, String)>,
 ) -> std::io::Result<()> {
-    let mut children: Vec<_> = std::fs::read_dir(dir)?.filter_map(|e| e.ok()).map(|e| e.path()).collect();
+    let mut children: Vec<_> = std::fs::read_dir(dir)?
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .collect();
     children.sort();
     for path in children {
         if path.is_dir() {
@@ -358,7 +380,11 @@ fn collect_files(
             }
             collect_files(&path, root, out)?;
         } else if path.is_file() {
-            let rel = path.strip_prefix(root).unwrap_or(&path).to_string_lossy().replace('\\', "/");
+            let rel = path
+                .strip_prefix(root)
+                .unwrap_or(&path)
+                .to_string_lossy()
+                .replace('\\', "/");
             let bytes = std::fs::read(&path)?;
             out.push((rel, heh::modules::sha256_hex(&bytes)));
         }
@@ -369,7 +395,8 @@ fn collect_files(
 /// Write `<root>/heh.lock` from the current vendor tree. Returns the file count.
 fn write_lock(root: &std::path::Path) -> std::io::Result<usize> {
     let entries = hash_vendor_tree(root)?;
-    let mut body = String::from("# heh.lock — SHA-256 of every vendored file. Do not edit by hand.\n");
+    let mut body =
+        String::from("# heh.lock — SHA-256 of every vendored file. Do not edit by hand.\n");
     for (rel, hash) in &entries {
         body.push_str(&format!("{hash}  {rel}\n"));
     }
@@ -391,12 +418,17 @@ fn verify_lock(base_dir: &std::path::Path) -> Result<(), String> {
         if line.is_empty() || line.starts_with('#') {
             continue;
         }
-        let (hash, rel) = line.split_once("  ").ok_or_else(|| format!("malformed heh.lock line: '{line}'"))?;
+        let (hash, rel) = line
+            .split_once("  ")
+            .ok_or_else(|| format!("malformed heh.lock line: '{line}'"))?;
         let file = base_dir.join(rel);
-        let bytes = std::fs::read(&file).map_err(|_| format!("lock verification failed: '{rel}' is missing"))?;
+        let bytes = std::fs::read(&file)
+            .map_err(|_| format!("lock verification failed: '{rel}' is missing"))?;
         let actual = heh::modules::sha256_hex(&bytes);
         if actual != hash {
-            return Err(format!("lock verification failed: '{rel}' has been modified (hash mismatch)"));
+            return Err(format!(
+                "lock verification failed: '{rel}' has been modified (hash mismatch)"
+            ));
         }
     }
     Ok(())
@@ -464,7 +496,10 @@ fn cmd_test(dir: &str) -> ExitCode {
             continue;
         }
 
-        let base_dir = file.parent().map(|p| p.to_path_buf()).unwrap_or_else(|| std::path::PathBuf::from("."));
+        let base_dir = file
+            .parent()
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| std::path::PathBuf::from("."));
         let mut eval = heh::eval::Evaluator::with_base_dir(base_dir);
         if let Err(d) = eval.load_defs(&ast) {
             eprintln!("{}", d.render(&rel.to_string(), &source));
@@ -506,7 +541,11 @@ fn find_test_files(dir: &std::path::Path, out: &mut Vec<PathBuf>) -> std::io::Re
                 continue;
             }
             find_test_files(&path, out)?;
-        } else if path.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.ends_with("_test.heh")) {
+        } else if path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .is_some_and(|n| n.ends_with("_test.heh"))
+        {
             out.push(path);
         }
     }

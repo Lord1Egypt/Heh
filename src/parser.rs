@@ -400,7 +400,10 @@ impl<'a> Parser<'a> {
     /// body (SPEC §6.5) — has already had that NEWLINE folded into the block's
     /// DEDENT, so the statement is complete without one.
     fn expect_stmt_end(&mut self, ctx: &'static str) -> Result<(), Diag> {
-        if matches!(self.tokens.get(self.pos.wrapping_sub(1)).map(|t| &t.kind), Some(TokenKind::Dedent)) {
+        if matches!(
+            self.tokens.get(self.pos.wrapping_sub(1)).map(|t| &t.kind),
+            Some(TokenKind::Dedent)
+        ) {
             return Ok(());
         }
         self.expect(&TokenKind::Newline, ctx)?;

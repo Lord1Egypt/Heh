@@ -18,8 +18,15 @@ use crate::eval::{Evaluator, Scope};
 use crate::val::Val;
 
 enum IterState {
-    Range { next: Val, end: Option<Val>, inclusive: bool },
-    List { items: Vec<Val>, idx: usize },
+    Range {
+        next: Val,
+        end: Option<Val>,
+        inclusive: bool,
+    },
+    List {
+        items: Vec<Val>,
+        idx: usize,
+    },
 }
 
 pub struct Vm {
@@ -41,13 +48,20 @@ impl Vm {
             let scope = Rc::new(RefCell::new(Scope::new(Some(global.clone()))));
             if !chunk.params.is_empty() {
                 if let Some(sys) = global.borrow().get("sys") {
-                    scope.borrow_mut().define(chunk.params[0].clone(), sys, false);
+                    scope
+                        .borrow_mut()
+                        .define(chunk.params[0].clone(), sys, false);
                 }
             }
             match self.exec_chunk(chunk, program, scope) {
                 Ok(_) => {}
                 Err(d) if d.code == "E_TRY_PROPAGATE" || d.code == "E_TRY_PROPAGATE_NONE" => {
-                    return Err(Diag { code: "E0114", msg: "try propagated outside result-returning function".into(), line: 1, col: 1 });
+                    return Err(Diag {
+                        code: "E0114",
+                        msg: "try propagated outside result-returning function".into(),
+                        line: 1,
+                        col: 1,
+                    });
                 }
                 Err(d) => return Err(d),
             }
@@ -55,7 +69,12 @@ impl Vm {
         Ok(())
     }
 
-    fn exec_chunk(&mut self, chunk: &Chunk, program: &Program, scope: Rc<RefCell<Scope>>) -> Result<Val, Diag> {
+    fn exec_chunk(
+        &mut self,
+        chunk: &Chunk,
+        program: &Program,
+        scope: Rc<RefCell<Scope>>,
+    ) -> Result<Val, Diag> {
         let mut stack: Vec<Val> = Vec::new();
         let mut iters: Vec<IterState> = Vec::new();
         let mut ip = 0usize;
@@ -65,9 +84,14 @@ impl Vm {
                 Op::PushConst(i) => stack.push(const_to_val(&chunk.consts[*i])),
                 Op::PushNone => stack.push(Val::None),
                 Op::PushBool(b) => stack.push(Val::Bool(*b)),
-                Op::Pop => { stack.pop(); }
+                Op::Pop => {
+                    stack.pop();
+                }
                 Op::Load(name) => {
-                    let v = scope.borrow().get(name).unwrap_or_else(|| Val::Enum(name.clone(), vec![]));
+                    let v = scope
+                        .borrow()
+                        .get(name)
+                        .unwrap_or_else(|| Val::Enum(name.clone(), vec![]));
                     stack.push(v);
                 }
                 Op::Define(name, is_mut) => {
@@ -83,9 +107,14 @@ impl Vm {
                 Op::OpAssign(name, op, line, col) => {
                     let rhs = stack.pop().unwrap();
                     let cur = scope.borrow().get(name).ok_or(Diag {
-                        code: "E0103", msg: format!("undefined variable '{}'", name), line: *line, col: *col,
+                        code: "E0103",
+                        msg: format!("undefined variable '{}'", name),
+                        line: *line,
+                        col: *col,
                     })?;
-                    let res = self.eval.eval_binop(op.clone(), cur, rhs, span(*line, *col))?;
+                    let res = self
+                        .eval
+                        .eval_binop(op.clone(), cur, rhs, span(*line, *col))?;
                     if let Err(is_mut) = scope.borrow_mut().set(name, res) {
                         return Err(assign_err(name, is_mut, *line, *col));
                     }
@@ -105,9 +134,19 @@ impl Vm {
                 Op::Neg(line, col) => {
                     let v = stack.pop().unwrap();
                     match v {
-                        Val::Int(mut i) => { i.sign = !i.sign; stack.push(Val::Int(i)); }
+                        Val::Int(mut i) => {
+                            i.sign = !i.sign;
+                            stack.push(Val::Int(i));
+                        }
                         Val::Float(f) => stack.push(Val::Float(-f)),
-                        _ => return Err(Diag { code: "E0104", msg: "bad type for '-'".into(), line: *line, col: *col }),
+                        _ => {
+                            return Err(Diag {
+                                code: "E0104",
+                                msg: "bad type for '-'".into(),
+                                line: *line,
+                                col: *col,
+                            })
+                        }
                     }
                 }
                 Op::Not(line, col) => {
@@ -137,7 +176,10 @@ impl Vm {
                     }
                     stack.push(Val::Record(name.clone(), Rc::new(RefCell::new(map))));
                 }
-                Op::WrapOk => { let v = stack.pop().unwrap(); stack.push(Val::Ok(Box::new(v))); }
+                Op::WrapOk => {
+                    let v = stack.pop().unwrap();
+                    stack.push(Val::Ok(Box::new(v)));
+                }
                 Op::WrapErr => {
                     let v = stack.pop().unwrap();
                     match v {
@@ -145,11 +187,16 @@ impl Vm {
                         other => stack.push(Val::Err(other.to_string())),
                     }
                 }
-                Op::WrapSome => { let v = stack.pop().unwrap(); stack.push(Val::Some(Box::new(v))); }
+                Op::WrapSome => {
+                    let v = stack.pop().unwrap();
+                    stack.push(Val::Some(Box::new(v)));
+                }
                 Op::ConcatStr(n) => {
                     let parts = pop_n(&mut stack, *n);
                     let mut out = String::new();
-                    for p in parts { out.push_str(&p.to_string()); }
+                    for p in parts {
+                        out.push_str(&p.to_string());
+                    }
                     stack.push(Val::Str(out));
                 }
                 Op::Field(f, line, col) => {
@@ -172,9 +219,19 @@ impl Vm {
                     let args = pop_n(&mut stack, *argc);
                     let callee = &program.functions[*idx];
                     if callee.params.len() != args.len() {
-                        return Err(Diag { code: "E0109", msg: format!("expected {} args, got {}", callee.params.len(), args.len()), line: *line, col: *col });
+                        return Err(Diag {
+                            code: "E0109",
+                            msg: format!(
+                                "expected {} args, got {}",
+                                callee.params.len(),
+                                args.len()
+                            ),
+                            line: *line,
+                            col: *col,
+                        });
                     }
-                    let call_scope = Rc::new(RefCell::new(Scope::new(Some(self.eval.global.clone()))));
+                    let call_scope =
+                        Rc::new(RefCell::new(Scope::new(Some(self.eval.global.clone()))));
                     for (p, a) in callee.params.iter().zip(args) {
                         call_scope.borrow_mut().define(p.clone(), a, false);
                     }
@@ -188,7 +245,10 @@ impl Vm {
                 Op::CallValue(argc, named, line, col) => {
                     let args = pop_n(&mut stack, *argc);
                     let callee = stack.pop().unwrap();
-                    stack.push(self.eval.apply_callee(callee, args, named.clone(), *line, *col)?);
+                    stack.push(
+                        self.eval
+                            .apply_callee(callee, args, named.clone(), *line, *col)?,
+                    );
                 }
                 Op::Try(else_exit, line, col) => {
                     let v = stack.pop().unwrap();
@@ -196,29 +256,64 @@ impl Vm {
                         Val::Ok(inner) => stack.push(*inner),
                         Val::Some(inner) => stack.push(*inner),
                         Val::None => {
-                            if *else_exit { eprintln!("fault: none"); std::process::exit(1); }
-                            return Err(Diag { code: "E_TRY_PROPAGATE_NONE", msg: "none".into(), line: *line, col: *col });
+                            if *else_exit {
+                                eprintln!("fault: none");
+                                std::process::exit(1);
+                            }
+                            return Err(Diag {
+                                code: "E_TRY_PROPAGATE_NONE",
+                                msg: "none".into(),
+                                line: *line,
+                                col: *col,
+                            });
                         }
                         Val::Err(e) => {
-                            if *else_exit { eprintln!("fault: {}", e); std::process::exit(1); }
-                            return Err(Diag { code: "E_TRY_PROPAGATE", msg: e, line: *line, col: *col });
+                            if *else_exit {
+                                eprintln!("fault: {}", e);
+                                std::process::exit(1);
+                            }
+                            return Err(Diag {
+                                code: "E_TRY_PROPAGATE",
+                                msg: e,
+                                line: *line,
+                                col: *col,
+                            });
                         }
-                        _ => return Err(Diag { code: "E0112", msg: "try on non-result".into(), line: *line, col: *col }),
+                        _ => {
+                            return Err(Diag {
+                                code: "E0112",
+                                msg: "try on non-result".into(),
+                                line: *line,
+                                col: *col,
+                            })
+                        }
                     }
                 }
                 Op::Return => return Ok(stack.pop().unwrap_or(Val::None)),
-                Op::Jump(t) => { ip = *t; continue; }
+                Op::Jump(t) => {
+                    ip = *t;
+                    continue;
+                }
                 Op::JumpIfFalse(t, line, col) => {
                     let v = stack.pop().unwrap();
-                    if !self.eval.expect_bool(v, span(*line, *col))? { ip = *t; continue; }
+                    if !self.eval.expect_bool(v, span(*line, *col))? {
+                        ip = *t;
+                        continue;
+                    }
                 }
                 Op::TestBoolJumpFalse(t, line, col) => {
                     let v = stack.pop().unwrap();
-                    if !self.eval.expect_bool(v, span(*line, *col))? { ip = *t; continue; }
+                    if !self.eval.expect_bool(v, span(*line, *col))? {
+                        ip = *t;
+                        continue;
+                    }
                 }
                 Op::TestBoolJumpTrue(t, line, col) => {
                     let v = stack.pop().unwrap();
-                    if self.eval.expect_bool(v, span(*line, *col))? { ip = *t; continue; }
+                    if self.eval.expect_bool(v, span(*line, *col))? {
+                        ip = *t;
+                        continue;
+                    }
                 }
                 Op::ToBool(line, col) => {
                     let v = stack.pop().unwrap();
@@ -229,33 +324,65 @@ impl Vm {
                     let iterable = stack.pop().unwrap();
                     match iterable {
                         Val::Range(start, end, inclusive) => {
-                            let end = if matches!(*end, Val::None) { None } else { Some(*end) };
-                            iters.push(IterState::Range { next: *start, end, inclusive });
+                            let end = if matches!(*end, Val::None) {
+                                None
+                            } else {
+                                Some(*end)
+                            };
+                            iters.push(IterState::Range {
+                                next: *start,
+                                end,
+                                inclusive,
+                            });
                         }
-                        Val::List(l) => iters.push(IterState::List { items: l.borrow().clone(), idx: 0 }),
-                        Val::Map(m) => iters.push(IterState::List { items: m.borrow().keys().cloned().collect(), idx: 0 }),
+                        Val::List(l) => iters.push(IterState::List {
+                            items: l.borrow().clone(),
+                            idx: 0,
+                        }),
+                        Val::Map(m) => iters.push(IterState::List {
+                            items: m.borrow().keys().cloned().collect(),
+                            idx: 0,
+                        }),
                         Val::Str(s) => iters.push(IterState::List {
                             items: s.chars().map(|c| Val::Str(c.to_string())).collect(),
                             idx: 0,
                         }),
-                        _ => return Err(Diag { code: "E0104", msg: "not iterable (expected a list, map, str, or range)".into(), line: *line, col: *col }),
+                        _ => {
+                            return Err(Diag {
+                                code: "E0104",
+                                msg: "not iterable (expected a list, map, str, or range)".into(),
+                                line: *line,
+                                col: *col,
+                            })
+                        }
                     }
                 }
                 Op::ForNext(var, end_addr) => {
                     let it = iters.last_mut().unwrap();
                     let bound_val = match it {
-                        IterState::Range { next, end, inclusive } => {
+                        IterState::Range {
+                            next,
+                            end,
+                            inclusive,
+                        } => {
                             let in_bound = match end {
                                 None => true,
-                                Some(e) => if *inclusive {
-                                    (*next).partial_cmp(&*e) != Some(Ordering::Greater)
-                                } else {
-                                    (*next).partial_cmp(&*e) == Some(Ordering::Less)
-                                },
+                                Some(e) => {
+                                    if *inclusive {
+                                        (*next).partial_cmp(&*e) != Some(Ordering::Greater)
+                                    } else {
+                                        (*next).partial_cmp(&*e) == Some(Ordering::Less)
+                                    }
+                                }
                             };
                             if in_bound {
                                 let cur = next.clone();
-                                let inc = self.eval.eval_binop(BinOp::Add, next.clone(), Val::Int(BigInt::from_i64(1)), span(0, 0))?;
+                                let inc = self.eval.eval_binop(
+                                    BinOp::Add,
+                                    next.clone(),
+                                    Val::Int(BigInt::from_i64(1)),
+                                    span(0, 0),
+                                )?;
                                 *next = inc;
                                 Some(cur)
                             } else {
@@ -274,10 +401,16 @@ impl Vm {
                     };
                     match bound_val {
                         Some(v) => scope.borrow_mut().define(var.clone(), v, false),
-                        None => { iters.pop(); ip = *end_addr; continue; }
+                        None => {
+                            iters.pop();
+                            ip = *end_addr;
+                            continue;
+                        }
                     }
                 }
-                Op::PopIter => { iters.pop(); }
+                Op::PopIter => {
+                    iters.pop();
+                }
                 Op::MatchArm(pattern, next_arm) => {
                     let scrutinee = stack.last().unwrap().clone();
                     match self.eval.match_pattern(&scrutinee, pattern) {
@@ -286,12 +419,22 @@ impl Vm {
                                 scope.borrow_mut().define(k, v, false);
                             }
                         }
-                        None => { ip = *next_arm; continue; }
+                        None => {
+                            ip = *next_arm;
+                            continue;
+                        }
                     }
                 }
-                Op::PopScrutinee => { stack.pop(); }
+                Op::PopScrutinee => {
+                    stack.pop();
+                }
                 Op::MatchFail(line, col) => {
-                    return Err(Diag { code: "E0020", msg: "non-exhaustive match".into(), line: *line, col: *col });
+                    return Err(Diag {
+                        code: "E0020",
+                        msg: "non-exhaustive match".into(),
+                        line: *line,
+                        col: *col,
+                    });
                 }
             }
             ip += 1;
