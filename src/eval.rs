@@ -58,6 +58,10 @@ impl Scope {
 
 pub struct Evaluator {
     pub global: Rc<RefCell<Scope>>,
+    /// Directory used to resolve relative `use "./file.heh"` imports.
+    pub base_dir: std::path::PathBuf,
+    /// Canonical paths currently being loaded, for cycle detection (E0030).
+    loading: Vec<std::path::PathBuf>,
 }
 
 pub enum Flow {
@@ -70,6 +74,16 @@ impl Evaluator {
     pub fn new() -> Self {
         Self {
             global: Rc::new(RefCell::new(Scope::new(None))),
+            base_dir: std::path::PathBuf::from("."),
+            loading: Vec::new(),
+        }
+    }
+
+    pub fn with_base_dir(base_dir: std::path::PathBuf) -> Self {
+        Self {
+            global: Rc::new(RefCell::new(Scope::new(None))),
+            base_dir,
+            loading: Vec::new(),
         }
     }
 }
@@ -152,31 +166,9 @@ impl Evaluator {
             false,
         );
 
-        // Bind std modules brought in by `use std/<name>`.
-        for u in &file.uses {
-            let bare = u.path.rsplit('/').next().unwrap_or(&u.path).to_string();
-            if let Some(record) = crate::modules::module_record(&u.path) {
-                self.global.borrow_mut().define(bare, record, false);
-            }
-        }
-        
-        let builtins = vec![
-            "len", "upper", "lower", "trim", "split", "replace", "contains", "starts_with", "chars",
-            "push", "pop", "get", "sort", "map", "filter", "join", "set", "remove", "keys", "values",
-            "int_of", "str"
-        ];
-        for b in builtins {
-            self.global.borrow_mut().define(b.into(), Val::BuiltinFn(b), false);
-        }
-
-        // Find main
-        for item in &file.items {
-            if let TopItem::Fn(f) = item {
-                let params = f.params.iter().map(|p| p.name.clone()).collect();
-                let func = Val::Fn(params, f.body.clone(), self.global.clone());
-                self.global.borrow_mut().define(f.name.clone(), func, false);
-            }
-        }
+        // Resolve `use` declarations, register builtins, and define top-level
+        // functions (shared with imported modules).
+        self.install_defs(file)?;
 
         // Check for main
         let main_fn = self.global.borrow().get("main");
@@ -256,6 +248,118 @@ impl Evaluator {
             }
         }
         Ok(())
+    }
+
+    /// Resolve `use` declarations, register builtin methods, and define the
+    /// file's top-level functions in the current global scope. Shared by
+    /// `eval_file` and imported modules (imported modules never see `sys`).
+    fn install_defs(&mut self, file: &File) -> Result<(), Diag> {
+        for u in &file.uses {
+            let bare = u.path.rsplit('/').next().unwrap_or(&u.path).to_string();
+            if let Some(record) = crate::modules::module_record(&u.path) {
+                self.global.borrow_mut().define(bare, record, false);
+            } else if is_local_import(&u.path) {
+                let record = self.load_module(&u.path, u.span.clone())?;
+                let name = module_bind_name(&u.path);
+                self.global.borrow_mut().define(name, record, false);
+            } else {
+                return Err(Diag {
+                    code: "E0031",
+                    msg: format!("unknown module '{}'", u.path),
+                    line: u.span.line,
+                    col: u.span.col,
+                });
+            }
+        }
+
+        let builtins = [
+            "len", "upper", "lower", "trim", "split", "replace", "contains", "starts_with", "chars",
+            "push", "pop", "get", "sort", "map", "filter", "join", "set", "remove", "keys", "values",
+            "int_of", "str",
+        ];
+        for b in builtins {
+            self.global.borrow_mut().define(b.into(), Val::BuiltinFn(b), false);
+        }
+
+        for item in &file.items {
+            if let TopItem::Fn(f) = item {
+                let params = f.params.iter().map(|p| p.name.clone()).collect();
+                let func = Val::Fn(params, f.body.clone(), self.global.clone());
+                self.global.borrow_mut().define(f.name.clone(), func, false);
+            }
+        }
+        Ok(())
+    }
+
+    /// Load a local `use "./file.heh"` (or `vendor/name`) import: parse, check,
+    /// evaluate its definitions in an isolated scope, and return a namespace
+    /// record of its exported functions. Detects import cycles (E0030).
+    fn load_module(&mut self, path: &str, span: Span) -> Result<Val, Diag> {
+        let resolved = self.resolve_import_path(path);
+        let canonical = resolved.canonicalize().map_err(|_| Diag {
+            code: "E0032",
+            msg: format!("cannot find imported file '{}'", path),
+            line: span.line,
+            col: span.col,
+        })?;
+
+        if self.loading.contains(&canonical) {
+            return Err(Diag {
+                code: "E0030",
+                msg: format!("import cycle through '{}'", path),
+                line: span.line,
+                col: span.col,
+            });
+        }
+
+        let source = std::fs::read_to_string(&canonical).map_err(|e| Diag {
+            code: "E0032",
+            msg: format!("cannot read '{}': {}", path, e),
+            line: span.line,
+            col: span.col,
+        })?;
+
+        let tokens = crate::lexer::lex(&source).map_err(|mut d| { d.line = span.line; d.col = span.col; d })?;
+        let mut parser = crate::parser::Parser::new(&tokens);
+        let module_file = parser.parse_file().map_err(|mut d| { d.line = span.line; d.col = span.col; d })?;
+
+        let mut checker = crate::check::Checker::new();
+        checker.check_file(&module_file);
+        if let Some(d) = checker.diags.into_iter().next() {
+            return Err(Diag {
+                code: "E0033",
+                msg: format!("in imported '{}': {}", path, d.msg),
+                line: span.line,
+                col: span.col,
+            });
+        }
+
+        let module_dir = canonical.parent().map(|p| p.to_path_buf()).unwrap_or_else(|| std::path::PathBuf::from("."));
+        let mut sub = Evaluator::with_base_dir(module_dir);
+        sub.loading = self.loading.clone();
+        sub.loading.push(canonical.clone());
+        sub.install_defs(&module_file)?;
+
+        // Harvest exported functions into a namespace record.
+        let mut exports = HashMap::new();
+        for item in &module_file.items {
+            if let TopItem::Fn(f) = item {
+                if let Some(v) = sub.global.borrow().get(&f.name) {
+                    exports.insert(f.name.clone(), v);
+                }
+            }
+        }
+        let name = module_bind_name(path);
+        Ok(Val::Record(name, Rc::new(RefCell::new(exports))))
+    }
+
+    fn resolve_import_path(&self, path: &str) -> std::path::PathBuf {
+        let p = std::path::Path::new(path);
+        if p.is_absolute() {
+            p.to_path_buf()
+        } else {
+            self.base_dir.join(p)
+        }
     }
 
     fn eval_block(
@@ -1448,4 +1552,20 @@ impl Evaluator {
             }
         }
     }
+}
+
+/// A `use` path is a local import if it references a `.heh` file (by relative
+/// or absolute path) or a vendored module under `vendor/`.
+fn is_local_import(path: &str) -> bool {
+    path.ends_with(".heh")
+        || path.starts_with("./")
+        || path.starts_with("../")
+        || path.starts_with('/')
+        || path.starts_with("vendor/")
+}
+
+/// The scope name a local import binds to: the file stem of its last segment.
+fn module_bind_name(path: &str) -> String {
+    let last = path.rsplit('/').next().unwrap_or(path);
+    last.strip_suffix(".heh").unwrap_or(last).to_string()
 }

@@ -162,7 +162,12 @@ fn cmd_run(path: &str, run_args: Vec<String>) -> ExitCode {
         return ExitCode::FAILURE;
     }
 
-    let mut eval = heh::eval::Evaluator::new();
+    let base_dir = std::path::Path::new(path)
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|| std::path::PathBuf::from("."));
+    let mut eval = heh::eval::Evaluator::with_base_dir(base_dir);
     match eval.eval_file(&ast, run_args) {
         Ok(_) => ExitCode::SUCCESS,
         Err(d) => {

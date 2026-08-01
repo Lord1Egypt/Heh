@@ -1,0 +1,5 @@
+# Imported library module (pure functions only, no Sys).
+fn hello(name: str) -> str
+    "Hello, {name}!"
+fn triple(n: int) -> int
+    n * 3
