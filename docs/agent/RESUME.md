@@ -1,36 +1,55 @@
 # RESUME.md
 
 # Current State
-Phases 0–11 are complete and merged.
-- **P11** bytecode VM: `src/compile.rs` (AST→bytecode) + `src/vm.rs` (stack VM),
-  opt-in via `heh run --vm`. Byte-identical to the tree-walker across the whole
-  corpus + examples (differential test `tests/vm.rs`). Fixed a real tree-walker
-  bug along the way: unbounded ranges (`0..`) never iterated. Follow-ups:
-  perf benchmarks (≥5× CPython gate is local/aspirational) and flipping `--vm`
-  to the default after soak-testing.
+**Phases 0–12 are complete. The language is at v1.0 and the spec is frozen.**
 
-Earlier phases:
-- **P7** stdlib: str/list/map methods + pure modules (math, fmt, json, csv,
-  hash [SHA-256 FIPS + CRC32], regex [non-backtracking], debug).
-- **P8** capabilities: full `sys` (fs/env/clock/rand/net/input/args) with
-  `--deny-*` flags failing closed.
-- **P9** imports + net + vendoring: `use std/x`, `use "./file.heh"`,
-  `use vendor/name` (cycle error E0030); `sys.net.get`; `heh get` + `heh.lock`
-  SHA-256 verification (tamper = fault).
-- **P10** tooling: `heh test` (runs pure `fn test_*()` in `*_test.heh`) and
-  `heh fmt` (canonical, idempotent + semantics-preserving across the corpus).
+`heh --version` → 1.0.0. Full `cargo test` green (58 tests). Fresh-clone build
+verified (zero crates, ~1.3 MB binary).
 
-The language is fully usable via the tree-walking evaluator; the whole
-corpus + examples pass. See `docs/STDLIB.md` for the frozen surface.
+## What P12 actually turned out to be
+
+The v1.0 spec audit was not a documentation pass — it found **22 places where
+the shipped toolchain did not match SPEC.md**, several in headline features.
+The charter says the implementation follows the spec (§1.3), so they were
+fixed in code, not written off in the document. In short:
+
+- `int ** int` was unimplemented — the spec's own `2 ** 200` example failed.
+- `//` truncated instead of flooring; `%` used Rust's sign rules, not Python's.
+- `int()`, `float()`, `list()` did not exist.
+- Maps were a std HashMap, so iteration order was **randomized per run**.
+- `for` rejected maps and strs; closures could not be bound (`let f = fn(...)`);
+  `p.x = v` / `l[i] = v` were unimplemented (and the VM compiled them to an
+  assignment to the *base name*, silently corrupting it).
+- Top-level `let` constants were skipped when a `fn main` existed, so
+  `sys.print(NAME)` printed the string `"NAME"`.
+- Neither optional-narrowing rule existed. `list.get(0)` panicked the
+  interpreter. `.len()` could not be called (`.len` was a property).
+- `sys.clock.now()` returned a float of seconds instead of int millis;
+  `clock.sleep`, `rand.float`, and the whole `std/time` module were missing.
+- **`heh fmt` deleted every comment in the file.**
+
+All fixed, each with corpus coverage. Two divergences were resolved as spec
+amendments with Mohamed's approval: `sys.net.tcp_connect` is dropped from v1.0
+(a socket handle needs a resource lifecycle the language does not have), and
+floats now print with a decimal point (`3.0`, not `3`).
+
+## Method worth reusing
+
+The gaps were found by **executing every claim in SPEC.md**, clause by clause,
+rather than reading the code. Grepping for `TODO` found 4 of the 22; running
+the spec's own examples found the rest. If a future phase claims conformance,
+run the document.
 
 # Next Step
-The next phase is **P11 — Bytecode VM** (`src/compile.rs` + `src/vm.rs`).
-1. Compile the AST to bytecode, execute on a stack VM that reuses the
-   existing `Val`, bignum, builtins, and capability records (so output stays
-   byte-identical).
-2. `heh run` uses the VM; keep `--tree-walk` for the old path.
-3. **Gate:** a differential test asserting the ENTIRE corpus is byte-identical
-   under VM vs tree-walk. Benchmarks in `benches/` (local-only perf gate).
+Nothing is open. The remaining work is optional and needs an explicit
+go-ahead where noted:
 
-Then **P12 — v1.0 freeze** (docs/spec/README/version; publish only with
-Mohamed's explicit go-ahead).
+1. **Publishing** — NOT done, needs Mohamed's explicit approval:
+   GitHub Release v1.0.0, release binaries/tarball, crates.io. Draft notes are
+   in `docs/RELEASE_NOTES_v1.0.0.md`.
+2. **VM follow-ups** (from P11) — perf benchmarks in `benches/`, and making
+   `--vm` the default after soak testing. Note that `needs_tree_walker()` in
+   `src/compile.rs` now routes three construct families to the tree-walker
+   (closures, optional narrowing, field/index assignment); making the VM the
+   default means encoding those first.
+3. **A demo GIF** for the README (project standard: prefer VHS).

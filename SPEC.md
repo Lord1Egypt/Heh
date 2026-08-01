@@ -1,12 +1,13 @@
-# Heh 𓁨 — Language Specification v0.1
+# Heh 𓁨 — Language Specification v1.0
 
 > **Heh** (ḥḥ) — the Egyptian god of infinity and eternity, holding a palm rib
 > notched with millions of years. This language is named for him and designed
 > like him: **small, frozen, and endless**.
 >
 > This spec is the single source of truth. The implementation follows the spec,
-> never the other way around. Until v1.0 the spec may be amended by PR with
-> owner approval; at v1.0 it freezes forever (see §1.3).
+> never the other way around. **This is v1.0: the surface below is frozen.**
+> Additions may still be proposed against the ≤100-page budget (§1.3); nothing
+> here may change meaning or be removed (§1.2 item 12).
 
 ---
 
@@ -128,8 +129,13 @@ sides), a lowercase-`e` exponent, or both: `1.5`, `2.0`, `1e5`, `6.02e23`,
 `1.5e-3`. `float` has `inf`,
 `-inf`, and `nan` values (produced by arithmetic; there are no literals for
 them — use `std/math`). `int` and `float` never mix implicitly: converting is
-explicit via the builtins `int(x)` (truncates, may error on nan/inf) and
-`float(x)` (exact for small ints; rounds for huge ones).
+explicit via the builtins `int(x)` (truncates towards zero; a fault on nan/inf)
+and `float(x)` (exact for small ints; rounds for huge ones).
+
+**Display.** A float always prints with a decimal point, so `3.0` is never
+mistaken for the int `3`. Plain decimal notation is always used — never an
+exponent — because it is exact and needs no threshold rule. `nan`, `inf`, and
+`-inf` print as those names.
 
 ### 5.3 `bool`, `str`
 
@@ -142,8 +148,11 @@ explicit via the builtins `int(x)` (truncates, may error on nan/inf) and
 ### 5.4 Collections
 
 - `list[T]` — dynamic array literal `[1, 2, 3]`.
-- `map[K, V]` — ordered hash map (insertion order preserved, like Python
-  dicts), literal `{"a": 1, "b": 2}`. Key types: `int`, `str`, `bool`.
+- `map[K, V]` — ordered hash map, literal `{"a": 1, "b": 2}`. Key types: `int`,
+  `str`, `bool`. **Insertion order is preserved** (like Python dicts) and is the
+  order used by iteration, `keys()`, `values()`, printing, and `json.write` —
+  so a program's output does not depend on hash seeding. Re-assigning an
+  existing key keeps its original position. Map equality ignores order.
 - Collections are reference values (aliasing is visible, like Python). `let`
   vs `mut` controls **rebinding** of the name, not deep mutation; `str` is
   always immutable.
@@ -188,9 +197,18 @@ finite range with `list(0..10)`.
 | 8 | `and` (short-circuit) |
 | 9 | `or` (short-circuit) |
 
-`/` on two ints yields `float` (like Python 3); `//` is integer floor
-division; `%` follows Python's sign rules. Division/modulo by zero is a
-runtime **fault** (§7.3).
+`/` on two ints yields `float` (like Python 3); `//` is integer floor division
+(the quotient rounds towards negative infinity, so `-7 // 2 == -4`); `%` takes
+the sign of the divisor, so `-7 % 3 == 2` and `7 % -3 == -2`. Division and
+modulo by zero are a runtime **fault** (§7.3). `**` on two ints is exact and
+unbounded; a negative exponent is a fault, since `int` stays closed under `**`
+(use floats for fractional powers).
+
+> **Unary `-` binds tighter than `**`** (levels 2 and 3 above), so `-2 ** 4` is
+> `(-2) ** 4` = `16`. This is deliberate — one rule, no exception carved out for
+> one operator — but it is the opposite of Python and of ordinary mathematical
+> notation, where `-2**4` is `-16`. `heh fmt` keeps the parentheses in
+> `(-2) ** 4` for exactly this reason.
 
 ### 6.2 Bindings
 
@@ -260,7 +278,14 @@ let double = fn(x: int) -> int     # anonymous fn (closure)
 ```
 
 `return expr` exits early; `return` alone returns the unit value (a function
-with no `->` clause returns unit).
+with no `->` clause returns unit). Unit is not a value you can bind usefully;
+it prints as `none`.
+
+A closure's body is an indented block, so a closure is written as a statement's
+own value — `let double = fn(x: int) -> int` and then its body — and passed on
+by name: `[1, 2, 3].map(double)`. Layout is suppressed inside `(` `[` `{`
+(§3), so a block-bodied closure cannot be written inline inside a call's
+parentheses; bind it first.
 
 **UFCS (uniform function call syntax):** `x.f(y)` is exactly `f(x, y)` when
 `x`'s type has no builtin method `f`. This gives method-style chaining without
@@ -309,8 +334,8 @@ A **fault** stops the program with a diagnostic (file, line, message): index
 out of bounds, division by zero, explicit `std/debug.fault(msg)`, or a bug in
 the interpreter. Faults are for **bugs**, not for expected failures — there is
 deliberately no way to catch one. APIs that can fail in normal operation
-return `T or error` or `T?` (e.g. `list.get(i) -> T?` is the non-faulting
-index).
+return `T or error` or `T?`. The non-faulting lookups are `list.get(i) -> T?`
+and `map.get(k) -> V?`: a missing index or key is `none`, never a fault.
 
 ## 8. Records, enums, `match`
 
@@ -393,10 +418,16 @@ fn main(sys: Sys)
 | `sys.print(x)` / `sys.input() -> str or error` | stdio |
 | `sys.args -> list[str]` | CLI arguments |
 | `sys.fs` | `read(path) -> str or error`, `read_bytes`, `write`, `append`, `exists`, `list_dir`, `remove` |
-| `sys.net` | `get(url) -> str or error` (HTTP), `tcp_connect(...)` |
-| `sys.env` | `get(name) -> str?` |
+| `sys.net` | `get(url) -> str or error` (HTTP/HTTPS) |
+| `sys.env` | `get(name) -> str?`, `set(name, value)` |
 | `sys.clock` | `now() -> int` (unix millis), `sleep(ms)` |
-| `sys.rand` | `int(a, b) -> int`, `float() -> float`, `bytes(n)` — OS entropy |
+| `sys.rand` | `int(a, b) -> int or error`, `float() -> float`, `bytes(n)` — OS entropy |
+
+*(v1.0 has no raw-socket capability. A socket is a handle with a lifetime —
+open, read, write, close — and Heh has no resource-lifecycle construct to hang
+that on; inventing one at the freeze would be a permanent commitment made in a
+hurry. `sys.net.get` covers request/response work. Sockets remain a candidate
+addition against the §1.3 page budget.)*
 
 The CLI can shrink the root capability: `heh run app.heh --deny-net --deny-fs`
 makes the corresponding sub-capability's operations return
@@ -422,23 +453,26 @@ and top-level `let` of constants).
 
 Batteries included, small forever. Builtin methods on core types
 (`str.upper/lower/split/trim/replace/contains/starts_with/len/chars/...`,
-`list.push/pop/get/len/sort/map/filter/join/...`, `map.get/set/remove/keys/
-values/len/...`) plus exactly eight modules:
+`list.push/pop/get/len/sort/map/filter/join/...`,
+`map.get/set/remove/keys/values/len/...`) plus exactly eight modules:
 
 `std/math` · `std/json` · `std/fmt` · `std/time` · `std/regex` (RE2-style, no
 backtracking) · `std/csv` · `std/hash` (SHA-256, CRC32) · `std/debug`
-(`fault`, `assert`, value dumping)
+(`fault`, `assert`)
 
-Pure modules — anything effectful lives on `Sys`. The full signatures are
-fixed in `docs/STDLIB.md` as phases land (P7).
+Every one of these is **pure** — anything effectful lives on `Sys`. `std/time`
+is calendar arithmetic over the same unix-millisecond int `sys.clock.now()`
+returns; it never reads the clock itself, so the instant is always an argument.
+Builtin methods are called with parentheses, including `len`: `x.len()`.
+The full frozen signatures are in `docs/STDLIB.md`.
 
 ## 13. Tooling (one binary)
 
 | Command | Does |
 |---|---|
-| `heh run file.heh [args] [--deny-*]` | run a program |
+| `heh run file.heh [args] [--deny-*]` | run a program (`--vm` selects the bytecode VM) |
 | `heh check file.heh` | parse + type-check only |
-| `heh fmt [path]` | canonical formatter, no options, idempotent |
+| `heh fmt [--check] <path>` | canonical formatter, no options, idempotent; a directory formats the whole tree |
 | `heh test [path]` | runs every `fn test_*()` in `*_test.heh` files |
 | `heh tokens/ast file.heh` | dump lexer/parser output (dev + conformance) |
 | `heh get <url>` | vendor a module + record hashes in `heh.lock` |
@@ -446,6 +480,9 @@ fixed in `docs/STDLIB.md` as phases land (P7).
 `heh test`: test functions take no params and no `Sys` (tests are pure);
 `std/debug.assert(cond, msg)` failures mark the test failed. Deterministic
 order, summary line, exit 1 on any failure.
+
+`heh fmt` is comment-preserving: a comment is never deleted. One sharing a line
+with code stays on that line; otherwise it keeps its own line.
 
 ## 14. Grammar (EBNF, v0.1)
 
@@ -521,6 +558,7 @@ suggestion when known. Diagnostic **codes and meanings are append-only**
 ## 16. Conformance
 
 `tests/corpus/` holds `programs/*.heh` with expected stdout in `*.out`, and
-`errors/*.heh` with expected diagnostic codes in `*.err`. The corpus grows
-with every phase and never shrinks. **Passing the corpus is the definition of
+`errors/*.heh` with expected diagnostic codes in `*.err`. **The corpus as of
+this document is the v1.0 conformance corpus.** It grows and never shrinks; an
+implementation that passes it is Heh. **Passing the corpus is the definition of
 being a Heh implementation.** `examples/` mirrors the flagship programs.

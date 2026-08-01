@@ -48,12 +48,22 @@ fn vendor_get_lock_and_tamper() {
         .args(["get", &url])
         .output()
         .unwrap();
-    assert!(out.status.success(), "heh get failed: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(
+        out.status.success(),
+        "heh get failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
     assert!(dir.join("heh.lock").exists(), "heh.lock was not created");
-    assert!(dir.join("vendor/greetlib.heh").exists(), "file was not vendored");
+    assert!(
+        dir.join("vendor/greetlib.heh").exists(),
+        "file was not vendored"
+    );
 
     let lock = fs::read_to_string(dir.join("heh.lock")).unwrap();
-    assert!(lock.contains("vendor/greetlib.heh"), "lock missing entry: {lock}");
+    assert!(
+        lock.contains("vendor/greetlib.heh"),
+        "lock missing entry: {lock}"
+    );
 
     // run with a valid lock -> success
     let out = Command::new(heh())
@@ -61,11 +71,19 @@ fn vendor_get_lock_and_tamper() {
         .args(["run", "app.heh"])
         .output()
         .unwrap();
-    assert!(out.status.success(), "run failed: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(
+        out.status.success(),
+        "run failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
     assert_eq!(String::from_utf8_lossy(&out.stdout), "HEH!\n");
 
     // tamper the vendored file -> run must fault with a hash mismatch
-    fs::write(dir.join("vendor/greetlib.heh"), "fn shout(s: str) -> str\n    \"{s.upper()}?\"\n").unwrap();
+    fs::write(
+        dir.join("vendor/greetlib.heh"),
+        "fn shout(s: str) -> str\n    \"{s.upper()}?\"\n",
+    )
+    .unwrap();
     let out = Command::new(heh())
         .current_dir(&dir)
         .args(["run", "app.heh"])
@@ -73,7 +91,10 @@ fn vendor_get_lock_and_tamper() {
         .unwrap();
     assert!(!out.status.success(), "tampered run should have failed");
     let stderr = String::from_utf8_lossy(&out.stderr);
-    assert!(stderr.contains("hash mismatch"), "expected hash mismatch, got: {stderr}");
+    assert!(
+        stderr.contains("hash mismatch"),
+        "expected hash mismatch, got: {stderr}"
+    );
 
     let _ = fs::remove_dir_all(&dir);
 }

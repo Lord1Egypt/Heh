@@ -19,6 +19,7 @@ fn factorial(n: int) -> int
     acc
 
 sys.print(factorial(1000))        # all 2,568 digits. no BigInt import. no overflow.
+sys.print(2 ** 200)               # exact. always.
 ```
 
 ## Why Heh exists
@@ -64,26 +65,68 @@ fn main(sys: Sys)
 
 No null. No exceptions. No classes. No `pip install`. No overflow. Forever.
 
+## Getting started
+
+Heh is one binary with no dependencies. If you have a Rust compiler, you can
+build the entire toolchain:
+
+```sh
+git clone https://github.com/Lord1Egypt/Heh && cd Heh
+cargo build --release          # produces target/release/heh
+echo 'sys.print("Heh lives forever 𓁨")' > hello.heh
+./target/release/heh run hello.heh
+```
+
+A file with no `fn main` runs top to bottom with `sys` already in scope, so
+hello world really is one line. Add a `fn main(sys: Sys)` when you want an
+entry point.
+
+## The toolchain
+
+| Command | Does |
+|---|---|
+| `heh run <file.heh> [args]` | run a program (`--vm` uses the bytecode VM) |
+| `heh check <file.heh>` | parse and type-check without running |
+| `heh test [path]` | run every `fn test_*()` in `*_test.heh` |
+| `heh fmt [--check] <path>` | canonical formatter — no options, comment-preserving |
+| `heh get <url>` | vendor a dependency and pin its hashes in `heh.lock` |
+| `heh ast` / `heh tokens` | dump the parse tree or token stream |
+
+### Capabilities, in practice
+
+Effects reach your program through the single `Sys` value handed to `main`.
+A function that never receives it cannot read a file, open a socket, or even
+look at the clock — so a security review is `grep` for who takes `sys`.
+
+```heh
+fn main(sys: Sys)
+    let text = try sys.fs.read("notes.txt") else exit
+    sys.print(text)
+```
+
+Any capability can be revoked from the outside, and revocation fails closed:
+
+```sh
+heh run app.heh --deny-net --deny-fs      # those calls now return err(...)
+```
+
 ## Status
 
-**Phase P7 — Standard library done** (builtins for str, list, map). The spec
-([SPEC.md](SPEC.md)) and plan are complete; the interpreter is built phase by
-phase (P2 parser → P12 v1.0 freeze) by autonomous AI agents following
-[AGENTS.md](AGENTS.md). Progress lives in
-[docs/agent/TASK_MENU.md](docs/agent/TASK_MENU.md).
+**v1.0 — the language is frozen.** [SPEC.md](SPEC.md) is authoritative and its
+surface no longer changes; the conformance corpus in `tests/corpus/` defines
+what it means to be a Heh implementation. Everything was built phase by phase
+(P0–P12) against that spec.
 
 | | |
 |---|---|
-| Spec | [SPEC.md](SPEC.md) — authoritative, v0.1 |
+| Spec | [SPEC.md](SPEC.md) — authoritative, **v1.0, frozen** |
+| Standard library | [docs/STDLIB.md](docs/STDLIB.md) — the complete frozen surface |
+| Diagnostics | [docs/DIAGNOSTICS.md](docs/DIAGNOSTICS.md) |
 | Reference implementation | Rust, **zero crates**, single binary `heh` |
-| Plan (P0–P12) | [docs/agent/TASK_MENU.md](docs/agent/TASK_MENU.md) |
 | Examples | [examples/](examples/) |
 | Verification | conformance corpus + `cargo test` (CI on every PR) |
 
-## Building
-
 ```sh
-cargo build --release      # produces target/release/heh — the whole toolchain
 cargo test                 # the gate: must be green, always
 ```
 

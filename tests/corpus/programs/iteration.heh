@@ -1,0 +1,32 @@
+# `for` iterates lists, maps (keys), ranges, and strs (chars) — SPEC §6.3.
+# Map order is insertion order (§5.4), so this output is stable across runs.
+let m = {"zeta": 1, "alpha": 2, "mid": 3}
+for k in m
+    sys.print(k)
+
+for c in "hi𓁨"
+    sys.print(c)
+
+for i in 0..3
+    sys.print(i)
+
+for i in 0..=2
+    sys.print(i)
+
+for x in [7, 8]
+    sys.print(x)
+
+# `list()` materializes a bounded range (§5.5).
+sys.print(list(0..5))
+sys.print(list(0..=5))
+sys.print(list(-3..2))
+
+# An unbounded range runs until `break` (§5.5).
+for k in 0..
+    if k * k > 100
+        sys.print("stopped at {k}")
+        break
+
+sys.print(m)
+sys.print(m.keys())
+sys.print(m.values())

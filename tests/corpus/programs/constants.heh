@@ -1,0 +1,10 @@
+# SPEC §11: a file with `fn main` may still carry top-level `let` constants.
+# They bind before main runs.
+let NAME = "heh"
+let LIMIT = 2 ** 10
+let SIGILS = ["𓁨", "𓎛"]
+
+fn main(sys: Sys)
+    sys.print(NAME)
+    sys.print(LIMIT)
+    sys.print(SIGILS)

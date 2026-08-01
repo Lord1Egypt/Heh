@@ -6,6 +6,90 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
+/// A `map[K, V]` — insertion-ordered, as SPEC §5.4 requires. A plain HashMap
+/// would iterate in a per-process random order, which makes otherwise
+/// deterministic programs print differently on every run.
+///
+/// Entries live in a Vec (the order of record) with a HashMap from key to slot
+/// for O(1) lookup. Removal is O(n) because it has to close the gap; that is
+/// the rare operation and it keeps the structure free of tombstones.
+#[derive(Debug, Clone, Default)]
+pub struct OrderedMap {
+    entries: Vec<(Val, Val)>,
+    index: HashMap<Val, usize>,
+}
+
+impl OrderedMap {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
+    pub fn get(&self, key: &Val) -> Option<&Val> {
+        self.index.get(key).map(|&i| &self.entries[i].1)
+    }
+
+    /// Insert or overwrite. Overwriting keeps the key's original position, the
+    /// same way Python dicts do.
+    pub fn insert(&mut self, key: Val, val: Val) {
+        match self.index.get(&key) {
+            Some(&i) => self.entries[i].1 = val,
+            None => {
+                self.index.insert(key.clone(), self.entries.len());
+                self.entries.push((key, val));
+            }
+        }
+    }
+
+    pub fn remove(&mut self, key: &Val) -> Option<Val> {
+        let i = self.index.remove(key)?;
+        let (_, val) = self.entries.remove(i);
+        for slot in self.index.values_mut() {
+            if *slot > i {
+                *slot -= 1;
+            }
+        }
+        Some(val)
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&Val, &Val)> {
+        self.entries.iter().map(|(k, v)| (k, v))
+    }
+
+    pub fn keys(&self) -> impl Iterator<Item = &Val> {
+        self.entries.iter().map(|(k, _)| k)
+    }
+
+    pub fn values(&self) -> impl Iterator<Item = &Val> {
+        self.entries.iter().map(|(_, v)| v)
+    }
+}
+
+impl PartialEq for OrderedMap {
+    /// Maps compare by content, not by insertion order — `{"a": 1, "b": 2}`
+    /// equals `{"b": 2, "a": 1}` even though they print differently.
+    fn eq(&self, other: &Self) -> bool {
+        self.len() == other.len() && self.iter().all(|(k, v)| other.get(k) == Some(v))
+    }
+}
+
+impl FromIterator<(Val, Val)> for OrderedMap {
+    fn from_iter<I: IntoIterator<Item = (Val, Val)>>(iter: I) -> Self {
+        let mut map = Self::new();
+        for (k, v) in iter {
+            map.insert(k, v);
+        }
+        map
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Val {
     Int(BigInt),
@@ -23,11 +107,31 @@ pub enum Val {
     Err(String),
     Some(Box<Val>),
     List(Rc<RefCell<Vec<Val>>>),
-    Map(Rc<RefCell<HashMap<Val, Val>>>),
+    Map(Rc<RefCell<OrderedMap>>),
     Record(String, Rc<RefCell<HashMap<String, Val>>>),
     Enum(String, Vec<Val>),
     BoundMethod(Box<Val>, String),
     None,
+}
+
+impl Val {
+    /// The value's type as it appears in diagnostics.
+    pub fn type_name(&self) -> &'static str {
+        match self {
+            Val::Int(_) => "int",
+            Val::Float(_) => "float",
+            Val::Bool(_) => "bool",
+            Val::Str(_) => "str",
+            Val::Range(..) => "range",
+            Val::Fn(..) | Val::BuiltinFn(_) | Val::BoundMethod(..) => "fn",
+            Val::Ok(_) | Val::Err(_) => "result",
+            Val::Some(_) | Val::None => "option",
+            Val::List(_) => "list",
+            Val::Map(_) => "map",
+            Val::Record(..) => "record",
+            Val::Enum(..) => "enum",
+        }
+    }
 }
 
 impl PartialEq for Val {
@@ -142,11 +246,28 @@ impl PartialOrd for Val {
     }
 }
 
+/// Escape a string being printed inside quotes, so `err("say \"hi\"")` cannot
+/// be confused for a shorter string followed by junk.
+fn escape_in_quotes(s: &str) -> String {
+    s.replace('\\', "\\\\").replace('"', "\\\"")
+}
+
 impl fmt::Display for Val {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Val::Int(i) => write!(f, "{}", i),
-            Val::Float(fl) => write!(f, "{}", fl),
+            // A float always shows a decimal point (SPEC §5.2), so printed
+            // output distinguishes `3.0` from the int `3`. Never exponent
+            // notation: plain decimal is exact and needs no threshold rule.
+            Val::Float(fl) => {
+                if fl.is_nan() {
+                    write!(f, "nan")
+                } else if fl.is_finite() && fl.fract() == 0.0 {
+                    write!(f, "{:.1}", fl)
+                } else {
+                    write!(f, "{}", fl)
+                }
+            }
             Val::Bool(b) => write!(f, "{}", b),
             Val::Str(s) => write!(f, "{}", s),
             Val::Range(start, end, inc) => {
@@ -159,7 +280,7 @@ impl fmt::Display for Val {
             Val::Fn(..) => write!(f, "<fn>"),
             Val::BuiltinFn(n) => write!(f, "<builtin {}>", n),
             Val::Ok(inner) => write!(f, "ok({})", inner),
-            Val::Err(e) => write!(f, "err(\"{}\")", e),
+            Val::Err(e) => write!(f, "err(\"{}\")", escape_in_quotes(e)),
             Val::Some(inner) => write!(f, "some({})", inner),
             Val::List(l) => {
                 write!(f, "[")?;
@@ -170,7 +291,7 @@ impl fmt::Display for Val {
                     }
                     // In real Heh, lists print string elements with quotes, but we'll keep it simple for now
                     if let Val::Str(s) = v {
-                        write!(f, "\"{}\"", s)?;
+                        write!(f, "\"{}\"", escape_in_quotes(s))?;
                     } else {
                         write!(f, "{}", v)?;
                     }
@@ -192,7 +313,7 @@ impl fmt::Display for Val {
                         write!(f, "{}: ", k)?;
                     }
                     if let Val::Str(s) = v {
-                        write!(f, "\"{}\"", s)?;
+                        write!(f, "\"{}\"", escape_in_quotes(s))?;
                     } else {
                         write!(f, "{}", v)?;
                     }
@@ -210,7 +331,7 @@ impl fmt::Display for Val {
                     first = false;
                     write!(f, "{}: ", k)?;
                     if let Val::Str(s) = v {
-                        write!(f, "\"{}\"", s)?;
+                        write!(f, "\"{}\"", escape_in_quotes(s))?;
                     } else {
                         write!(f, "{}", v)?;
                     }

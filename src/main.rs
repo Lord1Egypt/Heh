@@ -15,7 +15,7 @@ Usage:
   heh run <file.heh> [args]   run a program (--vm for the bytecode VM; pass --deny-fs/-net/-env/-clock/-rand)
   heh check <file.heh>        type-check without running
   heh test [dir]              run every fn test_*() in *_test.heh files
-  heh fmt [--check] <file>    format a file in place (or check it is formatted)
+  heh fmt [--check] <path>    format a file or directory tree in place
   heh get <url>               vendor a dependency into vendor/ and pin it in heh.lock
   heh ast <file.heh>          dump the parsed AST
   heh tokens <file.heh>       dump lexer output, one token per line
@@ -213,9 +213,9 @@ fn cmd_run(path: &str, run_args: Vec<String>, use_vm: bool) -> ExitCode {
         return ExitCode::FAILURE;
     }
 
-    // The bytecode VM can't compile closures (map/filter callbacks); fall back
-    // to the tree-walker for such programs so behaviour is never lost.
-    let vm_ok = use_vm && !heh::compile::uses_closures(&ast);
+    // Some constructs have no exact VM encoding; fall back to the tree-walker
+    // for those programs so behaviour is never lost (see needs_tree_walker).
+    let vm_ok = use_vm && !heh::compile::needs_tree_walker(&ast);
 
     if vm_ok {
         let mut eval = heh::eval::Evaluator::with_base_dir(base_dir);
@@ -278,7 +278,7 @@ fn cmd_check(path: &str) -> ExitCode {
         }
         return ExitCode::FAILURE;
     }
-    
+
     ExitCode::SUCCESS
 }
 
@@ -297,14 +297,28 @@ fn cmd_get(url: &str) -> ExitCode {
     }
 
     let fetch = if url.ends_with(".git") {
-        let name = url.rsplit('/').next().unwrap_or("dep").trim_end_matches(".git");
+        let name = url
+            .rsplit('/')
+            .next()
+            .unwrap_or("dep")
+            .trim_end_matches(".git");
         let dest = vendor.join(name);
         let _ = std::fs::remove_dir_all(&dest);
-        run_tool("git", &["clone", "--depth", "1", url, dest.to_str().unwrap_or("")])
+        run_tool(
+            "git",
+            &["clone", "--depth", "1", url, dest.to_str().unwrap_or("")],
+        )
     } else {
-        let name = url.rsplit('/').next().filter(|s| !s.is_empty()).unwrap_or("dep.heh");
+        let name = url
+            .rsplit('/')
+            .next()
+            .filter(|s| !s.is_empty())
+            .unwrap_or("dep.heh");
         let dest = vendor.join(name);
-        run_tool("curl", &["-sSL", "--fail", "-o", dest.to_str().unwrap_or(""), url])
+        run_tool(
+            "curl",
+            &["-sSL", "--fail", "-o", dest.to_str().unwrap_or(""), url],
+        )
     };
     if let Err(e) = fetch {
         eprintln!("heh get: {e}");
@@ -326,8 +340,13 @@ fn cmd_get(url: &str) -> ExitCode {
 fn run_tool(program: &str, args: &[&str]) -> Result<(), String> {
     match std::process::Command::new(program).args(args).output() {
         Ok(out) if out.status.success() => Ok(()),
-        Ok(out) => Err(format!("{program} failed: {}", String::from_utf8_lossy(&out.stderr).trim())),
-        Err(_) => Err(format!("'{program}' not found (required to fetch this dependency)")),
+        Ok(out) => Err(format!(
+            "{program} failed: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        )),
+        Err(_) => Err(format!(
+            "'{program}' not found (required to fetch this dependency)"
+        )),
     }
 }
 
@@ -348,7 +367,10 @@ fn collect_files(
     root: &std::path::Path,
     out: &mut Vec<(String, String)>,
 ) -> std::io::Result<()> {
-    let mut children: Vec<_> = std::fs::read_dir(dir)?.filter_map(|e| e.ok()).map(|e| e.path()).collect();
+    let mut children: Vec<_> = std::fs::read_dir(dir)?
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .collect();
     children.sort();
     for path in children {
         if path.is_dir() {
@@ -358,7 +380,11 @@ fn collect_files(
             }
             collect_files(&path, root, out)?;
         } else if path.is_file() {
-            let rel = path.strip_prefix(root).unwrap_or(&path).to_string_lossy().replace('\\', "/");
+            let rel = path
+                .strip_prefix(root)
+                .unwrap_or(&path)
+                .to_string_lossy()
+                .replace('\\', "/");
             let bytes = std::fs::read(&path)?;
             out.push((rel, heh::modules::sha256_hex(&bytes)));
         }
@@ -369,7 +395,8 @@ fn collect_files(
 /// Write `<root>/heh.lock` from the current vendor tree. Returns the file count.
 fn write_lock(root: &std::path::Path) -> std::io::Result<usize> {
     let entries = hash_vendor_tree(root)?;
-    let mut body = String::from("# heh.lock — SHA-256 of every vendored file. Do not edit by hand.\n");
+    let mut body =
+        String::from("# heh.lock — SHA-256 of every vendored file. Do not edit by hand.\n");
     for (rel, hash) in &entries {
         body.push_str(&format!("{hash}  {rel}\n"));
     }
@@ -391,12 +418,17 @@ fn verify_lock(base_dir: &std::path::Path) -> Result<(), String> {
         if line.is_empty() || line.starts_with('#') {
             continue;
         }
-        let (hash, rel) = line.split_once("  ").ok_or_else(|| format!("malformed heh.lock line: '{line}'"))?;
+        let (hash, rel) = line
+            .split_once("  ")
+            .ok_or_else(|| format!("malformed heh.lock line: '{line}'"))?;
         let file = base_dir.join(rel);
-        let bytes = std::fs::read(&file).map_err(|_| format!("lock verification failed: '{rel}' is missing"))?;
+        let bytes = std::fs::read(&file)
+            .map_err(|_| format!("lock verification failed: '{rel}' is missing"))?;
         let actual = heh::modules::sha256_hex(&bytes);
         if actual != hash {
-            return Err(format!("lock verification failed: '{rel}' has been modified (hash mismatch)"));
+            return Err(format!(
+                "lock verification failed: '{rel}' has been modified (hash mismatch)"
+            ));
         }
     }
     Ok(())
@@ -464,7 +496,10 @@ fn cmd_test(dir: &str) -> ExitCode {
             continue;
         }
 
-        let base_dir = file.parent().map(|p| p.to_path_buf()).unwrap_or_else(|| std::path::PathBuf::from("."));
+        let base_dir = file
+            .parent()
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| std::path::PathBuf::from("."));
         let mut eval = heh::eval::Evaluator::with_base_dir(base_dir);
         if let Err(d) = eval.load_defs(&ast) {
             eprintln!("{}", d.render(&rel.to_string(), &source));
@@ -506,7 +541,11 @@ fn find_test_files(dir: &std::path::Path, out: &mut Vec<PathBuf>) -> std::io::Re
                 continue;
             }
             find_test_files(&path, out)?;
-        } else if path.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.ends_with("_test.heh")) {
+        } else if path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .is_some_and(|n| n.ends_with("_test.heh"))
+        {
             out.push(path);
         }
     }
@@ -517,7 +556,44 @@ fn find_test_files(dir: &std::path::Path, out: &mut Vec<PathBuf>) -> std::io::Re
 // `heh fmt` — canonical formatter (rewrites in place, or --check)
 // --------------------------------------------------------------------------
 
+/// `heh fmt [--check] <path>` — a directory formats every `.heh` file under it
+/// (SPEC §13 writes the argument as a path, not a file).
 fn cmd_fmt(path: &str, check_mode: bool) -> ExitCode {
+    let target = std::path::Path::new(path);
+    if target.is_dir() {
+        let mut files = Vec::new();
+        if let Err(e) = find_heh_files(target, &mut files) {
+            eprintln!("heh fmt: cannot scan '{path}': {e}");
+            return ExitCode::FAILURE;
+        }
+        files.sort();
+        let mut worst = ExitCode::SUCCESS;
+        for file in files {
+            if cmd_fmt_file(&file.to_string_lossy(), check_mode) != ExitCode::SUCCESS {
+                worst = ExitCode::FAILURE;
+            }
+        }
+        return worst;
+    }
+    cmd_fmt_file(path, check_mode)
+}
+
+fn find_heh_files(dir: &std::path::Path, out: &mut Vec<PathBuf>) -> std::io::Result<()> {
+    for entry in std::fs::read_dir(dir)? {
+        let path = entry?.path();
+        if path.is_dir() {
+            if path.file_name().and_then(|n| n.to_str()) == Some(".git") {
+                continue;
+            }
+            find_heh_files(&path, out)?;
+        } else if path.extension().and_then(|e| e.to_str()) == Some("heh") {
+            out.push(path);
+        }
+    }
+    Ok(())
+}
+
+fn cmd_fmt_file(path: &str, check_mode: bool) -> ExitCode {
     let source = match std::fs::read_to_string(path) {
         Ok(s) => s,
         Err(e) => {
@@ -525,7 +601,8 @@ fn cmd_fmt(path: &str, check_mode: bool) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let tokens = match heh::lexer::lex(&source) {
+    // Comments live outside the AST, so formatting needs them alongside it.
+    let (tokens, comments) = match heh::lexer::lex_with_comments(&source) {
         Ok(t) => t,
         Err(d) => {
             eprintln!("{}", d.render(path, &source));
@@ -540,7 +617,7 @@ fn cmd_fmt(path: &str, check_mode: bool) -> ExitCode {
         }
     };
 
-    let formatted = heh::fmt::format_file(&ast);
+    let formatted = heh::fmt::format_file_with_comments(&ast, comments);
 
     if check_mode {
         if formatted == source {

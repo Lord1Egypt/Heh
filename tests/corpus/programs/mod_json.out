@@ -1,4 +1,4 @@
-{"active":true,"age":36,"name":"Ada","note":null,"tags":["math","first"]}
+{"name":"Ada","age":36,"tags":["math","first"],"active":true,"note":null}
 [1,2,3]
 "he said \"hi\""
 rejected: json: bad literal

@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use crate::ast::*;
 use crate::diag::Diag;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Ty {
@@ -44,7 +44,9 @@ impl Checker {
     pub fn new() -> Self {
         Self {
             diags: Vec::new(),
-            scopes: vec![Scope { vars: HashMap::new() }],
+            scopes: vec![Scope {
+                vars: HashMap::new(),
+            }],
             types: HashMap::new(),
             funcs: HashMap::new(),
             current_fn_ret: None,
@@ -57,6 +59,19 @@ impl Checker {
         self.define("int_of".to_string(), Ty::Any, false);
         self.define("float_of".to_string(), Ty::Any, false);
         self.define("str".to_string(), Ty::Any, false);
+        // The explicit conversions (SPEC §5.2, §5.5). These carry real result
+        // types so `int(x) + 1` still checks as int arithmetic.
+        self.define(
+            "int".to_string(),
+            Ty::Fn(vec![Ty::Any], Box::new(Ty::Int)),
+            false,
+        );
+        self.define(
+            "float".to_string(),
+            Ty::Fn(vec![Ty::Any], Box::new(Ty::Float)),
+            false,
+        );
+        self.define("list".to_string(), Ty::Any, false);
         self.define("print".to_string(), Ty::Any, false); // In case they use it directly
         self.define("exit".to_string(), Ty::Any, false);
         self.define("len".to_string(), Ty::Any, false);
@@ -68,17 +83,20 @@ impl Checker {
         self.define("write".to_string(), Ty::Any, false);
         self.define("split".to_string(), Ty::Any, false);
         self.define("join".to_string(), Ty::Any, false);
-        
+
         self.define("ok".to_string(), Ty::Any, false);
         self.define("err".to_string(), Ty::Any, false);
         self.define("some".to_string(), Ty::Any, false);
         self.define("none".to_string(), Ty::Any, false);
 
-        self.types.insert("Sys".to_string(), TypeDecl {
-            name: "Sys".to_string(),
-            kind: TypeDeclKind::Record(vec![]), // Doesn't need real fields since we treat sys as Any
-            span: Span { line: 0, col: 0 },
-        });
+        self.types.insert(
+            "Sys".to_string(),
+            TypeDecl {
+                name: "Sys".to_string(),
+                kind: TypeDeclKind::Record(vec![]), // Doesn't need real fields since we treat sys as Any
+                span: Span { line: 0, col: 0 },
+            },
+        );
 
         // Names brought into scope by `use` (std modules or local imports).
         for u in &file.uses {
@@ -86,15 +104,19 @@ impl Checker {
             let bare = last.strip_suffix(".heh").unwrap_or(last).to_string();
             self.define(bare, Ty::Any, false);
         }
-        
+
         for item in &file.items {
             match item {
                 TopItem::Type(t) => {
                     self.types.insert(t.name.clone(), t.clone());
-                    // Add type constructor to funcs (for Enums and Records)
-                    // We can just treat them as Ty::Any for now, or build proper Fn type
-                    self.define(t.name.clone(), Ty::Any, false); // Constructor
-                    
+                    // The constructor carries the type it builds, so
+                    // `P(x: 1).x` and `p.x = 2` both know `p` is a record.
+                    let built = match t.kind {
+                        TypeDeclKind::Record(_) => Ty::Record(t.name.clone()),
+                        TypeDeclKind::Enum(_) => Ty::Enum(t.name.clone()),
+                    };
+                    self.define(t.name.clone(), built, false);
+
                     if let TypeDeclKind::Enum(variants) = &t.kind {
                         for v in variants {
                             self.define(v.name.clone(), Ty::Enum(t.name.clone()), false);
@@ -107,7 +129,7 @@ impl Checker {
                 _ => {}
             }
         }
-        
+
         // TODO: Register builtins
         // ...
 
@@ -123,42 +145,58 @@ impl Checker {
 
     pub fn resolve_type(&mut self, t: &TypeExpr) -> Ty {
         let mut base_ty = match &t.kind {
-            TypeExprKind::Named(name, args) => {
-                match name.as_str() {
-                    "int" => Ty::Int,
-                    "float" => Ty::Float,
-                    "bool" => Ty::Bool,
-                    "str" => Ty::Str,
-                    "list" => {
-                        if args.len() == 1 {
-                            Ty::List(Box::new(self.resolve_type(&args[0])))
-                        } else {
-                            self.diags.push(Diag { code: "E0050", msg: "list takes 1 type argument".into(), line: t.span.line, col: t.span.col });
-                            Ty::Error
-                        }
-                    }
-                    "map" => {
-                        if args.len() == 2 {
-                            Ty::Map(Box::new(self.resolve_type(&args[0])), Box::new(self.resolve_type(&args[1])))
-                        } else {
-                            self.diags.push(Diag { code: "E0050", msg: "map takes 2 type arguments".into(), line: t.span.line, col: t.span.col });
-                            Ty::Error
-                        }
-                    }
-                    _ => {
-                        if self.types.contains_key(name) {
-                            let decl = self.types.get(name).unwrap().clone();
-                            match decl.kind {
-                                TypeDeclKind::Record(_) => Ty::Record(name.clone()),
-                                TypeDeclKind::Enum(_) => Ty::Enum(name.clone()),
-                            }
-                        } else {
-                            self.diags.push(Diag { code: "E0051", msg: format!("unknown type '{}'", name), line: t.span.line, col: t.span.col });
-                            Ty::Error
-                        }
+            TypeExprKind::Named(name, args) => match name.as_str() {
+                "int" => Ty::Int,
+                "float" => Ty::Float,
+                "bool" => Ty::Bool,
+                "str" => Ty::Str,
+                "list" => {
+                    if args.len() == 1 {
+                        Ty::List(Box::new(self.resolve_type(&args[0])))
+                    } else {
+                        self.diags.push(Diag {
+                            code: "E0050",
+                            msg: "list takes 1 type argument".into(),
+                            line: t.span.line,
+                            col: t.span.col,
+                        });
+                        Ty::Error
                     }
                 }
-            }
+                "map" => {
+                    if args.len() == 2 {
+                        Ty::Map(
+                            Box::new(self.resolve_type(&args[0])),
+                            Box::new(self.resolve_type(&args[1])),
+                        )
+                    } else {
+                        self.diags.push(Diag {
+                            code: "E0050",
+                            msg: "map takes 2 type arguments".into(),
+                            line: t.span.line,
+                            col: t.span.col,
+                        });
+                        Ty::Error
+                    }
+                }
+                _ => {
+                    if self.types.contains_key(name) {
+                        let decl = self.types.get(name).unwrap().clone();
+                        match decl.kind {
+                            TypeDeclKind::Record(_) => Ty::Record(name.clone()),
+                            TypeDeclKind::Enum(_) => Ty::Enum(name.clone()),
+                        }
+                    } else {
+                        self.diags.push(Diag {
+                            code: "E0051",
+                            msg: format!("unknown type '{}'", name),
+                            line: t.span.line,
+                            col: t.span.col,
+                        });
+                        Ty::Error
+                    }
+                }
+            },
             TypeExprKind::Fn(params, ret) => {
                 let p_tys = params.iter().map(|p| self.resolve_type(p)).collect();
                 let r_ty = match ret {
@@ -168,14 +206,14 @@ impl Checker {
                 Ty::Fn(p_tys, Box::new(r_ty))
             }
         };
-        
+
         if t.optional {
             base_ty = Ty::Optional(Box::new(base_ty));
         }
         if t.result {
             base_ty = Ty::Result(Box::new(base_ty));
         }
-        
+
         base_ty
     }
 
@@ -186,7 +224,12 @@ impl Checker {
             let p_ty = if let Some(pt) = &p.typ {
                 self.resolve_type(pt)
             } else {
-                self.diags.push(Diag { code: "E0052", msg: "missing type annotation for parameter".into(), line: p.span.line, col: p.span.col });
+                self.diags.push(Diag {
+                    code: "E0052",
+                    msg: "missing type annotation for parameter".into(),
+                    line: p.span.line,
+                    col: p.span.col,
+                });
                 Ty::Error
             };
             p_tys.push(p_ty.clone());
@@ -204,7 +247,9 @@ impl Checker {
     }
 
     pub fn push_scope(&mut self) {
-        self.scopes.push(Scope { vars: HashMap::new() });
+        self.scopes.push(Scope {
+            vars: HashMap::new(),
+        });
     }
 
     pub fn pop_scope(&mut self) {
@@ -212,7 +257,11 @@ impl Checker {
     }
 
     pub fn define(&mut self, name: String, ty: Ty, is_mut: bool) {
-        self.scopes.last_mut().unwrap().vars.insert(name, (ty, is_mut));
+        self.scopes
+            .last_mut()
+            .unwrap()
+            .vars
+            .insert(name, (ty, is_mut));
     }
 
     pub fn lookup(&self, name: &str) -> Option<(Ty, bool)> {
@@ -238,31 +287,93 @@ impl Checker {
             Statement::Assign(a) => {
                 let lhs_ty = self.check_lvalue(&a.target);
                 let rhs_ty = self.check_expr(&a.rhs);
-                
+
                 if a.target.tail.is_empty() {
                     if let Some((_, is_mut)) = self.lookup(&a.target.name) {
                         if !is_mut {
-                            self.diags.push(Diag { code: "E0010", msg: format!("cannot reassign immutable '{}'", a.target.name), line: a.span.line, col: a.span.col });
+                            self.diags.push(Diag {
+                                code: "E0010",
+                                msg: format!("cannot reassign immutable '{}'", a.target.name),
+                                line: a.span.line,
+                                col: a.span.col,
+                            });
                         }
                     } else {
-                        self.diags.push(Diag { code: "E0011", msg: format!("unknown variable '{}'", a.target.name), line: a.span.line, col: a.span.col });
+                        self.diags.push(Diag {
+                            code: "E0011",
+                            msg: format!("unknown variable '{}'", a.target.name),
+                            line: a.span.line,
+                            col: a.span.col,
+                        });
                     }
                 }
-                
-                if !lhs_ty.is_error() && !rhs_ty.is_error() && lhs_ty != rhs_ty {
-                    self.diags.push(Diag { code: "E0040", msg: "type mismatch in assignment".into(), line: a.span.line, col: a.span.col });
+
+                if !lhs_ty.is_error()
+                    && !rhs_ty.is_error()
+                    && lhs_ty != Ty::Any
+                    && rhs_ty != Ty::Any
+                    && lhs_ty != rhs_ty
+                {
+                    self.diags.push(Diag {
+                        code: "E0040",
+                        msg: "type mismatch in assignment".into(),
+                        line: a.span.line,
+                        col: a.span.col,
+                    });
                 }
             }
             Statement::If(i) => {
                 let cond_ty = self.check_expr(&i.cond);
                 if !cond_ty.is_error() && cond_ty != Ty::Bool && cond_ty != Ty::Any {
-                    self.diags.push(Diag { code: "E0041", msg: "if condition must be bool".into(), line: i.cond.span.line, col: i.cond.span.col });
+                    self.diags.push(Diag {
+                        code: "E0041",
+                        msg: "if condition must be bool".into(),
+                        line: i.cond.span.line,
+                        col: i.cond.span.col,
+                    });
                 }
-                self.check_block(&i.then_block);
+
+                // Optional narrowing (SPEC §6.4). `if x != none` narrows x to T
+                // inside the then-branch; `if x == none` followed by a jump out
+                // narrows x to T for everything after the if.
+                let narrowing =
+                    none_comparison(&i.cond).and_then(|(name, is_neq)| match self.lookup(name) {
+                        Some((Ty::Optional(inner), is_mut)) => {
+                            Some((name.to_string(), is_neq, *inner, is_mut))
+                        }
+                        _ => None,
+                    });
+
+                match &narrowing {
+                    Some((name, true, inner, is_mut)) => {
+                        self.push_scope();
+                        self.define(name.clone(), inner.clone(), *is_mut);
+                        for stmt in &i.then_block.stmts {
+                            self.check_stmt(stmt);
+                        }
+                        self.pop_scope();
+                    }
+                    _ => self.check_block(&i.then_block),
+                }
+
+                if let Some((name, false, inner, is_mut)) = narrowing {
+                    if block_diverges(&i.then_block) {
+                        self.define(name, inner, is_mut);
+                    }
+                }
+
                 for (elif_cond, elif_block) in &i.elifs {
                     let elif_cond_ty = self.check_expr(elif_cond);
-                    if !elif_cond_ty.is_error() && elif_cond_ty != Ty::Bool && elif_cond_ty != Ty::Any {
-                        self.diags.push(Diag { code: "E0041", msg: "elif condition must be bool".into(), line: elif_cond.span.line, col: elif_cond.span.col });
+                    if !elif_cond_ty.is_error()
+                        && elif_cond_ty != Ty::Bool
+                        && elif_cond_ty != Ty::Any
+                    {
+                        self.diags.push(Diag {
+                            code: "E0041",
+                            msg: "elif condition must be bool".into(),
+                            line: elif_cond.span.line,
+                            col: elif_cond.span.col,
+                        });
                     }
                     self.check_block(elif_block);
                 }
@@ -273,7 +384,12 @@ impl Checker {
             Statement::While(w) => {
                 let cond_ty = self.check_expr(&w.cond);
                 if !cond_ty.is_error() && cond_ty != Ty::Bool && cond_ty != Ty::Any {
-                    self.diags.push(Diag { code: "E0041", msg: "while condition must be bool".into(), line: w.cond.span.line, col: w.cond.span.col });
+                    self.diags.push(Diag {
+                        code: "E0041",
+                        msg: "while condition must be bool".into(),
+                        line: w.cond.span.line,
+                        col: w.cond.span.col,
+                    });
                 }
                 self.check_block(&w.body);
             }
@@ -281,10 +397,17 @@ impl Checker {
                 let iter_ty = self.check_expr(&f.iter);
                 let elem_ty = match iter_ty {
                     Ty::List(inner) => *inner,
+                    // Iterating a map yields its keys (SPEC §6.3).
+                    Ty::Map(key, _) => *key,
                     Ty::Str => Ty::Str,
-                    Ty::Error => Ty::Error,
+                    Ty::Any | Ty::Error => Ty::Any,
                     _ => {
-                        self.diags.push(Diag { code: "E0042", msg: "can only iterate over list or str".into(), line: f.iter.span.line, col: f.iter.span.col });
+                        self.diags.push(Diag {
+                            code: "E0042",
+                            msg: "can only iterate over a list, map, str, or range".into(),
+                            line: f.iter.span.line,
+                            col: f.iter.span.col,
+                        });
                         Ty::Error
                     }
                 };
@@ -311,7 +434,11 @@ impl Checker {
                         }
                         Pattern::Variant(_, name, binds) => {
                             if let Ty::Enum(enum_name) = &expr_ty {
-                                let variant_fields = if let Some(TypeDecl { kind: TypeDeclKind::Enum(variants), .. }) = self.types.get(enum_name) {
+                                let variant_fields = if let Some(TypeDecl {
+                                    kind: TypeDeclKind::Enum(variants),
+                                    ..
+                                }) = self.types.get(enum_name)
+                                {
                                     if let Some(v) = variants.iter().find(|v| v.name == *name) {
                                         Some(v.fields.clone())
                                     } else {
@@ -320,7 +447,7 @@ impl Checker {
                                 } else {
                                     None
                                 };
-                                
+
                                 if let Some(fields) = variant_fields {
                                     if binds.len() == fields.len() {
                                         for (b_name, field) in binds.iter().zip(fields.iter()) {
@@ -328,10 +455,28 @@ impl Checker {
                                             self.define(b_name.clone(), f_ty, false);
                                         }
                                     } else {
-                                        self.diags.push(Diag { code: "E0044", msg: format!("variant '{}' takes {} args, {} given", name, fields.len(), binds.len()), line: arm.span.line, col: arm.span.col });
+                                        self.diags.push(Diag {
+                                            code: "E0044",
+                                            msg: format!(
+                                                "variant '{}' takes {} args, {} given",
+                                                name,
+                                                fields.len(),
+                                                binds.len()
+                                            ),
+                                            line: arm.span.line,
+                                            col: arm.span.col,
+                                        });
                                     }
                                 } else {
-                                    self.diags.push(Diag { code: "E0045", msg: format!("unknown variant '{}' for enum '{}'", name, enum_name), line: arm.span.line, col: arm.span.col });
+                                    self.diags.push(Diag {
+                                        code: "E0045",
+                                        msg: format!(
+                                            "unknown variant '{}' for enum '{}'",
+                                            name, enum_name
+                                        ),
+                                        line: arm.span.line,
+                                        col: arm.span.col,
+                                    });
                                 }
                             } else {
                                 // For now, if matching a literal or result/option
@@ -358,7 +503,7 @@ impl Checker {
                         }
                         Pattern::Wildcard(_) | Pattern::Literal(_) => {}
                     }
-                    
+
                     // TODO: exhaustive match (E0020) and arm typing
                     for stmt in &arm.body.stmts {
                         self.check_stmt(stmt);
@@ -373,15 +518,30 @@ impl Checker {
                     Ty::Unit
                 };
                 if let Some(expected) = &self.current_fn_ret {
-                    if !ret_ty.is_error() && !expected.is_error() && ret_ty != *expected && ret_ty != Ty::Any && *expected != Ty::Any {
-                        self.diags.push(Diag { code: "E0040", msg: "type mismatch in return".into(), line: r.span.line, col: r.span.col });
+                    if !ret_ty.is_error()
+                        && !expected.is_error()
+                        && ret_ty != *expected
+                        && ret_ty != Ty::Any
+                        && *expected != Ty::Any
+                    {
+                        self.diags.push(Diag {
+                            code: "E0040",
+                            msg: "type mismatch in return".into(),
+                            line: r.span.line,
+                            col: r.span.col,
+                        });
                     }
                 } else {
-                    self.diags.push(Diag { code: "E0043", msg: "return outside function".into(), line: r.span.line, col: r.span.col });
+                    self.diags.push(Diag {
+                        code: "E0043",
+                        msg: "return outside function".into(),
+                        line: r.span.line,
+                        col: r.span.col,
+                    });
                 }
             }
             Statement::Break(_) | Statement::Continue(_) => {
-                // Flow check is technically runtime or could be static, but E0110 handles it mostly. 
+                // Flow check is technically runtime or could be static, but E0110 handles it mostly.
             }
             Statement::Expr(e) => {
                 self.check_expr(e);
@@ -398,7 +558,12 @@ impl Checker {
         let mut curr_ty = if let Some((ty, _)) = self.lookup(&lval.name) {
             ty
         } else {
-            self.diags.push(Diag { code: "E0011", msg: format!("unknown variable '{}'", lval.name), line: lval.span.line, col: lval.span.col });
+            self.diags.push(Diag {
+                code: "E0011",
+                msg: format!("unknown variable '{}'", lval.name),
+                line: lval.span.line,
+                col: lval.span.col,
+            });
             return Ty::Error;
         };
 
@@ -407,7 +572,11 @@ impl Checker {
                 LValueTail::Field(f) => {
                     curr_ty = match curr_ty {
                         Ty::Record(name) => {
-                            let field_typ = if let Some(TypeDecl { kind: TypeDeclKind::Record(fields), .. }) = self.types.get(&name) {
+                            let field_typ = if let Some(TypeDecl {
+                                kind: TypeDeclKind::Record(fields),
+                                ..
+                            }) = self.types.get(&name)
+                            {
                                 if let Some(field) = fields.iter().find(|field| field.name == *f) {
                                     Some(field.typ.clone())
                                 } else {
@@ -416,17 +585,29 @@ impl Checker {
                             } else {
                                 None
                             };
-                            
+
                             if let Some(t) = field_typ {
                                 self.resolve_type(&t)
                             } else {
-                                self.diags.push(Diag { code: "E0053", msg: format!("unknown field '{}' on record '{}'", f, name), line: lval.span.line, col: lval.span.col });
+                                self.diags.push(Diag {
+                                    code: "E0053",
+                                    msg: format!("unknown field '{}' on record '{}'", f, name),
+                                    line: lval.span.line,
+                                    col: lval.span.col,
+                                });
                                 Ty::Error
                             }
                         }
-                        Ty::Error => Ty::Error,
+                        // Any = not statically known (e.g. through a closure);
+                        // the evaluator checks these at runtime.
+                        Ty::Any | Ty::Error => curr_ty,
                         _ => {
-                            self.diags.push(Diag { code: "E0054", msg: "field access on non-record".into(), line: lval.span.line, col: lval.span.col });
+                            self.diags.push(Diag {
+                                code: "E0054",
+                                msg: "field access on non-record".into(),
+                                line: lval.span.line,
+                                col: lval.span.col,
+                            });
                             Ty::Error
                         }
                     };
@@ -435,20 +616,35 @@ impl Checker {
                     let idx_ty = self.check_expr(idx_expr);
                     curr_ty = match curr_ty {
                         Ty::List(inner) => {
-                            if !idx_ty.is_error() && idx_ty != Ty::Int {
-                                self.diags.push(Diag { code: "E0055", msg: "list index must be int".into(), line: lval.span.line, col: lval.span.col });
+                            if !idx_ty.is_error() && idx_ty != Ty::Any && idx_ty != Ty::Int {
+                                self.diags.push(Diag {
+                                    code: "E0055",
+                                    msg: "list index must be int".into(),
+                                    line: lval.span.line,
+                                    col: lval.span.col,
+                                });
                             }
                             *inner
                         }
                         Ty::Map(k, v) => {
-                            if !idx_ty.is_error() && idx_ty != *k {
-                                self.diags.push(Diag { code: "E0056", msg: "map index type mismatch".into(), line: lval.span.line, col: lval.span.col });
+                            if !idx_ty.is_error() && idx_ty != Ty::Any && idx_ty != *k {
+                                self.diags.push(Diag {
+                                    code: "E0056",
+                                    msg: "map index type mismatch".into(),
+                                    line: lval.span.line,
+                                    col: lval.span.col,
+                                });
                             }
                             *v
                         }
-                        Ty::Error => Ty::Error,
+                        Ty::Any | Ty::Error => curr_ty,
                         _ => {
-                            self.diags.push(Diag { code: "E0057", msg: "index on non-collection".into(), line: lval.span.line, col: lval.span.col });
+                            self.diags.push(Diag {
+                                code: "E0057",
+                                msg: "index on non-collection".into(),
+                                line: lval.span.line,
+                                col: lval.span.col,
+                            });
                             Ty::Error
                         }
                     }
@@ -472,11 +668,29 @@ impl Checker {
                     ty
                 } else if self.funcs.contains_key(name) {
                     let f = self.funcs.get(name).unwrap().clone();
-                    let p_tys = f.params.iter().map(|p| p.typ.as_ref().map(|t| self.resolve_type(t)).unwrap_or(Ty::Any)).collect();
-                    let r_ty = f.ret_type.as_ref().map(|t| self.resolve_type(t)).unwrap_or(Ty::Unit);
+                    let p_tys = f
+                        .params
+                        .iter()
+                        .map(|p| {
+                            p.typ
+                                .as_ref()
+                                .map(|t| self.resolve_type(t))
+                                .unwrap_or(Ty::Any)
+                        })
+                        .collect();
+                    let r_ty = f
+                        .ret_type
+                        .as_ref()
+                        .map(|t| self.resolve_type(t))
+                        .unwrap_or(Ty::Unit);
                     Ty::Fn(p_tys, Box::new(r_ty))
                 } else {
-                    self.diags.push(Diag { code: "E0011", msg: format!("unknown variable '{}'", name), line: e.span.line, col: e.span.col });
+                    self.diags.push(Diag {
+                        code: "E0011",
+                        msg: format!("unknown variable '{}'", name),
+                        line: e.span.line,
+                        col: e.span.col,
+                    });
                     Ty::Error
                 }
             }
@@ -484,7 +698,13 @@ impl Checker {
                 let l_ty = self.check_expr(left);
                 let r_ty = self.check_expr(right);
                 match op {
-                    BinOp::Add | BinOp::Sub | BinOp::Mul | BinOp::Div | BinOp::Mod | BinOp::Pow | BinOp::FloorDiv => {
+                    BinOp::Add
+                    | BinOp::Sub
+                    | BinOp::Mul
+                    | BinOp::Div
+                    | BinOp::Mod
+                    | BinOp::Pow
+                    | BinOp::FloorDiv => {
                         if l_ty == Ty::Any || r_ty == Ty::Any {
                             Ty::Any
                         } else if l_ty == Ty::Int && r_ty == Ty::Int {
@@ -495,7 +715,12 @@ impl Checker {
                             Ty::Str
                         } else {
                             if !l_ty.is_error() && !r_ty.is_error() {
-                                self.diags.push(Diag { code: "E0040", msg: "type mismatch in binary op".into(), line: e.span.line, col: e.span.col });
+                                self.diags.push(Diag {
+                                    code: "E0040",
+                                    msg: "type mismatch in binary op".into(),
+                                    line: e.span.line,
+                                    col: e.span.col,
+                                });
                             }
                             Ty::Error
                         }
@@ -504,11 +729,18 @@ impl Checker {
                     BinOp::Lt | BinOp::Leq | BinOp::Gt | BinOp::Geq => {
                         if l_ty == Ty::Any || r_ty == Ty::Any {
                             Ty::Bool
-                        } else if l_ty == Ty::Int && r_ty == Ty::Int || l_ty == Ty::Float && r_ty == Ty::Float {
+                        } else if l_ty == Ty::Int && r_ty == Ty::Int
+                            || l_ty == Ty::Float && r_ty == Ty::Float
+                        {
                             Ty::Bool
                         } else {
                             if !l_ty.is_error() && !r_ty.is_error() {
-                                self.diags.push(Diag { code: "E0040", msg: "type mismatch in comparison".into(), line: e.span.line, col: e.span.col });
+                                self.diags.push(Diag {
+                                    code: "E0040",
+                                    msg: "type mismatch in comparison".into(),
+                                    line: e.span.line,
+                                    col: e.span.col,
+                                });
                             }
                             Ty::Error
                         }
@@ -520,14 +752,25 @@ impl Checker {
                             Ty::Bool
                         } else {
                             if !l_ty.is_error() && !r_ty.is_error() {
-                                self.diags.push(Diag { code: "E0040", msg: "type mismatch in logical op".into(), line: e.span.line, col: e.span.col });
+                                self.diags.push(Diag {
+                                    code: "E0040",
+                                    msg: "type mismatch in logical op".into(),
+                                    line: e.span.line,
+                                    col: e.span.col,
+                                });
                             }
                             Ty::Error
                         }
                     }
                     BinOp::Range | BinOp::RangeInc => {
-                        if l_ty == Ty::Int && r_ty == Ty::Int {
-                            Ty::List(Box::new(Ty::Int)) // technically an iterator but Heh uses lists for range loops usually? wait, it just produces a range object... we can represent as Any for now.
+                        // An unbounded range (`0..`) carries a `none` upper
+                        // bound, so only the start pins the element type.
+                        let bounded = r_ty == Ty::Int
+                            || matches!(right.kind, ExprKind::Literal(Literal::None));
+                        if l_ty == Ty::Int && bounded {
+                            Ty::List(Box::new(Ty::Int))
+                        } else if l_ty == Ty::Any || r_ty == Ty::Any {
+                            Ty::Any
                         } else {
                             Ty::Error
                         }
@@ -539,7 +782,12 @@ impl Checker {
                 match op {
                     UnOp::Not => {
                         if !inner_ty.is_error() && inner_ty != Ty::Bool {
-                            self.diags.push(Diag { code: "E0040", msg: "type mismatch in not".into(), line: e.span.line, col: e.span.col });
+                            self.diags.push(Diag {
+                                code: "E0040",
+                                msg: "type mismatch in not".into(),
+                                line: e.span.line,
+                                col: e.span.col,
+                            });
                         }
                         Ty::Bool
                     }
@@ -548,7 +796,12 @@ impl Checker {
                             inner_ty
                         } else {
                             if !inner_ty.is_error() {
-                                self.diags.push(Diag { code: "E0040", msg: "type mismatch in neg".into(), line: e.span.line, col: e.span.col });
+                                self.diags.push(Diag {
+                                    code: "E0040",
+                                    msg: "type mismatch in neg".into(),
+                                    line: e.span.line,
+                                    col: e.span.col,
+                                });
                             }
                             Ty::Error
                         }
@@ -565,7 +818,12 @@ impl Checker {
                         if elem_ty == Ty::Any {
                             elem_ty = t;
                         } else if !t.is_error() && t != elem_ty {
-                            self.diags.push(Diag { code: "E0040", msg: "list elements must have same type".into(), line: e.span.line, col: e.span.col });
+                            self.diags.push(Diag {
+                                code: "E0040",
+                                msg: "list elements must have same type".into(),
+                                line: e.span.line,
+                                col: e.span.col,
+                            });
                             elem_ty = Ty::Error;
                             break;
                         }
@@ -582,14 +840,26 @@ impl Checker {
                     for (k, v) in entries {
                         let t_k = self.check_expr(k);
                         let t_v = self.check_expr(v);
-                        if k_ty == Ty::Any { k_ty = t_k; }
-                        else if !t_k.is_error() && t_k != k_ty {
-                            self.diags.push(Diag { code: "E0040", msg: "map keys must have same type".into(), line: e.span.line, col: e.span.col });
+                        if k_ty == Ty::Any {
+                            k_ty = t_k;
+                        } else if !t_k.is_error() && t_k != k_ty {
+                            self.diags.push(Diag {
+                                code: "E0040",
+                                msg: "map keys must have same type".into(),
+                                line: e.span.line,
+                                col: e.span.col,
+                            });
                             k_ty = Ty::Error;
                         }
-                        if v_ty == Ty::Any { v_ty = t_v; }
-                        else if !t_v.is_error() && t_v != v_ty {
-                            self.diags.push(Diag { code: "E0040", msg: "map values must have same type".into(), line: e.span.line, col: e.span.col });
+                        if v_ty == Ty::Any {
+                            v_ty = t_v;
+                        } else if !t_v.is_error() && t_v != v_ty {
+                            self.diags.push(Diag {
+                                code: "E0040",
+                                msg: "map values must have same type".into(),
+                                line: e.span.line,
+                                col: e.span.col,
+                            });
                             v_ty = Ty::Error;
                         }
                     }
@@ -600,8 +870,14 @@ impl Checker {
                 let base_ty = self.check_expr(base);
                 match base_ty {
                     Ty::Record(name) => {
-                        let field_typ = if let Some(TypeDecl { kind: TypeDeclKind::Record(fields), .. }) = self.types.get(&name) {
-                            if let Some(field) = fields.iter().find(|field| field.name == *field_name) {
+                        let field_typ = if let Some(TypeDecl {
+                            kind: TypeDeclKind::Record(fields),
+                            ..
+                        }) = self.types.get(&name)
+                        {
+                            if let Some(field) =
+                                fields.iter().find(|field| field.name == *field_name)
+                            {
                                 Some(field.typ.clone())
                             } else {
                                 None
@@ -609,7 +885,7 @@ impl Checker {
                         } else {
                             None
                         };
-                        
+
                         if let Some(t) = field_typ {
                             self.resolve_type(&t)
                         } else {
@@ -620,7 +896,7 @@ impl Checker {
                     Ty::Any | Ty::Error => Ty::Any,
                     _ => {
                         // Might be UFCS method call (e.g. float.sqrt)
-                        Ty::Any 
+                        Ty::Any
                     }
                 }
             }
@@ -629,26 +905,46 @@ impl Checker {
                 let idx_ty = self.check_expr(idx);
                 match base_ty {
                     Ty::List(inner) => {
-                        if !idx_ty.is_error() && idx_ty != Ty::Int {
-                            self.diags.push(Diag { code: "E0055", msg: "list index must be int".into(), line: e.span.line, col: e.span.col });
+                        if !idx_ty.is_error() && idx_ty != Ty::Any && idx_ty != Ty::Int {
+                            self.diags.push(Diag {
+                                code: "E0055",
+                                msg: "list index must be int".into(),
+                                line: e.span.line,
+                                col: e.span.col,
+                            });
                         }
                         *inner
                     }
                     Ty::Map(k, v) => {
-                        if !idx_ty.is_error() && idx_ty != *k {
-                            self.diags.push(Diag { code: "E0056", msg: "map index type mismatch".into(), line: e.span.line, col: e.span.col });
+                        if !idx_ty.is_error() && idx_ty != Ty::Any && idx_ty != *k {
+                            self.diags.push(Diag {
+                                code: "E0056",
+                                msg: "map index type mismatch".into(),
+                                line: e.span.line,
+                                col: e.span.col,
+                            });
                         }
                         *v
                     }
                     Ty::Str => {
-                        if !idx_ty.is_error() && idx_ty != Ty::Int {
-                            self.diags.push(Diag { code: "E0055", msg: "str index must be int".into(), line: e.span.line, col: e.span.col });
+                        if !idx_ty.is_error() && idx_ty != Ty::Any && idx_ty != Ty::Int {
+                            self.diags.push(Diag {
+                                code: "E0055",
+                                msg: "str index must be int".into(),
+                                line: e.span.line,
+                                col: e.span.col,
+                            });
                         }
                         Ty::Str
                     }
                     Ty::Any | Ty::Error => Ty::Any,
                     _ => {
-                        self.diags.push(Diag { code: "E0057", msg: "index on non-collection".into(), line: e.span.line, col: e.span.col });
+                        self.diags.push(Diag {
+                            code: "E0057",
+                            msg: "index on non-collection".into(),
+                            line: e.span.line,
+                            col: e.span.col,
+                        });
                         Ty::Error
                     }
                 }
@@ -660,7 +956,12 @@ impl Checker {
                     Ty::Optional(inner_ty) => *inner_ty,
                     Ty::Any | Ty::Error => Ty::Any,
                     _ => {
-                        self.diags.push(Diag { code: "E0021", msg: "try on non-result/optional".into(), line: e.span.line, col: e.span.col });
+                        self.diags.push(Diag {
+                            code: "E0021",
+                            msg: "try on non-result/optional".into(),
+                            line: e.span.line,
+                            col: e.span.col,
+                        });
                         Ty::Error
                     }
                 }
@@ -677,8 +978,12 @@ impl Checker {
                 let callee_ty = self.check_expr(callee);
                 for arg in args {
                     match arg {
-                        CallArg::Positional(a) => { self.check_expr(a); }
-                        CallArg::Named(_, a) => { self.check_expr(a); }
+                        CallArg::Positional(a) => {
+                            self.check_expr(a);
+                        }
+                        CallArg::Named(_, a) => {
+                            self.check_expr(a);
+                        }
                     }
                 }
                 // TODO: full function signature checking
@@ -688,7 +993,12 @@ impl Checker {
                     Ty::Record(r) => Ty::Record(r.clone()),
                     Ty::Any | Ty::Error => Ty::Any,
                     _ => {
-                        self.diags.push(Diag { code: "E0058", msg: "call on non-function".into(), line: e.span.line, col: e.span.col });
+                        self.diags.push(Diag {
+                            code: "E0058",
+                            msg: "call on non-function".into(),
+                            line: e.span.line,
+                            col: e.span.col,
+                        });
                         Ty::Error
                     }
                 }
@@ -706,4 +1016,33 @@ impl Checker {
             }
         }
     }
+}
+
+/// Recognise the two `none` comparisons that drive optional narrowing
+/// (SPEC §6.4): returns the compared variable and whether the test was `!=`.
+/// Either operand order is accepted.
+pub fn none_comparison(cond: &Expr) -> Option<(&str, bool)> {
+    let ExprKind::Binary(op, left, right) = &cond.kind else {
+        return None;
+    };
+    let is_neq = match op {
+        BinOp::Neq => true,
+        BinOp::Eq => false,
+        _ => return None,
+    };
+    let is_none = |e: &Expr| matches!(&e.kind, ExprKind::Literal(Literal::None));
+    match (&left.kind, &right.kind) {
+        (ExprKind::Ident(name), _) if is_none(right) => Some((name.as_str(), is_neq)),
+        (_, ExprKind::Ident(name)) if is_none(left) => Some((name.as_str(), is_neq)),
+        _ => None,
+    }
+}
+
+/// Whether a block always leaves the enclosing block — the condition under
+/// which `if x == none` narrows `x` for the statements that follow it.
+fn block_diverges(b: &Block) -> bool {
+    matches!(
+        b.stmts.last(),
+        Some(Statement::Return(_) | Statement::Break(_) | Statement::Continue(_))
+    )
 }

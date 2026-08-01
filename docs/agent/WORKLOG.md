@@ -107,3 +107,26 @@ PR#. No entry = the step didn't happen. Mohamed reads this first when rating.
 - What: Implemented full static checker (check_expr, check_stmt), scopes, match arm bindings, UFCS methods. 
 - Test: `cargo test` -> ok. 6/6 cli, 2/2 corpus, 31/31 lexer, 1/1 parser.
 - PR: (goal mode self-merge)
+
+## 2026-08-01 — P12 v1.0 freeze (Claude)
+- Branch: `feat/p12-v1-freeze`
+- What: The v1.0 spec audit found **22 divergences between SPEC.md and the
+  shipped toolchain**, not the documentation cleanup the task menu implied.
+  Fixed in code (the spec is authoritative, §1.3): int `**`, floor `//` and
+  Python-sign `%`, `int()`/`float()`/`list()`, insertion-ordered maps (std
+  HashMap made output randomized per run), `for` over maps/strs, closure
+  binding, field/index assignment, top-level constants alongside `main`, both
+  optional-narrowing rules, `list.get` panic + option return, `.len()` as a
+  method, int-millis `clock.now`, `clock.sleep`, `rand.float`, `std/time`, and
+  a formatter that was deleting every comment. Then froze SPEC/STDLIB/
+  DIAGNOSTICS (10 → all 44 codes), rewrote README for users, bumped 0.0.1 →
+  1.0.0, added 7 corpus programs.
+- Owner decisions: dropped `sys.net.tcp_connect` from v1.0 (socket handles need
+  a resource lifecycle the language lacks); floats print `3.0` not `3`.
+- Verification: 58 tests green; VM differential still byte-identical (it caught
+  a real latent bug — the VM compiled `l[i] = v` to an assignment to `l`);
+  fresh-clone build + test from a clean checkout; every SPEC claim and every
+  README snippet executed; std/time and arithmetic checked against CPython.
+- Lesson: conformance was verified by **running every claim in the spec**, not
+  by reading code. `grep TODO` found 4 of the 22 gaps.
+- PR: pending (branch pushed for review)

@@ -44,7 +44,9 @@ fn differential(path: &Path) {
 }
 
 fn walk(dir: &str) {
-    let Ok(entries) = fs::read_dir(dir) else { return };
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
     let mut paths: Vec<_> = entries
         .flatten()
         .map(|e| e.path())

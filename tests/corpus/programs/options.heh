@@ -1,0 +1,46 @@
+# Optionals (SPEC §6.4, §7.3): both narrowing rules, and the non-faulting
+# lookups that return `T?`.
+
+fn after_early_return(x: int?) -> int
+    if x == none
+        return 0
+    x + 1
+
+fn inside_true_branch(x: int?) -> int
+    if x != none
+        return x + 100
+    -1
+
+fn reversed_operands(x: int?) -> int
+    if none != x
+        return x * 2
+    0
+
+fn find(users: list[str], who: str) -> int?
+    for i in 0..users.len()
+        if users[i] == who
+            return some(i)
+    none
+
+fn main(sys: Sys)
+    sys.print(after_early_return(some(5)))
+    sys.print(after_early_return(none))
+    sys.print(inside_true_branch(some(5)))
+    sys.print(inside_true_branch(none))
+    sys.print(reversed_operands(some(5)))
+
+    let names = ["ra", "heh"]
+    let idx = find(names, "heh")
+    if idx != none
+        sys.print("found at {idx}")
+    else
+        sys.print("not found")
+
+    # list.get / map.get never fault — they answer with an option.
+    let l = [1, 2]
+    sys.print(l.get(0))
+    sys.print(l.get(5))
+    sys.print(l.get(-1))
+    let m = {"a": 1}
+    sys.print(m.get("a"))
+    sys.print(m.get("zz"))

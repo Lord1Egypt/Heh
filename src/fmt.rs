@@ -4,14 +4,80 @@
 //! (`fmt(fmt(x)) == fmt(x)`).
 
 use crate::ast::*;
+use crate::lexer::Comment;
 
 const INDENT: &str = "    ";
 
+/// Comments are not part of the AST, so the formatter replays them from the
+/// lexer's side table: each one is re-emitted just before the first construct
+/// that starts on a later source line, at that construct's indentation.
+/// Comments sharing a line with code are appended to the emitted line.
+struct Comments {
+    items: Vec<Comment>,
+    next: usize,
+}
+
+impl Comments {
+    fn new(mut items: Vec<Comment>) -> Self {
+        items.sort_by_key(|c| (c.line, c.col));
+        Self { items, next: 0 }
+    }
+
+    /// Emit every comment that came before source line `line`. A comment that
+    /// was not claimed as a trailing one by now gets its own line: the
+    /// formatter never drops a comment, even if it has to move it.
+    fn flush_before(&mut self, line: u32, depth: usize, out: &mut String) {
+        while let Some(c) = self.items.get(self.next) {
+            if c.line >= line {
+                break;
+            }
+            out.push_str(&format!("{}{}\n", pad(depth), c.text));
+            self.next += 1;
+        }
+    }
+
+    /// Take the trailing comment sitting on source line `line`, if any.
+    fn trailing_on(&mut self, line: u32) -> Option<String> {
+        let c = self.items.get(self.next)?;
+        if c.line == line && !c.own_line {
+            let text = c.text.clone();
+            self.next += 1;
+            return Some(text);
+        }
+        None
+    }
+
+    /// Emit whatever is left once the program has been written out.
+    fn flush_rest(&mut self, out: &mut String) {
+        while let Some(c) = self.items.get(self.next) {
+            out.push_str(&format!("{}\n", c.text));
+            self.next += 1;
+        }
+    }
+}
+
+/// Append a trailing comment to the line just written to `out`.
+fn attach_trailing(out: &mut String, comment: Option<String>) {
+    if let Some(text) = comment {
+        if out.ends_with('\n') {
+            out.pop();
+        }
+        out.push_str(&format!("  {}\n", text));
+    }
+}
+
 pub fn format_file(file: &File) -> String {
+    format_file_with_comments(file, Vec::new())
+}
+
+pub fn format_file_with_comments(file: &File, comments: Vec<Comment>) -> String {
     let mut out = String::new();
+    let cm = &mut Comments::new(comments);
 
     for u in &file.uses {
+        cm.flush_before(u.span.line, 0, &mut out);
         out.push_str(&format!("use {}\n", format_use_path(&u.path)));
+        attach_trailing(&mut out, cm.trailing_on(u.span.line));
     }
     if !file.uses.is_empty() && !file.items.is_empty() {
         out.push('\n');
@@ -21,8 +87,11 @@ pub fn format_file(file: &File) -> String {
         if i > 0 && (is_decl(item) || is_decl(&file.items[i - 1])) {
             out.push('\n');
         }
-        format_top_item(item, &mut out);
+        cm.flush_before(top_item_line(item), 0, &mut out);
+        format_top_item(item, &mut out, cm);
     }
+
+    cm.flush_rest(&mut out);
 
     // Exactly one trailing newline.
     while out.ends_with("\n\n") {
@@ -47,19 +116,45 @@ fn format_use_path(path: &str) -> String {
     }
 }
 
-fn format_top_item(item: &TopItem, out: &mut String) {
+/// The source line a top-level item starts on (where its comments belong).
+fn top_item_line(item: &TopItem) -> u32 {
     match item {
-        TopItem::Fn(f) => format_fn(f, out),
+        TopItem::Fn(f) => f.span.line,
+        TopItem::Type(t) => t.span.line,
+        TopItem::Let(l) => l.span.line,
+        TopItem::Stmt(s) => stmt_line(s),
+    }
+}
+
+/// The source line a statement starts on.
+fn stmt_line(stmt: &Statement) -> u32 {
+    match stmt {
+        Statement::Let(l) => l.span.line,
+        Statement::Assign(a) => a.span.line,
+        Statement::Expr(e) => e.span.line,
+        Statement::Return(r) => r.span.line,
+        Statement::Break(s) | Statement::Continue(s) => s.line,
+        Statement::If(i) => i.span.line,
+        Statement::While(w) => w.span.line,
+        Statement::For(f) => f.span.line,
+        Statement::Match(m) => m.span.line,
+    }
+}
+
+fn format_top_item(item: &TopItem, out: &mut String, cm: &mut Comments) {
+    match item {
+        TopItem::Fn(f) => format_fn(f, out, cm),
         TopItem::Type(t) => format_type(t, out),
         TopItem::Let(l) => {
             out.push_str(&format_let(l));
             out.push('\n');
+            attach_trailing(out, cm.trailing_on(l.span.line));
         }
-        TopItem::Stmt(s) => format_stmt(s, 0, out),
+        TopItem::Stmt(s) => format_stmt(s, 0, out, cm),
     }
 }
 
-fn format_fn(f: &FnDecl, out: &mut String) {
+fn format_fn(f: &FnDecl, out: &mut String, cm: &mut Comments) {
     let mut sig = String::from("fn ");
     if let Some(recv) = &f.receiver {
         sig.push_str(recv);
@@ -67,7 +162,13 @@ fn format_fn(f: &FnDecl, out: &mut String) {
     }
     sig.push_str(&f.name);
     sig.push('(');
-    sig.push_str(&f.params.iter().map(format_param).collect::<Vec<_>>().join(", "));
+    sig.push_str(
+        &f.params
+            .iter()
+            .map(format_param)
+            .collect::<Vec<_>>()
+            .join(", "),
+    );
     sig.push(')');
     if let Some(rt) = &f.ret_type {
         sig.push_str(" -> ");
@@ -75,7 +176,8 @@ fn format_fn(f: &FnDecl, out: &mut String) {
     }
     out.push_str(&sig);
     out.push('\n');
-    format_block(&f.body, 1, out);
+    attach_trailing(out, cm.trailing_on(f.span.line));
+    format_block(&f.body, 1, out, cm);
 }
 
 fn format_param(p: &Param) -> String {
@@ -94,7 +196,12 @@ fn format_type(t: &TypeDecl, out: &mut String) {
                     if v.fields.is_empty() {
                         v.name.clone()
                     } else {
-                        let fields = v.fields.iter().map(format_field).collect::<Vec<_>>().join(", ");
+                        let fields = v
+                            .fields
+                            .iter()
+                            .map(format_field)
+                            .collect::<Vec<_>>()
+                            .join(", ");
                         format!("{}({})", v.name, fields)
                     }
                 })
@@ -120,12 +227,20 @@ fn format_type_expr(t: &TypeExpr) -> String {
             if args.is_empty() {
                 name.clone()
             } else {
-                let a = args.iter().map(format_type_expr).collect::<Vec<_>>().join(", ");
+                let a = args
+                    .iter()
+                    .map(format_type_expr)
+                    .collect::<Vec<_>>()
+                    .join(", ");
                 format!("{}[{}]", name, a)
             }
         }
         TypeExprKind::Fn(args, ret) => {
-            let a = args.iter().map(format_type_expr).collect::<Vec<_>>().join(", ");
+            let a = args
+                .iter()
+                .map(format_type_expr)
+                .collect::<Vec<_>>()
+                .join(", ");
             match ret {
                 Some(r) => format!("fn({}) -> {}", a, format_type_expr(r)),
                 None => format!("fn({})", a),
@@ -141,9 +256,10 @@ fn format_type_expr(t: &TypeExpr) -> String {
     s
 }
 
-fn format_block(block: &Block, depth: usize, out: &mut String) {
+fn format_block(block: &Block, depth: usize, out: &mut String, cm: &mut Comments) {
     for stmt in &block.stmts {
-        format_stmt(stmt, depth, out);
+        cm.flush_before(stmt_line(stmt), depth, out);
+        format_stmt(stmt, depth, out, cm);
     }
 }
 
@@ -151,12 +267,19 @@ fn pad(depth: usize) -> String {
     INDENT.repeat(depth)
 }
 
-fn format_stmt(stmt: &Statement, depth: usize, out: &mut String) {
+fn format_stmt(stmt: &Statement, depth: usize, out: &mut String, cm: &mut Comments) {
     let p = pad(depth);
+    let head_line = stmt_line(stmt);
     match stmt {
         Statement::Let(l) => out.push_str(&format!("{}{}\n", p, format_let(l))),
         Statement::Assign(a) => {
-            out.push_str(&format!("{}{} {} {}\n", p, format_lvalue(&a.target), assign_op(&a.op), format_expr(&a.rhs, 0)));
+            out.push_str(&format!(
+                "{}{} {} {}\n",
+                p,
+                format_lvalue(&a.target),
+                assign_op(&a.op),
+                format_expr(&a.rhs, 0)
+            ));
         }
         Statement::Expr(e) => out.push_str(&format!("{}{}\n", p, format_expr(e, 0))),
         Statement::Return(r) => match &r.expr {
@@ -167,31 +290,53 @@ fn format_stmt(stmt: &Statement, depth: usize, out: &mut String) {
         Statement::Continue(_) => out.push_str(&format!("{}continue\n", p)),
         Statement::If(i) => {
             out.push_str(&format!("{}if {}\n", p, format_expr(&i.cond, 0)));
-            format_block(&i.then_block, depth + 1, out);
+            attach_trailing(out, cm.trailing_on(head_line));
+            format_block(&i.then_block, depth + 1, out, cm);
             for (cond, block) in &i.elifs {
+                cm.flush_before(cond.span.line, depth, out);
                 out.push_str(&format!("{}elif {}\n", p, format_expr(cond, 0)));
-                format_block(block, depth + 1, out);
+                attach_trailing(out, cm.trailing_on(cond.span.line));
+                format_block(block, depth + 1, out, cm);
             }
             if let Some(else_block) = &i.else_block {
                 out.push_str(&format!("{}else\n", p));
-                format_block(else_block, depth + 1, out);
+                format_block(else_block, depth + 1, out, cm);
             }
         }
         Statement::While(w) => {
             out.push_str(&format!("{}while {}\n", p, format_expr(&w.cond, 0)));
-            format_block(&w.body, depth + 1, out);
+            attach_trailing(out, cm.trailing_on(head_line));
+            format_block(&w.body, depth + 1, out, cm);
         }
         Statement::For(f) => {
-            out.push_str(&format!("{}for {} in {}\n", p, f.name, format_expr(&f.iter, 0)));
-            format_block(&f.body, depth + 1, out);
+            out.push_str(&format!(
+                "{}for {} in {}\n",
+                p,
+                f.name,
+                format_expr(&f.iter, 0)
+            ));
+            attach_trailing(out, cm.trailing_on(head_line));
+            format_block(&f.body, depth + 1, out, cm);
         }
         Statement::Match(m) => {
             out.push_str(&format!("{}match {}\n", p, format_expr(&m.expr, 0)));
+            attach_trailing(out, cm.trailing_on(head_line));
             for arm in &m.arms {
-                out.push_str(&format!("{}{}\n", pad(depth + 1), format_pattern(&arm.pattern)));
-                format_block(&arm.body, depth + 2, out);
+                out.push_str(&format!(
+                    "{}{}\n",
+                    pad(depth + 1),
+                    format_pattern(&arm.pattern)
+                ));
+                format_block(&arm.body, depth + 2, out, cm);
             }
         }
+    }
+    // Single-line statements carry any comment that shared their line.
+    if !matches!(
+        stmt,
+        Statement::If(_) | Statement::While(_) | Statement::For(_) | Statement::Match(_)
+    ) {
+        attach_trailing(out, cm.trailing_on(head_line));
     }
 }
 
@@ -286,8 +431,12 @@ fn operand_mins(op: &BinOp) -> (u8, u8) {
 }
 
 fn format_expr(e: &Expr, min_prec: u8) -> String {
+    format_expr_in(e, min_prec, false)
+}
+
+fn format_expr_in(e: &Expr, min_prec: u8, keep_parens: bool) -> String {
     let raw = format_expr_raw(e);
-    if expr_prec(e) < min_prec {
+    if keep_parens || expr_prec(e) < min_prec {
         format!("({})", raw)
     } else {
         raw
@@ -310,32 +459,61 @@ fn format_expr_raw(e: &Expr) -> String {
                 }
                 return format!("{}{}{}", left, sym, format_expr(r, rmin));
             }
-            format!("{} {} {}", format_expr(l, lmin), bin_symbol(op), format_expr(r, rmin))
+            // Heh binds unary `-` tighter than `**` (SPEC §6.1), so `-2 ** 4`
+            // is `(-2) ** 4` — the opposite of Python and ordinary maths
+            // notation. Keep the parentheses a reader needs to see that.
+            let negated_base =
+                matches!(op, BinOp::Pow) && matches!(&l.kind, ExprKind::Unary(UnOp::Neg, _));
+            format!(
+                "{} {} {}",
+                format_expr_in(l, lmin, negated_base),
+                bin_symbol(op),
+                format_expr(r, rmin)
+            )
         }
         ExprKind::Unary(op, inner) => {
-            let sym = match op { UnOp::Neg => "-", UnOp::Not => "not " };
+            let sym = match op {
+                UnOp::Neg => "-",
+                UnOp::Not => "not ",
+            };
             format!("{}{}", sym, format_expr(inner, 9))
         }
         ExprKind::Call(callee, args) => {
-            let a = args.iter().map(format_call_arg).collect::<Vec<_>>().join(", ");
+            let a = args
+                .iter()
+                .map(format_call_arg)
+                .collect::<Vec<_>>()
+                .join(", ");
             format!("{}({})", format_expr(callee, 9), a)
         }
         ExprKind::Field(obj, name) => format!("{}.{}", format_expr(obj, 9), name),
         ExprKind::Index(obj, idx) => format!("{}[{}]", format_expr(obj, 9), format_expr(idx, 0)),
         ExprKind::List(items) => {
-            let a = items.iter().map(|i| format_expr(i, 0)).collect::<Vec<_>>().join(", ");
+            let a = items
+                .iter()
+                .map(|i| format_expr(i, 0))
+                .collect::<Vec<_>>()
+                .join(", ");
             format!("[{}]", a)
         }
         ExprKind::Map(pairs) => {
             if pairs.is_empty() {
                 "{}".to_string()
             } else {
-                let a = pairs.iter().map(|(k, v)| format!("{}: {}", format_expr(k, 0), format_expr(v, 0))).collect::<Vec<_>>().join(", ");
+                let a = pairs
+                    .iter()
+                    .map(|(k, v)| format!("{}: {}", format_expr(k, 0), format_expr(v, 0)))
+                    .collect::<Vec<_>>()
+                    .join(", ");
                 format!("{{{}}}", a)
             }
         }
         ExprKind::Record(name, fields) => {
-            let a = fields.iter().map(|(f, v)| format!("{}: {}", f, format_expr(v, 0))).collect::<Vec<_>>().join(", ");
+            let a = fields
+                .iter()
+                .map(|(f, v)| format!("{}: {}", f, format_expr(v, 0)))
+                .collect::<Vec<_>>()
+                .join(", ");
             format!("{}{{{}}}", name, a)
         }
         ExprKind::Try(inner, else_exit) => {
@@ -346,13 +524,20 @@ fn format_expr_raw(e: &Expr) -> String {
             }
         }
         ExprKind::Closure(params, ret, body) => {
-            let ps = params.iter().map(format_param).collect::<Vec<_>>().join(", ");
+            let ps = params
+                .iter()
+                .map(format_param)
+                .collect::<Vec<_>>()
+                .join(", ");
             let mut s = format!("fn({})", ps);
             if let Some(r) = ret {
                 s.push_str(&format!(" -> {}", format_type_expr(r)));
             }
             s.push('\n');
-            format_block(body, 1, &mut s);
+            // A closure body is built inside an expression, with no cursor to
+            // hand; comments inside one are recovered by the enclosing
+            // statement's next flush rather than being lost.
+            format_block(body, 1, &mut s, &mut Comments::new(Vec::new()));
             // trim the trailing newline so callers control layout
             if s.ends_with('\n') {
                 s.pop();

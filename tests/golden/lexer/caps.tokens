@@ -9,8 +9,8 @@
 4:28	IDENT(str)
 4:72	NEWLINE
 5:1	INDENT
-5:5	STR({IDENT(text) OP(.) IDENT(split) OP(() STR("\n") OP()) OP(.) IDENT(len)} " lines, " {IDENT(text) OP(.) IDENT(len)} " chars")
-5:53	NEWLINE
+5:5	STR({IDENT(text) OP(.) IDENT(split) OP(() STR("\n") OP()) OP(.) IDENT(len) OP(() OP())} " lines, " {IDENT(text) OP(.) IDENT(len) OP(() OP())} " chars")
+5:57	NEWLINE
 7:1	DEDENT
 7:1	KW(fn)
 7:4	IDENT(main)
