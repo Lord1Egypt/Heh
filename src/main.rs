@@ -11,11 +11,15 @@ const USAGE: &str = "\
 heh — the immortal programming language 𓁨
 
 Usage:
-  heh tokens <file.heh>  dump lexer output, one token per line
-  heh --version          print the toolchain version
-  heh --help             print this help
+  heh run <file.heh> [args]   run a program (pass --deny-fs/-net/-env/-clock/-rand)
+  heh check <file.heh>        type-check without running
+  heh get <url>               vendor a dependency into vendor/ and pin it in heh.lock
+  heh ast <file.heh>          dump the parsed AST
+  heh tokens <file.heh>       dump lexer output, one token per line
+  heh --version               print the toolchain version
+  heh --help                  print this help
 
-More subcommands arrive phase by phase (P2+): ast, run, check, fmt, test, get.
+More subcommands arrive phase by phase: fmt, test.
 Spec: SPEC.md · Plan: docs/agent/TASK_MENU.md";
 
 fn main() -> ExitCode {
@@ -69,6 +73,13 @@ fn main() -> ExitCode {
                 eprintln!("heh: usage: heh run <file.heh> [args...]");
                 ExitCode::from(2)
             }
+        }
+        Some("get") => {
+            let Some(url) = args.get(1) else {
+                eprintln!("heh: usage: heh get <url>");
+                return ExitCode::from(2);
+            };
+            cmd_get(url)
         }
         Some(other) => {
             eprintln!("heh: unknown command '{other}' (see --help)");
@@ -167,6 +178,14 @@ fn cmd_run(path: &str, run_args: Vec<String>) -> ExitCode {
         .filter(|p| !p.as_os_str().is_empty())
         .map(|p| p.to_path_buf())
         .unwrap_or_else(|| std::path::PathBuf::from("."));
+
+    // Verify the vendor lockfile before running: a tampered vendored file is a
+    // fault (fail closed, never execute mismatched code).
+    if let Err(e) = verify_lock(&base_dir) {
+        eprintln!("fault: {e}");
+        return ExitCode::FAILURE;
+    }
+
     let mut eval = heh::eval::Evaluator::with_base_dir(base_dir);
     match eval.eval_file(&ast, run_args) {
         Ok(_) => ExitCode::SUCCESS,
@@ -213,4 +232,124 @@ fn cmd_check(path: &str) -> ExitCode {
     }
     
     ExitCode::SUCCESS
+}
+
+// --------------------------------------------------------------------------
+// Vendoring: `heh get <url>` + heh.lock (SHA-256 of every vendored file)
+// --------------------------------------------------------------------------
+
+/// `heh get <url>` — vendor a dependency into `./vendor/` and refresh
+/// `./heh.lock`. A `.git` URL is cloned with git; anything else is fetched
+/// with curl. Both run as arg-lists (never a shell string).
+fn cmd_get(url: &str) -> ExitCode {
+    let vendor = std::path::Path::new("vendor");
+    if let Err(e) = std::fs::create_dir_all(vendor) {
+        eprintln!("heh get: cannot create vendor/: {e}");
+        return ExitCode::FAILURE;
+    }
+
+    let fetch = if url.ends_with(".git") {
+        let name = url.rsplit('/').next().unwrap_or("dep").trim_end_matches(".git");
+        let dest = vendor.join(name);
+        let _ = std::fs::remove_dir_all(&dest);
+        run_tool("git", &["clone", "--depth", "1", url, dest.to_str().unwrap_or("")])
+    } else {
+        let name = url.rsplit('/').next().filter(|s| !s.is_empty()).unwrap_or("dep.heh");
+        let dest = vendor.join(name);
+        run_tool("curl", &["-sSL", "--fail", "-o", dest.to_str().unwrap_or(""), url])
+    };
+    if let Err(e) = fetch {
+        eprintln!("heh get: {e}");
+        return ExitCode::FAILURE;
+    }
+
+    match write_lock(std::path::Path::new(".")) {
+        Ok(n) => {
+            println!("vendored '{url}' — heh.lock now pins {n} file(s)");
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("heh get: cannot write heh.lock: {e}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+fn run_tool(program: &str, args: &[&str]) -> Result<(), String> {
+    match std::process::Command::new(program).args(args).output() {
+        Ok(out) if out.status.success() => Ok(()),
+        Ok(out) => Err(format!("{program} failed: {}", String::from_utf8_lossy(&out.stderr).trim())),
+        Err(_) => Err(format!("'{program}' not found (required to fetch this dependency)")),
+    }
+}
+
+/// Collect (relative-path, sha256-hex) for every file under `<root>/vendor/`,
+/// sorted by path for a stable lockfile.
+fn hash_vendor_tree(root: &std::path::Path) -> std::io::Result<Vec<(String, String)>> {
+    let vendor = root.join("vendor");
+    let mut entries = Vec::new();
+    if vendor.is_dir() {
+        collect_files(&vendor, root, &mut entries)?;
+    }
+    entries.sort();
+    Ok(entries)
+}
+
+fn collect_files(
+    dir: &std::path::Path,
+    root: &std::path::Path,
+    out: &mut Vec<(String, String)>,
+) -> std::io::Result<()> {
+    let mut children: Vec<_> = std::fs::read_dir(dir)?.filter_map(|e| e.ok()).map(|e| e.path()).collect();
+    children.sort();
+    for path in children {
+        if path.is_dir() {
+            // Skip git metadata — it is not source and changes constantly.
+            if path.file_name().and_then(|n| n.to_str()) == Some(".git") {
+                continue;
+            }
+            collect_files(&path, root, out)?;
+        } else if path.is_file() {
+            let rel = path.strip_prefix(root).unwrap_or(&path).to_string_lossy().replace('\\', "/");
+            let bytes = std::fs::read(&path)?;
+            out.push((rel, heh::modules::sha256_hex(&bytes)));
+        }
+    }
+    Ok(())
+}
+
+/// Write `<root>/heh.lock` from the current vendor tree. Returns the file count.
+fn write_lock(root: &std::path::Path) -> std::io::Result<usize> {
+    let entries = hash_vendor_tree(root)?;
+    let mut body = String::from("# heh.lock — SHA-256 of every vendored file. Do not edit by hand.\n");
+    for (rel, hash) in &entries {
+        body.push_str(&format!("{hash}  {rel}\n"));
+    }
+    std::fs::write(root.join("heh.lock"), body)?;
+    Ok(entries.len())
+}
+
+/// Verify `<base_dir>/heh.lock` against the vendor tree. Ok(()) when there is
+/// no lockfile or every pinned hash matches; Err on any mismatch or missing
+/// file (fail closed).
+fn verify_lock(base_dir: &std::path::Path) -> Result<(), String> {
+    let lock_path = base_dir.join("heh.lock");
+    let contents = match std::fs::read_to_string(&lock_path) {
+        Ok(c) => c,
+        Err(_) => return Ok(()), // no lockfile: nothing to verify
+    };
+    for line in contents.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let (hash, rel) = line.split_once("  ").ok_or_else(|| format!("malformed heh.lock line: '{line}'"))?;
+        let file = base_dir.join(rel);
+        let bytes = std::fs::read(&file).map_err(|_| format!("lock verification failed: '{rel}' is missing"))?;
+        let actual = heh::modules::sha256_hex(&bytes);
+        if actual != hash {
+            return Err(format!("lock verification failed: '{rel}' has been modified (hash mismatch)"));
+        }
+    }
+    Ok(())
 }
