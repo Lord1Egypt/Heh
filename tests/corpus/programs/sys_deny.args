@@ -1,0 +1,1 @@
+--deny-env --deny-clock --deny-rand

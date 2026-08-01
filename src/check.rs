@@ -73,6 +73,12 @@ impl Checker {
         self.define("err".to_string(), Ty::Any, false);
         self.define("some".to_string(), Ty::Any, false);
         self.define("none".to_string(), Ty::Any, false);
+
+        self.types.insert("Sys".to_string(), TypeDecl {
+            name: "Sys".to_string(),
+            kind: TypeDeclKind::Record(vec![]), // Doesn't need real fields since we treat sys as Any
+            span: Span { line: 0, col: 0 },
+        });
         
         for item in &file.items {
             match item {
@@ -242,13 +248,13 @@ impl Checker {
             }
             Statement::If(i) => {
                 let cond_ty = self.check_expr(&i.cond);
-                if !cond_ty.is_error() && cond_ty != Ty::Bool {
+                if !cond_ty.is_error() && cond_ty != Ty::Bool && cond_ty != Ty::Any {
                     self.diags.push(Diag { code: "E0041", msg: "if condition must be bool".into(), line: i.cond.span.line, col: i.cond.span.col });
                 }
                 self.check_block(&i.then_block);
                 for (elif_cond, elif_block) in &i.elifs {
                     let elif_cond_ty = self.check_expr(elif_cond);
-                    if !elif_cond_ty.is_error() && elif_cond_ty != Ty::Bool {
+                    if !elif_cond_ty.is_error() && elif_cond_ty != Ty::Bool && elif_cond_ty != Ty::Any {
                         self.diags.push(Diag { code: "E0041", msg: "elif condition must be bool".into(), line: elif_cond.span.line, col: elif_cond.span.col });
                     }
                     self.check_block(elif_block);
@@ -259,7 +265,7 @@ impl Checker {
             }
             Statement::While(w) => {
                 let cond_ty = self.check_expr(&w.cond);
-                if !cond_ty.is_error() && cond_ty != Ty::Bool {
+                if !cond_ty.is_error() && cond_ty != Ty::Bool && cond_ty != Ty::Any {
                     self.diags.push(Diag { code: "E0041", msg: "while condition must be bool".into(), line: w.cond.span.line, col: w.cond.span.col });
                 }
                 self.check_block(&w.body);

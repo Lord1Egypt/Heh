@@ -1,0 +1,15 @@
+sys.fs.write("test_sys_fs.tmp", "hello")
+let content = try sys.fs.read("test_sys_fs.tmp") else exit
+sys.print(content)
+sys.fs.append("test_sys_fs.tmp", " world")
+let content2 = try sys.fs.read("test_sys_fs.tmp") else exit
+sys.print(content2)
+let exists = sys.fs.exists("test_sys_fs.tmp")
+if exists
+    sys.print("exists")
+sys.fs.remove("test_sys_fs.tmp")
+let exists2 = sys.fs.exists("test_sys_fs.tmp")
+if exists2
+    sys.print("should not exist")
+else
+    sys.print("removed")

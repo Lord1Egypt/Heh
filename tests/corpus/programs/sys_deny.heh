@@ -1,0 +1,5 @@
+# Every capability fails closed when its deny flag is set (SPEC §10, P8).
+# fs-deny is covered by io_deny; here we assert env/clock/rand deny values.
+sys.print(sys.env.get("HOME"))
+sys.print(sys.clock.now())
+sys.print(sys.rand.int(0, 10))
