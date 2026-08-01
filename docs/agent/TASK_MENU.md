@@ -97,7 +97,7 @@ This is what makes "it works" provable instead of hopeful.
 - **Gate:** corpus programs exercising every module; SHA-256 FIPS vectors;
   regex unit tests incl. pathological patterns completing fast.
 
-## P8 — Capabilities: the full Sys  ⬜
+## P8 — Capabilities: the full Sys  ✅
 - `sys.fs` (read/read_bytes/write/append/exists/list_dir/remove — resolve
   paths, no traversal outside cwd unless absolute path given by user),
   `sys.env`, `sys.clock`, `sys.rand` (OS entropy via /dev/urandom, getrandom
@@ -107,7 +107,7 @@ This is what makes "it works" provable instead of hopeful.
 - **Gate:** corpus with tempdir-driven fs programs; deny-flag tests assert
   the err value; `caps` example runs.
 
-## P9 — sys.net + imports & vendoring  ⬜
+## P9 — sys.net + imports & vendoring  ✅
 - `sys.net.get` (HTTP/1.1 over std TcpStream; **https via shelling out to
   `curl` if available, else clean err** — std has no TLS; document).
 - `use std/x`, `use "./file.heh"` (namespace binding, cycle error `E0030`),
@@ -117,7 +117,7 @@ This is what makes "it works" provable instead of hopeful.
 - **Gate:** multi-file corpus programs; lock tamper test (flip one byte →
   fault); cycle test.
 
-## P10 — Tooling: heh fmt + heh test  ⬜
+## P10 — Tooling: heh fmt + heh test  ✅
 - `heh fmt`: canonical formatter from the AST (4-space indent, stable spacing,
   no options). Idempotent (`fmt(fmt(x)) == fmt(x)`) and semantics-preserving
   (AST-equal before/after) across the whole corpus.
