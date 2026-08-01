@@ -4,3 +4,6 @@ Cargo.lock
 .DS_Store
 *.orig
 *.rej
+
+# Written by the io corpus program when the suite runs.
+test_io.txt
