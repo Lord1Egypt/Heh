@@ -33,23 +33,32 @@
 
 ## Modules
 
+All modules are pure (no I/O); bring one into scope with `use std/<name>`.
+
 ### std/math
 - `math.sin(x: float) -> float`
 - `math.cos(x: float) -> float`
 - `math.sqrt(x: float) -> float`
 - `math.abs(x: float) -> float`
 - `math.pow(base: float, exp: float) -> float`
-- `math.log(x: float) -> float`
+- `math.log(x: float) -> float` (natural log)
+- `math.floor(x: float) -> float`
+- `math.ceil(x: float) -> float`
+- `math.pi() -> float`
+- `math.e() -> float`
 
 ### std/fmt
-- `fmt.format(template: str, args: list[Any]) -> str`
+Heh has native string interpolation (`"{expr}"`), so `std/fmt` covers what
+interpolation cannot express:
+- `fmt.pad_left(s: str, width: int, fill: str) -> str`
+- `fmt.pad_right(s: str, width: int, fill: str) -> str`
+- `fmt.repeat(s: str, n: int) -> str`
+- `fmt.hex(n: int) -> str`
+- `fmt.fixed(x: float, places: int) -> str`
 
 ### std/json
 - `json.parse(s: str) -> Any or error`
-- `json.write(v: Any) -> str`
-
-### std/time
-- `time.now_utc() -> int` (Note: pure time functions only, effectful clock is in sys.clock)
+- `json.write(v: Any) -> str` (object keys sorted for deterministic output)
 
 ### std/csv
 - `csv.parse(s: str) -> list[list[str]]`

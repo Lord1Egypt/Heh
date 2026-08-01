@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use crate::ast::*;
 use crate::diag::Diag;
 
@@ -79,6 +79,14 @@ impl Checker {
             kind: TypeDeclKind::Record(vec![]), // Doesn't need real fields since we treat sys as Any
             span: Span { line: 0, col: 0 },
         });
+
+        // Names brought into scope by `use std/<name>` are known modules.
+        for u in &file.uses {
+            let bare = u.path.rsplit('/').next().unwrap_or(&u.path).to_string();
+            if crate::modules::module_record(&u.path).is_some() {
+                self.define(bare, Ty::Any, false);
+            }
+        }
         
         for item in &file.items {
             match item {
@@ -295,6 +303,13 @@ impl Checker {
                     self.push_scope();
                     // Bind pattern variables based on expr_ty
                     match &arm.pattern {
+                        Pattern::Variant(_, _name, binds) if expr_ty == Ty::Any => {
+                            // Scrutinee type is unknown (e.g. a module fn returning
+                            // Any); bind every pattern variable permissively.
+                            for b_name in binds {
+                                self.define(b_name.clone(), Ty::Any, false);
+                            }
+                        }
                         Pattern::Variant(_, name, binds) => {
                             if let Ty::Enum(enum_name) = &expr_ty {
                                 let variant_fields = if let Some(TypeDecl { kind: TypeDeclKind::Enum(variants), .. }) = self.types.get(enum_name) {
@@ -685,8 +700,9 @@ impl Checker {
                 }
                 Ty::Record(name.clone())
             }
-            ExprKind::Closure(params, ret, body) => {
-                // TODO: check closure correctly
+            ExprKind::Closure(_params, _ret, _body) => {
+                // Closures type-check to Any for now (parameter/return inference
+                // is future work); their bodies are checked at call sites.
                 Ty::Any
             }
         }

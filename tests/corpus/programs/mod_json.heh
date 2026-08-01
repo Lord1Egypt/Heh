@@ -1,0 +1,11 @@
+# std/json — parse and write (object keys sorted on write)
+use std/json
+let doc = try json.parse("\{\"name\": \"Ada\", \"age\": 36, \"tags\": [\"math\", \"first\"], \"active\": true, \"note\": null}") else exit
+sys.print(json.write(doc))
+sys.print(json.write([1, 2, 3]))
+sys.print(json.write("he said \"hi\""))
+match json.parse("not json")
+    ok(v)
+        sys.print("unexpected ok")
+    err(e)
+        sys.print("rejected: {e.msg}")

@@ -10,3 +10,4 @@ pub mod lexer;
 pub mod parser;
 pub mod val;
 pub mod stdlib;
+pub mod modules;

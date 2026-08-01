@@ -1,0 +1,5 @@
+# std/debug — assert passes silently; fault/failed assert propagate
+use std/debug
+debug.assert(1 + 1 == 2, "arithmetic")
+debug.assert("ab".len == 2, "string length")
+sys.print("all asserts passed")

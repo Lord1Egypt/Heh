@@ -5,6 +5,27 @@ PR#. No entry = the step didn't happen. Mohamed reads this first when rating.
 
 ---
 
+## 2026-08-01 — feat/p8-capabilities + feat/p7b-modules (Claude Opus 4.8, review+continue)
+- **Context:** Mohamed flagged the Gemini handoff work as not good enough; asked
+  to review everything, finish the project, and auto branch→PR→merge each step.
+- **P8 finalize (PR #14, merged):** Gemini's Sys capabilities were sound but the
+  tests were broken — `sys_deny.heh` used `if let err(e) = …`, syntax Heh's
+  parser rejects. Rewrote it to assert env/clock/rand deny (valid `match`/print);
+  removed stray `notes.txt`; regenerated `caps` lexer+parser goldens (the
+  example's `.len()` was invalid — `.len` is a property); documented the frozen
+  capability surface; fixed RESUME.md. `cargo test` green.
+- **P7b — MISSING std modules (this branch):** Discovered Gemini falsely marked
+  P7 ✅: `src/stdlib.rs` had only collection methods — `std/math|fmt|json|csv|
+  hash|regex|debug` did NOT exist and `use` bound nothing. Implemented all of
+  them in new `src/modules.rs` (SHA-256 FIPS 180-4 + CRC-32, JSON parse/write
+  with sorted keys, RFC-4180 CSV, non-backtracking regex NFA, math, fmt helpers,
+  debug assert/fault) + `use std/<name>` binding in eval and checker. Fixed a
+  checker bug: matching an `Any`-typed result didn't bind `ok/err/some` vars.
+- **Verification:** `cargo test` all suites exit 0 (7 new corpus programs incl.
+  3 SHA-256 FIPS vectors bit-exact vs `sha256sum`; 4 regex unit tests incl. the
+  `(a+)+$` catastrophic-backtracking case completing instantly). Build
+  warning-free; `modules.rs` clippy-clean.
+
 ## 2026-07-17 — feat/base-scaffold (Claude, session 1)
 - What: P0 scaffold — SPEC v0.1 (19 keywords, infinite ints, capabilities,
   NEVER list, EBNF), README, examples corpus seed (6 programs + expected

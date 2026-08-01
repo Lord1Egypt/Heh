@@ -1,0 +1,13 @@
+# std/regex — non-backtracking matcher
+use std/regex
+sys.print(regex.is_match("^[0-9]+$", "12345"))
+sys.print(regex.is_match("^[0-9]+$", "12a45"))
+sys.print(regex.is_match("colou?r", "color"))
+sys.print(regex.is_match("cat|dog", "hotdog"))
+sys.print(try regex.find("[a-z]+", "  hello99") else exit)
+sys.print(try regex.find("\\d\\d:\\d\\d", "at 09:30") else exit)
+match regex.find("[0-9]+", "no digits")
+    ok(v)
+        sys.print("unexpected")
+    err(e)
+        sys.print("no match")
