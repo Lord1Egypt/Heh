@@ -66,3 +66,36 @@
 ### std/debug
 - `debug.fault(msg: str)`
 - `debug.assert(cond: bool, msg: str)`
+
+## Capabilities (`sys`)
+
+Only `fn main(sys: Sys)` receives the `Sys` object; pure code has no way to
+reach I/O. Each capability can be denied at the CLI with `--deny-<cap>`; a
+denied op returns `err("capability denied: <cap>")` and never touches the
+resource (fail closed). Relative paths containing `..` are rejected —
+traversal outside the working directory requires an absolute path.
+
+### sys
+- `sys.print(...args)` — print space-joined values + newline
+- `sys.input() -> str or error` — read one line from stdin
+- `sys.args -> list[str]` — program arguments (after run flags)
+
+### sys.fs — `--deny-fs`
+- `sys.fs.read(path: str) -> str or error`
+- `sys.fs.read_bytes(path: str) -> list[int] or error`
+- `sys.fs.write(path: str, data: str) -> none or error`
+- `sys.fs.append(path: str, data: str) -> none or error`
+- `sys.fs.exists(path: str) -> bool`
+- `sys.fs.list_dir(path: str) -> list[str] or error`
+- `sys.fs.remove(path: str) -> none or error`
+
+### sys.env — `--deny-env`
+- `sys.env.get(key: str) -> str or none`
+- `sys.env.set(key: str, val: str)`
+
+### sys.clock — `--deny-clock`
+- `sys.clock.now() -> float` (seconds since the Unix epoch)
+
+### sys.rand — `--deny-rand`
+- `sys.rand.bytes(n: int) -> list[int] or error` (OS entropy, /dev/urandom)
+- `sys.rand.int(min: int, max: int) -> int or error` (half-open `[min, max)`)

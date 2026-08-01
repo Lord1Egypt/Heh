@@ -1,0 +1,3 @@
+err("capability denied: env")
+err("capability denied: clock")
+err("capability denied: rand")

@@ -83,31 +83,68 @@ impl Default for Evaluator {
 impl Evaluator {
     pub fn eval_file(&mut self, file: &File, run_args: Vec<String>) -> Result<(), Diag> {
         let mut deny_fs = false;
+        let mut _deny_net = false; // wired in P9 (sys.net)
+        let mut deny_env = false;
+        let mut deny_clock = false;
+        let mut deny_rand = false;
         let mut app_args = Vec::new();
         for arg in run_args {
-            if arg == "--deny-fs" {
-                deny_fs = true;
-            } else if !arg.starts_with("--deny-") {
-                app_args.push(Val::Str(arg));
+            match arg.as_str() {
+                "--deny-fs" => deny_fs = true,
+                "--deny-net" => _deny_net = true,
+                "--deny-env" => deny_env = true,
+                "--deny-clock" => deny_clock = true,
+                "--deny-rand" => deny_rand = true,
+                _ => {
+                    if !arg.starts_with("--deny-") {
+                        app_args.push(Val::Str(arg));
+                    }
+                }
             }
         }
 
         let mut sys_map = std::collections::HashMap::new();
         sys_map.insert("print".into(), Val::BuiltinFn("sys.print"));
+        sys_map.insert("input".into(), Val::BuiltinFn("sys.input"));
         sys_map.insert("args".into(), Val::List(Rc::new(RefCell::new(app_args))));
 
         let mut fs_map = std::collections::HashMap::new();
-        if deny_fs {
-            fs_map.insert("read".into(), Val::BuiltinFn("sys.fs.denied"));
-            fs_map.insert("write".into(), Val::BuiltinFn("sys.fs.denied"));
-        } else {
-            fs_map.insert("read".into(), Val::BuiltinFn("sys.fs.read"));
-            fs_map.insert("write".into(), Val::BuiltinFn("sys.fs.write"));
+        for func in ["read", "read_bytes", "write", "append", "exists", "list_dir", "remove"] {
+            if deny_fs {
+                fs_map.insert(func.into(), Val::BuiltinFn("sys.fs.denied"));
+            } else {
+                fs_map.insert(func.into(), Val::BuiltinFn(Box::leak(format!("sys.fs.{}", func).into_boxed_str())));
+            }
         }
-        sys_map.insert(
-            "fs".into(),
-            Val::Record("SysFs".into(), Rc::new(RefCell::new(fs_map))),
-        );
+        sys_map.insert("fs".into(), Val::Record("SysFs".into(), Rc::new(RefCell::new(fs_map))));
+
+        let mut env_map = std::collections::HashMap::new();
+        for func in ["get", "set"] {
+            if deny_env {
+                env_map.insert(func.into(), Val::BuiltinFn("sys.env.denied"));
+            } else {
+                env_map.insert(func.into(), Val::BuiltinFn(Box::leak(format!("sys.env.{}", func).into_boxed_str())));
+            }
+        }
+        sys_map.insert("env".into(), Val::Record("SysEnv".into(), Rc::new(RefCell::new(env_map))));
+
+        let mut clock_map = std::collections::HashMap::new();
+        if deny_clock {
+            clock_map.insert("now".into(), Val::BuiltinFn("sys.clock.denied"));
+        } else {
+            clock_map.insert("now".into(), Val::BuiltinFn("sys.clock.now"));
+        }
+        sys_map.insert("clock".into(), Val::Record("SysClock".into(), Rc::new(RefCell::new(clock_map))));
+
+        let mut rand_map = std::collections::HashMap::new();
+        for func in ["bytes", "int"] {
+            if deny_rand {
+                rand_map.insert(func.into(), Val::BuiltinFn("sys.rand.denied"));
+            } else {
+                rand_map.insert(func.into(), Val::BuiltinFn(Box::leak(format!("sys.rand.{}", func).into_boxed_str())));
+            }
+        }
+        sys_map.insert("rand".into(), Val::Record("SysRand".into(), Rc::new(RefCell::new(rand_map))));
 
         self.global.borrow_mut().define(
             "sys".into(),
@@ -996,17 +1033,27 @@ impl Evaluator {
                 println!("{}", outs.join(" "));
                 Ok(Val::None)
             }
+            "sys.input" => {
+                let mut s = String::new();
+                match std::io::stdin().read_line(&mut s) {
+                    Ok(_) => Ok(Val::Ok(Box::new(Val::Str(s.trim_end_matches('\n').trim_end_matches('\r').to_string())))),
+                    Err(e) => Ok(Val::Err(e.to_string())),
+                }
+            }
             "sys.fs.denied" => Ok(Val::Err("capability denied: fs".into())),
+            "sys.env.denied" => Ok(Val::Err("capability denied: env".into())),
+            "sys.clock.denied" => Ok(Val::Err("capability denied: clock".into())),
+            "sys.rand.denied" => Ok(Val::Err("capability denied: rand".into())),
             "sys.fs.read" => {
                 if arg_vals.len() != 1 {
-                    return Err(Diag {
-                        code: "E0109",
-                        msg: "sys.fs.read expects 1 arg".into(),
-                        line: callee.span.line,
-                        col: callee.span.col,
-                    });
+                    return Err(Diag { code: "E0109", msg: "sys.fs.read expects 1 arg".into(), line: callee.span.line, col: callee.span.col });
                 }
                 if let Val::Str(s) = &arg_vals[0] {
+                    // Restrict traversal outside cwd if not absolute
+                    let path = std::path::Path::new(s);
+                    if !path.is_absolute() && path.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+                        return Ok(Val::Err("path traversal outside cwd is denied".into()));
+                    }
                     match std::fs::read_to_string(s) {
                         Ok(content) => Ok(Val::Ok(Box::new(Val::Str(content)))),
                         Err(e) => Ok(Val::Err(e.to_string())),
@@ -1015,22 +1062,204 @@ impl Evaluator {
                     Ok(Val::Err("path must be string".into()))
                 }
             }
+            "sys.fs.read_bytes" => {
+                if arg_vals.len() != 1 {
+                    return Err(Diag { code: "E0109", msg: "sys.fs.read_bytes expects 1 arg".into(), line: callee.span.line, col: callee.span.col });
+                }
+                if let Val::Str(s) = &arg_vals[0] {
+                    let path = std::path::Path::new(s);
+                    if !path.is_absolute() && path.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+                        return Ok(Val::Err("path traversal outside cwd is denied".into()));
+                    }
+                    match std::fs::read(s) {
+                        Ok(bytes) => {
+                            let list: Vec<Val> = bytes.into_iter().map(|b| Val::Int(crate::bignum::BigInt::from_i64(b as i64))).collect();
+                            Ok(Val::Ok(Box::new(Val::List(Rc::new(RefCell::new(list))))))
+                        }
+                        Err(e) => Ok(Val::Err(e.to_string())),
+                    }
+                } else {
+                    Ok(Val::Err("path must be string".into()))
+                }
+            }
             "sys.fs.write" => {
                 if arg_vals.len() != 2 {
-                    return Err(Diag {
-                        code: "E0109",
-                        msg: "sys.fs.write expects 2 args".into(),
-                        line: callee.span.line,
-                        col: callee.span.col,
-                    });
+                    return Err(Diag { code: "E0109", msg: "sys.fs.write expects 2 args".into(), line: callee.span.line, col: callee.span.col });
                 }
-                if let (Val::Str(path), Val::Str(data)) = (&arg_vals[0], &arg_vals[1]) {
-                    match std::fs::write(path, data) {
+                if let (Val::Str(s), Val::Str(data)) = (&arg_vals[0], &arg_vals[1]) {
+                    let path = std::path::Path::new(s);
+                    if !path.is_absolute() && path.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+                        return Ok(Val::Err("path traversal outside cwd is denied".into()));
+                    }
+                    match std::fs::write(s, data) {
                         Ok(_) => Ok(Val::Ok(Box::new(Val::None))),
                         Err(e) => Ok(Val::Err(e.to_string())),
                     }
                 } else {
                     Ok(Val::Err("path and data must be strings".into()))
+                }
+            }
+            "sys.fs.append" => {
+                if arg_vals.len() != 2 {
+                    return Err(Diag { code: "E0109", msg: "sys.fs.append expects 2 args".into(), line: callee.span.line, col: callee.span.col });
+                }
+                if let (Val::Str(s), Val::Str(data)) = (&arg_vals[0], &arg_vals[1]) {
+                    let path = std::path::Path::new(s);
+                    if !path.is_absolute() && path.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+                        return Ok(Val::Err("path traversal outside cwd is denied".into()));
+                    }
+                    use std::io::Write;
+                    match std::fs::OpenOptions::new().create(true).append(true).open(s) {
+                        Ok(mut file) => match file.write_all(data.as_bytes()) {
+                            Ok(_) => Ok(Val::Ok(Box::new(Val::None))),
+                            Err(e) => Ok(Val::Err(e.to_string())),
+                        },
+                        Err(e) => Ok(Val::Err(e.to_string())),
+                    }
+                } else {
+                    Ok(Val::Err("path and data must be strings".into()))
+                }
+            }
+            "sys.fs.exists" => {
+                if arg_vals.len() != 1 {
+                    return Err(Diag { code: "E0109", msg: "sys.fs.exists expects 1 arg".into(), line: callee.span.line, col: callee.span.col });
+                }
+                if let Val::Str(s) = &arg_vals[0] {
+                    let path = std::path::Path::new(s);
+                    if !path.is_absolute() && path.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+                        return Ok(Val::Err("path traversal outside cwd is denied".into()));
+                    }
+                    Ok(Val::Bool(std::path::Path::new(s).exists()))
+                } else {
+                    Ok(Val::Err("path must be string".into()))
+                }
+            }
+            "sys.fs.list_dir" => {
+                if arg_vals.len() != 1 {
+                    return Err(Diag { code: "E0109", msg: "sys.fs.list_dir expects 1 arg".into(), line: callee.span.line, col: callee.span.col });
+                }
+                if let Val::Str(s) = &arg_vals[0] {
+                    let path = std::path::Path::new(s);
+                    if !path.is_absolute() && path.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+                        return Ok(Val::Err("path traversal outside cwd is denied".into()));
+                    }
+                    match std::fs::read_dir(s) {
+                        Ok(entries) => {
+                            let mut list = Vec::new();
+                            for entry in entries {
+                                if let Ok(entry) = entry {
+                                    if let Ok(name) = entry.file_name().into_string() {
+                                        list.push(Val::Str(name));
+                                    }
+                                }
+                            }
+                            Ok(Val::Ok(Box::new(Val::List(Rc::new(RefCell::new(list))))))
+                        }
+                        Err(e) => Ok(Val::Err(e.to_string())),
+                    }
+                } else {
+                    Ok(Val::Err("path must be string".into()))
+                }
+            }
+            "sys.fs.remove" => {
+                if arg_vals.len() != 1 {
+                    return Err(Diag { code: "E0109", msg: "sys.fs.remove expects 1 arg".into(), line: callee.span.line, col: callee.span.col });
+                }
+                if let Val::Str(s) = &arg_vals[0] {
+                    let path = std::path::Path::new(s);
+                    if !path.is_absolute() && path.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+                        return Ok(Val::Err("path traversal outside cwd is denied".into()));
+                    }
+                    if path.is_file() {
+                        match std::fs::remove_file(s) {
+                            Ok(_) => Ok(Val::Ok(Box::new(Val::None))),
+                            Err(e) => Ok(Val::Err(e.to_string())),
+                        }
+                    } else if path.is_dir() {
+                        match std::fs::remove_dir_all(s) {
+                            Ok(_) => Ok(Val::Ok(Box::new(Val::None))),
+                            Err(e) => Ok(Val::Err(e.to_string())),
+                        }
+                    } else {
+                        Ok(Val::Err("path not found".into()))
+                    }
+                } else {
+                    Ok(Val::Err("path must be string".into()))
+                }
+            }
+            "sys.env.get" => {
+                if arg_vals.len() != 1 {
+                    return Err(Diag { code: "E0109", msg: "sys.env.get expects 1 arg".into(), line: callee.span.line, col: callee.span.col });
+                }
+                if let Val::Str(s) = &arg_vals[0] {
+                    match std::env::var(s) {
+                        Ok(v) => Ok(Val::Some(Box::new(Val::Str(v)))),
+                        Err(_) => Ok(Val::None),
+                    }
+                } else {
+                    Ok(Val::Err("key must be string".into()))
+                }
+            }
+            "sys.env.set" => {
+                if arg_vals.len() != 2 {
+                    return Err(Diag { code: "E0109", msg: "sys.env.set expects 2 args".into(), line: callee.span.line, col: callee.span.col });
+                }
+                if let (Val::Str(k), Val::Str(v)) = (&arg_vals[0], &arg_vals[1]) {
+                    std::env::set_var(k, v);
+                    Ok(Val::None)
+                } else {
+                    Ok(Val::Err("key and value must be strings".into()))
+                }
+            }
+            "sys.clock.now" => {
+                let now = std::time::SystemTime::now();
+                match now.duration_since(std::time::UNIX_EPOCH) {
+                    Ok(d) => Ok(Val::Float(d.as_secs_f64())),
+                    Err(_) => Ok(Val::Err("time went backwards".into())),
+                }
+            }
+            "sys.rand.bytes" => {
+                if arg_vals.len() != 1 {
+                    return Err(Diag { code: "E0109", msg: "sys.rand.bytes expects 1 arg".into(), line: callee.span.line, col: callee.span.col });
+                }
+                if let Val::Int(n) = &arg_vals[0] {
+                    use std::io::Read;
+                    let count = n.limbs.first().copied().unwrap_or(0) as usize;
+                    let mut buf = vec![0u8; count];
+                    match std::fs::File::open("/dev/urandom").and_then(|mut f| f.read_exact(&mut buf)) {
+                        Ok(_) => {
+                            let list: Vec<Val> = buf.into_iter().map(|b| Val::Int(crate::bignum::BigInt::from_i64(b as i64))).collect();
+                            Ok(Val::Ok(Box::new(Val::List(Rc::new(RefCell::new(list))))))
+                        }
+                        Err(e) => Ok(Val::Err(e.to_string())),
+                    }
+                } else {
+                    Ok(Val::Err("length must be int".into()))
+                }
+            }
+            "sys.rand.int" => {
+                if arg_vals.len() != 2 {
+                    return Err(Diag { code: "E0109", msg: "sys.rand.int expects 2 args".into(), line: callee.span.line, col: callee.span.col });
+                }
+                if let (Val::Int(min), Val::Int(max)) = (&arg_vals[0], &arg_vals[1]) {
+                    use std::io::Read;
+                    let min_val = min.limbs.first().copied().unwrap_or(0) as i64 * if min.sign { -1 } else { 1 };
+                    let max_val = max.limbs.first().copied().unwrap_or(0) as i64 * if max.sign { -1 } else { 1 };
+                    if min_val >= max_val {
+                        return Ok(Val::Err("min must be < max".into()));
+                    }
+                    let mut buf = [0u8; 8];
+                    match std::fs::File::open("/dev/urandom").and_then(|mut f| f.read_exact(&mut buf)) {
+                        Ok(_) => {
+                            let r = u64::from_ne_bytes(buf) as i64;
+                            let range = max_val - min_val;
+                            let val = min_val + r.rem_euclid(range);
+                            Ok(Val::Ok(Box::new(Val::Int(crate::bignum::BigInt::from_i64(val)))))
+                        }
+                        Err(e) => Ok(Val::Err(e.to_string())),
+                    }
+                } else {
+                    Ok(Val::Err("bounds must be int".into()))
                 }
             }
             "sort" => {
