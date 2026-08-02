@@ -2,7 +2,7 @@
 # The crate is `heh-lang` because `heh` was taken on crates.io in 2022 by an
 # unrelated hex editor. The installed command is still `heh` (see [[bin]]).
 name = "heh-lang"
-version = "1.0.1"
+version = "1.0.2"
 edition = "2021"
 rust-version = "1.70"
 description = "Heh 𓁨 — the immortal programming language: easier than Python, integers that never overflow, capability-secure I/O, zero dependencies."
