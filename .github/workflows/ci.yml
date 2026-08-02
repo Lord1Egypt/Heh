@@ -7,13 +7,42 @@ on:
 
 jobs:
   test:
-    name: Tests (cargo)
+    name: Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Release binaries ship for all three, so all three get tested.
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: cargo build --release
+      - name: Tests
+        run: cargo test --release
+
+  lint:
+    name: Format and lints
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Format check
         run: cargo fmt --check
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+  msrv:
+    name: Builds on the promised minimum Rust
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Cargo.toml promises rust-version = 1.70. Prove it rather than hope:
+      # claiming an MSRV the code does not meet breaks `cargo install` for
+      # anyone on an older toolchain. The lockfile is written by a newer Cargo
+      # and is not needed — this project has no dependencies to lock.
+      - name: Install Rust 1.70
+        run: rustup toolchain install 1.70 --profile minimal
       - name: Build
-        run: cargo build --locked 2>/dev/null || cargo build
-      - name: Tests
-        run: cargo test
+        run: |
+          rm -f Cargo.lock
+          cargo +1.70 build --release

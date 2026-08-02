@@ -1,0 +1,14 @@
+# Byte-exact fixtures and language sources must keep LF on every platform.
+# Without this, a Windows checkout rewrites them to CRLF and the golden
+# comparisons fail for a reason that has nothing to do with the language.
+* text=auto eol=lf
+
+*.heh   text eol=lf
+*.out   text eol=lf
+*.err   text eol=lf
+*.args  text eol=lf
+*.tokens text eol=lf
+*.ast   text eol=lf
+*.lock  text eol=lf
+
+*.gif binary

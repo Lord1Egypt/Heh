@@ -1,5 +1,10 @@
 # Heh 𓁨 — The Immortal Programming Language
 
+[![CI](https://github.com/Lord1Egypt/Heh/actions/workflows/ci.yml/badge.svg)](https://github.com/Lord1Egypt/Heh/actions/workflows/ci.yml)
+[![crates.io](https://img.shields.io/crates/v/heh-lang.svg)](https://crates.io/crates/heh-lang)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)](Cargo.toml)
+
 > Named for **Heh**, the Egyptian god of infinity, who holds a palm rib notched
 > with millions of years. A language designed to be **small, frozen, and
 > endless**: easier than Python, fast, secure by default, with no package

@@ -40,6 +40,12 @@ pub struct Checker {
     pub current_fn_ret: Option<Ty>,
 }
 
+impl Default for Checker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Checker {
     pub fn new() -> Self {
         Self {
@@ -439,11 +445,10 @@ impl Checker {
                                     ..
                                 }) = self.types.get(enum_name)
                                 {
-                                    if let Some(v) = variants.iter().find(|v| v.name == *name) {
-                                        Some(v.fields.clone())
-                                    } else {
-                                        None
-                                    }
+                                    variants
+                                        .iter()
+                                        .find(|v| v.name == *name)
+                                        .map(|v| v.fields.clone())
                                 } else {
                                     None
                                 };
@@ -577,11 +582,10 @@ impl Checker {
                                 ..
                             }) = self.types.get(&name)
                             {
-                                if let Some(field) = fields.iter().find(|field| field.name == *f) {
-                                    Some(field.typ.clone())
-                                } else {
-                                    None
-                                }
+                                fields
+                                    .iter()
+                                    .find(|field| field.name == *f)
+                                    .map(|field| field.typ.clone())
                             } else {
                                 None
                             };
@@ -727,11 +731,14 @@ impl Checker {
                     }
                     BinOp::Eq | BinOp::Neq => Ty::Bool,
                     BinOp::Lt | BinOp::Leq | BinOp::Gt | BinOp::Geq => {
-                        if l_ty == Ty::Any || r_ty == Ty::Any {
-                            Ty::Bool
-                        } else if l_ty == Ty::Int && r_ty == Ty::Int
-                            || l_ty == Ty::Float && r_ty == Ty::Float
-                        {
+                        // Any = not statically known; comparable operands must
+                        // otherwise be two ints or two floats (SPEC §1.2: no
+                        // implicit coercion).
+                        let comparable = l_ty == Ty::Any
+                            || r_ty == Ty::Any
+                            || (l_ty == Ty::Int && r_ty == Ty::Int)
+                            || (l_ty == Ty::Float && r_ty == Ty::Float);
+                        if comparable {
                             Ty::Bool
                         } else {
                             if !l_ty.is_error() && !r_ty.is_error() {
@@ -746,9 +753,10 @@ impl Checker {
                         }
                     }
                     BinOp::And | BinOp::Or => {
-                        if l_ty == Ty::Any || r_ty == Ty::Any {
-                            Ty::Bool
-                        } else if l_ty == Ty::Bool && r_ty == Ty::Bool {
+                        let logical = l_ty == Ty::Any
+                            || r_ty == Ty::Any
+                            || (l_ty == Ty::Bool && r_ty == Ty::Bool);
+                        if logical {
                             Ty::Bool
                         } else {
                             if !l_ty.is_error() && !r_ty.is_error() {
@@ -875,13 +883,10 @@ impl Checker {
                             ..
                         }) = self.types.get(&name)
                         {
-                            if let Some(field) =
-                                fields.iter().find(|field| field.name == *field_name)
-                            {
-                                Some(field.typ.clone())
-                            } else {
-                                None
-                            }
+                            fields
+                                .iter()
+                                .find(|field| field.name == *field_name)
+                                .map(|field| field.typ.clone())
                         } else {
                             None
                         };

@@ -13,7 +13,7 @@ fn check_golden(name: &str) {
     let ast = parser.parse_file().unwrap();
     let actual = ast::dump_file(&ast);
 
-    if let Ok(expected) = fs::read_to_string(&golden_path) {
+    if let Ok(expected) = fs::read_to_string(&golden_path).map(|s| s.replace("\r\n", "\n")) {
         if actual != expected {
             // Write actual to a temp file for easy diffing if needed, but here just assert.
             // Normally we'd use pretty_assertions or just panic.
