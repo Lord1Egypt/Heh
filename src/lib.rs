@@ -7,6 +7,7 @@ pub mod check;
 pub mod compile;
 pub mod diag;
 pub mod eval;
+pub mod fasthash;
 pub mod fmt;
 pub mod lexer;
 pub mod modules;

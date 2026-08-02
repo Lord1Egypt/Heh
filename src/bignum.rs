@@ -1,15 +1,29 @@
+//! Integers are unbounded (SPEC §5.1). SPEC's own implementation note asks for
+//! "a machine-word fast path with automatic promotion to a bignum, so ordinary
+//! arithmetic runs at native speed", which is exactly the shape here:
+//!
+//! - `BigInt::Small(i64)` holds anything that fits a machine word — no
+//!   allocation at all, and arithmetic is a checked machine instruction.
+//! - `BigInt::Big` is the limb-vector implementation, used only once a value
+//!   outstrips i64.
+//!
+//! Every operation normalizes its result back to `Small` when it fits, so a
+//! given mathematical value has exactly ONE representation. That invariant is
+//! what lets `Eq`, `Ord`, and `Hash` stay consistent across the two forms —
+//! without it, `Small(5) != Big(5)` and maps keyed by ints would break.
+
 use std::cmp::Ordering;
 use std::fmt;
 
 use std::hash::{Hash, Hasher};
 
 #[derive(Clone, Eq)]
-pub struct BigInt {
+pub struct Big {
     pub sign: bool,      // true if negative
     pub limbs: Vec<u32>, // base 2^32, little endian
 }
 
-impl BigInt {
+impl Big {
     pub fn zero() -> Self {
         Self {
             sign: false,
@@ -210,6 +224,27 @@ impl BigInt {
         self.limbs.is_empty()
     }
 
+    /// Value as an `i64`, or `None` when it does not fit — the test that
+    /// decides whether a result can live in the machine-word fast path.
+    pub fn to_i64(&self) -> Option<i64> {
+        if self.limbs.len() > 2 {
+            return None;
+        }
+        let mut mag: u64 = 0;
+        for (i, &limb) in self.limbs.iter().enumerate() {
+            mag |= (limb as u64) << (32 * i);
+        }
+        if self.sign {
+            // i64::MIN is representable even though its magnitude is not.
+            if mag == 1 << 63 {
+                return Some(i64::MIN);
+            }
+            i64::try_from(mag).ok().map(|v| -v)
+        } else {
+            i64::try_from(mag).ok()
+        }
+    }
+
     /// Truncate a finite float towards zero into an exact integer. Callers must
     /// reject nan/inf first — those have no integer value at all.
     pub fn from_f64_trunc(f: f64) -> Self {
@@ -245,7 +280,7 @@ impl BigInt {
     }
 }
 
-impl PartialEq for BigInt {
+impl PartialEq for Big {
     fn eq(&self, other: &Self) -> bool {
         if self.is_zero() && other.is_zero() {
             return true;
@@ -254,13 +289,13 @@ impl PartialEq for BigInt {
     }
 }
 
-impl PartialOrd for BigInt {
+impl PartialOrd for Big {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for BigInt {
+impl Ord for Big {
     fn cmp(&self, other: &Self) -> Ordering {
         if self.is_zero() && other.is_zero() {
             return Ordering::Equal;
@@ -274,7 +309,7 @@ impl Ord for BigInt {
     }
 }
 
-impl Hash for BigInt {
+impl Hash for Big {
     fn hash<H: Hasher>(&self, state: &mut H) {
         if self.is_zero() {
             false.hash(state);
@@ -285,28 +320,28 @@ impl Hash for BigInt {
     }
 }
 
-impl std::ops::Add for &BigInt {
-    type Output = BigInt;
-    fn add(self, other: Self) -> BigInt {
+impl std::ops::Add for &Big {
+    type Output = Big;
+    fn add(self, other: Self) -> Big {
         if self.sign == other.sign {
             let limbs = self.add_abs(other);
-            BigInt {
+            Big {
                 sign: self.sign,
                 limbs,
             }
         } else {
             match self.cmp_abs(other) {
-                Ordering::Equal => BigInt::zero(),
+                Ordering::Equal => Big::zero(),
                 Ordering::Greater => {
                     let limbs = self.sub_abs(other);
-                    BigInt {
+                    Big {
                         sign: self.sign,
                         limbs,
                     }
                 }
                 Ordering::Less => {
                     let limbs = other.sub_abs(self);
-                    BigInt {
+                    Big {
                         sign: other.sign,
                         limbs,
                     }
@@ -316,28 +351,28 @@ impl std::ops::Add for &BigInt {
     }
 }
 
-impl std::ops::Sub for &BigInt {
-    type Output = BigInt;
-    fn sub(self, other: Self) -> BigInt {
+impl std::ops::Sub for &Big {
+    type Output = Big;
+    fn sub(self, other: Self) -> Big {
         if self.sign != other.sign {
             let limbs = self.add_abs(other);
-            BigInt {
+            Big {
                 sign: self.sign,
                 limbs,
             }
         } else {
             match self.cmp_abs(other) {
-                Ordering::Equal => BigInt::zero(),
+                Ordering::Equal => Big::zero(),
                 Ordering::Greater => {
                     let limbs = self.sub_abs(other);
-                    BigInt {
+                    Big {
                         sign: self.sign,
                         limbs,
                     }
                 }
                 Ordering::Less => {
                     let limbs = other.sub_abs(self);
-                    BigInt {
+                    Big {
                         sign: !self.sign,
                         limbs,
                     }
@@ -347,11 +382,11 @@ impl std::ops::Sub for &BigInt {
     }
 }
 
-impl std::ops::Mul for &BigInt {
-    type Output = BigInt;
-    fn mul(self, other: Self) -> BigInt {
+impl std::ops::Mul for &Big {
+    type Output = Big;
+    fn mul(self, other: Self) -> Big {
         if self.is_zero() || other.is_zero() {
-            return BigInt::zero();
+            return Big::zero();
         }
         let mut limbs = vec![0u32; self.limbs.len() + other.limbs.len()];
         for (i, &a) in self.limbs.iter().enumerate() {
@@ -366,14 +401,14 @@ impl std::ops::Mul for &BigInt {
         while limbs.last() == Some(&0) {
             limbs.pop();
         }
-        BigInt {
+        Big {
             sign: self.sign != other.sign,
             limbs,
         }
     }
 }
 
-impl BigInt {
+impl Big {
     // Basic division by 1-limb
     fn div_mod_u32(&self, div: u32) -> (Self, u32) {
         if div == 0 {
@@ -400,7 +435,7 @@ impl BigInt {
         )
     }
 
-    // Binary long division for BigInt / BigInt. Not the fastest, but small code.
+    // Binary long division for Big / Big. Not the fastest, but small code.
     pub fn div_mod(&self, other: &Self) -> (Self, Self) {
         if other.is_zero() {
             panic!("division by zero");
@@ -535,7 +570,7 @@ impl BigInt {
     }
 }
 
-impl fmt::Display for BigInt {
+impl fmt::Display for Big {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_zero() {
             return write!(f, "0");
@@ -558,6 +593,288 @@ impl fmt::Display for BigInt {
             write!(f, "{:09}", chunk)?;
         }
         Ok(())
+    }
+}
+
+impl fmt::Debug for Big {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Big({})", self)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// The public integer: a machine word until it has to be more.
+// ---------------------------------------------------------------------------
+
+#[derive(Clone, Eq)]
+pub enum BigInt {
+    Small(i64),
+    Large(Big),
+}
+
+impl BigInt {
+    pub fn zero() -> Self {
+        BigInt::Small(0)
+    }
+
+    pub fn from_i64(n: i64) -> Self {
+        BigInt::Small(n)
+    }
+
+    pub fn from_u64(n: u64) -> Self {
+        match i64::try_from(n) {
+            Ok(v) => BigInt::Small(v),
+            Err(_) => BigInt::Large(Big::from_u64(n)),
+        }
+    }
+
+    /// Demote to `Small` whenever the value fits, so each value has exactly one
+    /// representation (see the module note).
+    fn norm(b: Big) -> Self {
+        match b.to_i64() {
+            Some(v) => BigInt::Small(v),
+            None => BigInt::Large(b),
+        }
+    }
+
+    fn big(&self) -> Big {
+        match self {
+            BigInt::Small(v) => Big::from_i64(*v),
+            BigInt::Large(b) => b.clone(),
+        }
+    }
+
+    pub fn is_zero(&self) -> bool {
+        match self {
+            BigInt::Small(v) => *v == 0,
+            BigInt::Large(b) => b.is_zero(),
+        }
+    }
+
+    pub fn is_negative(&self) -> bool {
+        match self {
+            BigInt::Small(v) => *v < 0,
+            BigInt::Large(b) => b.sign && !b.is_zero(),
+        }
+    }
+
+    /// Absolute value.
+    pub fn abs(&self) -> Self {
+        match self {
+            // i64::MIN has no positive counterpart in a machine word.
+            BigInt::Small(v) => match v.checked_abs() {
+                Some(a) => BigInt::Small(a),
+                None => {
+                    let mut b = Big::from_i64(*v);
+                    b.sign = false;
+                    BigInt::Large(b)
+                }
+            },
+            BigInt::Large(b) => {
+                let mut b = b.clone();
+                b.sign = false;
+                Self::norm(b)
+            }
+        }
+    }
+
+    pub fn negate(&self) -> Self {
+        match self {
+            BigInt::Small(v) => match v.checked_neg() {
+                Some(n) => BigInt::Small(n),
+                None => {
+                    let mut b = Big::from_i64(*v);
+                    b.sign = false;
+                    BigInt::Large(b)
+                }
+            },
+            BigInt::Large(b) => {
+                let mut b = b.clone();
+                if !b.is_zero() {
+                    b.sign = !b.sign;
+                }
+                Self::norm(b)
+            }
+        }
+    }
+
+    pub fn to_i64(&self) -> Option<i64> {
+        match self {
+            BigInt::Small(v) => Some(*v),
+            BigInt::Large(b) => b.to_i64(),
+        }
+    }
+
+    pub fn to_f64(&self) -> f64 {
+        match self {
+            BigInt::Small(v) => *v as f64,
+            BigInt::Large(b) => b.to_f64(),
+        }
+    }
+
+    /// Value as a `usize`, or `None` when negative or too large to index with.
+    pub fn to_usize(&self) -> Option<usize> {
+        match self {
+            BigInt::Small(v) => usize::try_from(*v).ok(),
+            BigInt::Large(b) => b.to_usize(),
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Big::parse(s).map(Self::norm)
+    }
+
+    pub fn from_f64_trunc(f: f64) -> Self {
+        // Anything inside the machine-word range converts exactly and directly.
+        let t = f.trunc();
+        if t >= -(2f64.powi(63)) && t < 2f64.powi(63) {
+            return BigInt::Small(t as i64);
+        }
+        Self::norm(Big::from_f64_trunc(f))
+    }
+
+    /// Truncating division and remainder (quotient rounds towards zero).
+    pub fn div_mod(&self, other: &Self) -> (Self, Self) {
+        if let (BigInt::Small(a), BigInt::Small(b)) = (self, other) {
+            // i64::MIN / -1 is the one pair that overflows a machine word.
+            if let (Some(q), Some(r)) = (a.checked_div(*b), a.checked_rem(*b)) {
+                return (BigInt::Small(q), BigInt::Small(r));
+            }
+        }
+        let (q, r) = self.big().div_mod(&other.big());
+        (Self::norm(q), Self::norm(r))
+    }
+
+    /// Floor division and Python-style modulo (SPEC §6.1).
+    pub fn div_mod_floor(&self, other: &Self) -> (Self, Self) {
+        if let (BigInt::Small(a), BigInt::Small(b)) = (self, other) {
+            if let (Some(q), Some(r)) = (a.checked_div_euclid(*b), a.checked_rem_euclid(*b)) {
+                // Euclidean division keeps the remainder non-negative; SPEC §6.1
+                // wants the remainder to take the DIVISOR's sign. They agree for
+                // a positive divisor, and differ by one step for a negative one
+                // with a non-zero remainder: 1 // -2 is -1, not 0.
+                if *b < 0 && r != 0 {
+                    if let (Some(q), Some(r)) = (q.checked_sub(1), r.checked_add(*b)) {
+                        return (BigInt::Small(q), BigInt::Small(r));
+                    }
+                } else {
+                    return (BigInt::Small(q), BigInt::Small(r));
+                }
+            }
+        }
+        let (q, r) = self.big().div_mod_floor(&other.big());
+        (Self::norm(q), Self::norm(r))
+    }
+
+    /// `self ** exp`, exact and unbounded. `exp` must be non-negative.
+    pub fn pow(&self, exp: &Self) -> Self {
+        if let (BigInt::Small(base), Some(e)) = (self, exp.to_i64()) {
+            if let Ok(e32) = u32::try_from(e) {
+                if let Some(v) = base.checked_pow(e32) {
+                    return BigInt::Small(v);
+                }
+            }
+        }
+        Self::norm(self.big().pow(&exp.big()))
+    }
+}
+
+impl PartialEq for BigInt {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (BigInt::Small(a), BigInt::Small(b)) => a == b,
+            // Normalization means a Small and a Large are never equal.
+            (BigInt::Large(a), BigInt::Large(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
+impl PartialOrd for BigInt {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for BigInt {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match (self, other) {
+            (BigInt::Small(a), BigInt::Small(b)) => a.cmp(b),
+            // A normalized Large is always outside i64's range, so its sign
+            // alone decides against any Small.
+            (BigInt::Large(a), BigInt::Small(_)) => {
+                if a.sign {
+                    Ordering::Less
+                } else {
+                    Ordering::Greater
+                }
+            }
+            (BigInt::Small(_), BigInt::Large(b)) => {
+                if b.sign {
+                    Ordering::Greater
+                } else {
+                    Ordering::Less
+                }
+            }
+            (BigInt::Large(a), BigInt::Large(b)) => a.cmp(b),
+        }
+    }
+}
+
+impl Hash for BigInt {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        // Hash the mathematical value, not the representation. Normalization
+        // guarantees only one arm can ever hold a given value, but hashing
+        // through a common form keeps that from being load-bearing.
+        match self {
+            BigInt::Small(v) => v.hash(state),
+            BigInt::Large(b) => b.hash(state),
+        }
+    }
+}
+
+impl std::ops::Add for &BigInt {
+    type Output = BigInt;
+    fn add(self, other: Self) -> BigInt {
+        if let (BigInt::Small(a), BigInt::Small(b)) = (self, other) {
+            if let Some(v) = a.checked_add(*b) {
+                return BigInt::Small(v);
+            }
+        }
+        BigInt::norm(&self.big() + &other.big())
+    }
+}
+
+impl std::ops::Sub for &BigInt {
+    type Output = BigInt;
+    fn sub(self, other: Self) -> BigInt {
+        if let (BigInt::Small(a), BigInt::Small(b)) = (self, other) {
+            if let Some(v) = a.checked_sub(*b) {
+                return BigInt::Small(v);
+            }
+        }
+        BigInt::norm(&self.big() - &other.big())
+    }
+}
+
+impl std::ops::Mul for &BigInt {
+    type Output = BigInt;
+    fn mul(self, other: Self) -> BigInt {
+        if let (BigInt::Small(a), BigInt::Small(b)) = (self, other) {
+            if let Some(v) = a.checked_mul(*b) {
+                return BigInt::Small(v);
+            }
+        }
+        BigInt::norm(&self.big() * &other.big())
+    }
+}
+
+impl fmt::Display for BigInt {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            BigInt::Small(v) => write!(f, "{}", v),
+            BigInt::Large(b) => write!(f, "{}", b),
+        }
     }
 }
 

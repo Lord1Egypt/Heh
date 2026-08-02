@@ -6,6 +6,7 @@
 //! shared helpers (see `Evaluator::{eval_binop, apply_callee, field_get, …}`).
 
 use crate::ast::*;
+use std::rc::Rc;
 
 #[derive(Clone, Debug)]
 pub enum Const {
@@ -22,10 +23,10 @@ pub enum Op {
     PushNone,
     PushBool(bool),
     Pop,
-    Load(String),
-    Define(String, bool),
-    Assign(String, u32, u32),
-    OpAssign(String, BinOp, u32, u32),
+    Load(Rc<str>),
+    Define(Rc<str>, bool),
+    Assign(Rc<str>, u32, u32),
+    OpAssign(Rc<str>, BinOp, u32, u32),
     Binop(BinOp, u32, u32),
     Neg(u32, u32),
     Not(u32, u32),
@@ -49,7 +50,7 @@ pub enum Op {
     TestBoolJumpTrue(usize, u32, u32),
     ToBool(u32, u32),
     ForStart(u32, u32),
-    ForNext(String, usize),
+    ForNext(Rc<str>, usize),
     PopIter,
     MatchArm(Pattern, usize),
     PopScrutinee,
@@ -61,7 +62,7 @@ pub enum Op {
 
     // Field / index assignment (SPEC §14 `lvalue`). The container is already
     // on the stack; these mutate it in place and leave nothing behind.
-    SetField(String, u32, u32),
+    SetField(Rc<str>, u32, u32),
     SetIndex(u32, u32),
 
     // Block scopes. Optional narrowing binds `x` to its unwrapped value for
@@ -71,7 +72,7 @@ pub enum Op {
     PushScope,
     PopScope,
     TruncScopes(usize),
-    NarrowOption(String),
+    NarrowOption(Rc<str>),
 
     // A closure captures the scope it is created in (SPEC §6.5).
     MakeClosure(usize),
@@ -81,14 +82,14 @@ pub enum Op {
 /// runs through the shared evaluator, exactly as a named function's does.
 #[derive(Clone, Debug)]
 pub struct ClosureDef {
-    pub params: Vec<String>,
+    pub params: Vec<Rc<str>>,
     pub body: Block,
 }
 
 #[derive(Clone, Debug)]
 pub struct Chunk {
     pub name: String,
-    pub params: Vec<String>,
+    pub params: Vec<Rc<str>>,
     pub ops: Vec<Op>,
     pub consts: Vec<Const>,
     pub closures: Vec<ClosureDef>,
@@ -186,7 +187,7 @@ impl<'a> Compiler<'a> {
             }
             Statement::Let(l) => {
                 self.compile_expr(&l.init);
-                self.emit(Op::Define(l.name.clone(), l.is_mut));
+                self.emit(Op::Define(l.name.as_str().into(), l.is_mut));
             }
             Statement::Assign(a) => {
                 if !a.target.tail.is_empty() {
@@ -197,19 +198,39 @@ impl<'a> Compiler<'a> {
                 let (line, col) = (a.span.line, a.span.col);
                 match a.op {
                     AssignOp::Eq => {
-                        self.emit(Op::Assign(a.target.name.clone(), line, col));
+                        self.emit(Op::Assign(a.target.name.as_str().into(), line, col));
                     }
                     AssignOp::AddEq => {
-                        self.emit(Op::OpAssign(a.target.name.clone(), BinOp::Add, line, col));
+                        self.emit(Op::OpAssign(
+                            a.target.name.as_str().into(),
+                            BinOp::Add,
+                            line,
+                            col,
+                        ));
                     }
                     AssignOp::SubEq => {
-                        self.emit(Op::OpAssign(a.target.name.clone(), BinOp::Sub, line, col));
+                        self.emit(Op::OpAssign(
+                            a.target.name.as_str().into(),
+                            BinOp::Sub,
+                            line,
+                            col,
+                        ));
                     }
                     AssignOp::MulEq => {
-                        self.emit(Op::OpAssign(a.target.name.clone(), BinOp::Mul, line, col));
+                        self.emit(Op::OpAssign(
+                            a.target.name.as_str().into(),
+                            BinOp::Mul,
+                            line,
+                            col,
+                        ));
                     }
                     AssignOp::DivEq => {
-                        self.emit(Op::OpAssign(a.target.name.clone(), BinOp::Div, line, col));
+                        self.emit(Op::OpAssign(
+                            a.target.name.as_str().into(),
+                            BinOp::Div,
+                            line,
+                            col,
+                        ));
                     }
                 }
             }
@@ -250,7 +271,7 @@ impl<'a> Compiler<'a> {
             .split_last()
             .expect("caller checked the tail is non-empty");
 
-        self.emit(Op::Load(a.target.name.clone()));
+        self.emit(Op::Load(a.target.name.as_str().into()));
         for step in path {
             match step {
                 LValueTail::Field(f) => {
@@ -281,7 +302,7 @@ impl<'a> Compiler<'a> {
                 } else {
                     self.compile_expr(&a.rhs);
                 }
-                self.emit(Op::SetField(f.clone(), line, col));
+                self.emit(Op::SetField(f.as_str().into(), line, col));
             }
             LValueTail::Index(idx) => {
                 self.compile_expr(idx);
@@ -324,7 +345,7 @@ impl<'a> Compiler<'a> {
             Some((name, true)) => {
                 let name = name.to_string();
                 self.in_scope(|c| {
-                    c.emit(Op::NarrowOption(name));
+                    c.emit(Op::NarrowOption(name.as_str().into()));
                     if value {
                         c.compile_block_value(&i.then_block);
                     } else {
@@ -343,7 +364,7 @@ impl<'a> Compiler<'a> {
         end_jumps.push(self.emit(Op::Jump(0)));
         self.patch_jump(jf, self.here());
         if let Some((name, false)) = narrow {
-            self.emit(Op::NarrowOption(name.to_string()));
+            self.emit(Op::NarrowOption(name.into()));
         }
         // elifs
         for (cond, block) in &i.elifs {
@@ -396,7 +417,7 @@ impl<'a> Compiler<'a> {
         self.compile_expr(&f.iter);
         self.emit(Op::ForStart(f.iter.span.line, f.iter.span.col));
         let next_addr = self.here();
-        let for_next = self.emit(Op::ForNext(f.name.clone(), 0)); // patched to end-of-iter
+        let for_next = self.emit(Op::ForNext(f.name.as_str().into(), 0)); // patched to end-of-iter
         self.loops.push(Loop {
             continue_addr: next_addr,
             break_jumps: Vec::new(),
@@ -459,7 +480,7 @@ impl<'a> Compiler<'a> {
                 self.emit(Op::PushConst(idx));
             }
             ExprKind::Ident(id) => {
-                self.emit(Op::Load(id.clone()));
+                self.emit(Op::Load(id.as_str().into()));
             }
             ExprKind::Binary(op, l, r) => match op {
                 BinOp::And => {
@@ -550,7 +571,7 @@ impl<'a> Compiler<'a> {
                 // shared evaluator (SPEC §6.5).
                 let idx = self.closures.len();
                 self.closures.push(ClosureDef {
-                    params: params.iter().map(|p| p.name.clone()).collect(),
+                    params: params.iter().map(|p| p.name.as_str().into()).collect(),
                     body: body.clone(),
                 });
                 self.emit(Op::MakeClosure(idx));
@@ -643,7 +664,7 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    fn finish(mut self, name: String, params: Vec<String>) -> Chunk {
+    fn finish(mut self, name: String, params: Vec<Rc<str>>) -> Chunk {
         self.emit(Op::Return);
         Chunk {
             name,
@@ -681,7 +702,7 @@ pub fn compile(file: &File) -> Program {
     for f in &fn_decls {
         let mut c = Compiler::new(&fn_index);
         c.compile_block_value(&f.body);
-        let params: Vec<String> = f.params.iter().map(|p| p.name.clone()).collect();
+        let params: Vec<Rc<str>> = f.params.iter().map(|p| p.name.as_str().into()).collect();
         functions.push(c.finish(f.name.clone(), params));
     }
 
@@ -694,7 +715,7 @@ pub fn compile(file: &File) -> Program {
         match item {
             TopItem::Let(l) => {
                 top.compile_expr(&l.init);
-                top.emit(Op::Define(l.name.clone(), l.is_mut));
+                top.emit(Op::Define(l.name.as_str().into(), l.is_mut));
             }
             TopItem::Stmt(s) if main.is_none() => top.compile_stmt_discard(s),
             _ => {}

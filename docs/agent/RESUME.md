@@ -53,13 +53,19 @@ go-ahead where noted:
    the command and library named `heh`, so `cargo install heh-lang` gives you
    `heh`. Publishing a future version is just `cargo publish` from `main`
    after bumping `Cargo.toml`.
-2. **Performance is the real open engineering work.** `benches/run.sh` exists
-   and the numbers are recorded in the worklog: the VM beats the tree-walker
-   everywhere (1.01x–2.27x) but reaches only 0.28x–1.02x of CPython, winning
-   only on bigint. The P11 target was ≥5x CPython. The cause is structural, not
-   tuning:
-   - every variable access is a String-keyed HashMap lookup up a `Scope` chain
-     (a real VM resolves locals to slot indices at compile time), and
-   - every integer heap-allocates a `Vec<u32>`; there is no machine-word fast
-     path, though SPEC §5.1 explicitly invites one.
-   Fixing those two is the next milestone, and the harness can prove it.
+2. **Performance — two of the three structural costs are now fixed.**
+   `int` has a machine-word fast path (SPEC §5.1), the interpreter's internal
+   maps use a fast hasher, and variable names are `Rc<str>` so binding does not
+   allocate. That roughly doubled the VM: it now runs at ~0.5x–1.15x of CPython
+   (was ~0.3x) and is faster than CPython on `strings` and `bigint`.
+
+   **Still open, and it is the big one:** locals resolve by *name* through a
+   `Scope` chain on every access. A real VM assigns frame slots at compile time
+   and indexes an array. Doing that here means a resolver pass handling
+   shadowing across block scopes, `match` arm bindings, narrowing rebinds, and
+   closure upvalues — a subsystem, not a patch. It is the remaining path to
+   the ≥5x CPython target, and honestly 5x on loop-heavy code may need more
+   than slots alone.
+
+   Do not bother re-trying a linear-scan `Vec` for small scopes; it was
+   measured against the hash map and came out within noise (see WORKLOG).

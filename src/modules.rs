@@ -377,14 +377,9 @@ fn time_format(ms: i64) -> String {
 /// An `int` argument as an exact i64 (time values never need bignum range).
 fn millis_arg(v: &Val, who: &str) -> Result<i64, String> {
     match v {
-        Val::Int(i) => {
-            let mut mag = i.clone();
-            mag.sign = false;
-            match mag.to_usize().and_then(|u| i64::try_from(u).ok()) {
-                Some(n) => Ok(if i.sign { -n } else { n }),
-                None => Err(format!("time.{}: value out of range", who)),
-            }
-        }
+        Val::Int(i) => i
+            .to_i64()
+            .ok_or_else(|| format!("time.{}: value out of range", who)),
         _ => Err(format!("time.{}: expects int", who)),
     }
 }

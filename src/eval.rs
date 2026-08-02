@@ -10,7 +10,12 @@ use crate::val::Val;
 #[derive(Clone)]
 pub struct Scope {
     parent: Option<Rc<RefCell<Scope>>>,
-    vars: HashMap<String, (Val, bool)>, // (value, is_mut)
+    // Interpreter-internal, so it uses the fast hasher rather than the
+    // DoS-resistant default: this map is read on nearly every instruction.
+    // Names are refcounted: binding a loop variable happens once per
+    // iteration, and cloning an `Rc<str>` is a counter bump rather than a
+    // fresh heap allocation and copy.
+    vars: crate::fasthash::FastMap<Rc<str>, (Val, bool)>, // (value, is_mut)
 }
 
 impl std::fmt::Debug for Scope {
@@ -23,7 +28,7 @@ impl Scope {
     pub fn new(parent: Option<Rc<RefCell<Scope>>>) -> Self {
         Self {
             parent,
-            vars: HashMap::new(),
+            vars: crate::fasthash::FastMap::default(),
         }
     }
 
@@ -51,8 +56,8 @@ impl Scope {
         }
     }
 
-    pub fn define(&mut self, name: String, val: Val, is_mut: bool) {
-        self.vars.insert(name, (val, is_mut));
+    pub fn define(&mut self, name: impl Into<Rc<str>>, val: Val, is_mut: bool) {
+        self.vars.insert(name.into(), (val, is_mut));
     }
 }
 
@@ -228,7 +233,7 @@ impl Evaluator {
         );
 
         self.global.borrow_mut().define(
-            "sys".into(),
+            "sys",
             Val::Record("Sys".into(), Rc::new(RefCell::new(sys_map))),
             false,
         );
@@ -418,14 +423,12 @@ impl Evaluator {
             "list",
         ];
         for b in builtins {
-            self.global
-                .borrow_mut()
-                .define(b.into(), Val::BuiltinFn(b), false);
+            self.global.borrow_mut().define(b, Val::BuiltinFn(b), false);
         }
 
         for item in &file.items {
             if let TopItem::Fn(f) = item {
-                let params = f.params.iter().map(|p| p.name.clone()).collect();
+                let params = f.params.iter().map(|p| p.name.as_str().into()).collect();
                 let func = Val::Fn(params, f.body.clone(), self.global.clone());
                 self.global.borrow_mut().define(f.name.clone(), func, false);
             }
@@ -979,10 +982,7 @@ impl Evaluator {
                 let val = self.eval_expr(inner, env.clone())?;
                 match op {
                     UnOp::Neg => match val {
-                        Val::Int(mut i) => {
-                            i.sign = !i.sign;
-                            Ok(Val::Int(i))
-                        }
+                        Val::Int(i) => Ok(Val::Int(i.negate())),
                         Val::Float(f) => Ok(Val::Float(-f)),
                         _ => Err(Diag {
                             code: "E0104",
@@ -1135,7 +1135,7 @@ impl Evaluator {
                 }
             }
             ExprKind::Closure(params, _, body) => {
-                let p_names = params.iter().map(|p| p.name.clone()).collect();
+                let p_names = params.iter().map(|p| p.name.as_str().into()).collect();
                 Ok(Val::Fn(p_names, body.clone(), env.clone()))
             }
             ExprKind::Try(inner, else_exit) => {
@@ -1782,7 +1782,10 @@ impl Evaluator {
                 }
                 if let Val::Int(n) = &arg_vals[0] {
                     use std::io::Read;
-                    let count = n.limbs.first().copied().unwrap_or(0) as usize;
+                    // A silly-large request would try to allocate that much.
+                    let Some(count) = n.to_usize().filter(|c| *c <= 1 << 20) else {
+                        return Ok(Val::Err("sys.rand.bytes: count must be 0..=1048576".into()));
+                    };
                     let mut buf = vec![0u8; count];
                     match std::fs::File::open("/dev/urandom")
                         .and_then(|mut f| f.read_exact(&mut buf))
@@ -1811,10 +1814,11 @@ impl Evaluator {
                 }
                 if let (Val::Int(min), Val::Int(max)) = (&arg_vals[0], &arg_vals[1]) {
                     use std::io::Read;
-                    let min_val = min.limbs.first().copied().unwrap_or(0) as i64
-                        * if min.sign { -1 } else { 1 };
-                    let max_val = max.limbs.first().copied().unwrap_or(0) as i64
-                        * if max.sign { -1 } else { 1 };
+                    let (Some(min_val), Some(max_val)) = (min.to_i64(), max.to_i64()) else {
+                        return Ok(Val::Err(
+                            "sys.rand.int: bounds must fit in a machine word".into(),
+                        ));
+                    };
                     if min_val >= max_val {
                         return Ok(Val::Err("min must be < max".into()));
                     }
@@ -2100,7 +2104,7 @@ impl Evaluator {
     /// Run a user function value (`Val::Fn`) with already-evaluated args.
     pub fn call_user(
         &mut self,
-        params: Vec<String>,
+        params: Vec<Rc<str>>,
         body: Block,
         closure_env: Rc<RefCell<Scope>>,
         args: Vec<Val>,
@@ -2133,7 +2137,7 @@ impl Evaluator {
 
     fn call_user_inner(
         &mut self,
-        params: Vec<String>,
+        params: Vec<Rc<str>>,
         body: Block,
         closure_env: Rc<RefCell<Scope>>,
         args: Vec<Val>,

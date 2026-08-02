@@ -93,7 +93,7 @@ impl Vm {
                     let v = cur_scope(&scopes)
                         .borrow()
                         .get(name)
-                        .unwrap_or_else(|| Val::Enum(name.clone(), vec![]));
+                        .unwrap_or_else(|| Val::Enum(name.to_string(), vec![]));
                     stack.push(v);
                 }
                 Op::Define(name, is_mut) => {
@@ -138,10 +138,7 @@ impl Vm {
                 Op::Neg(line, col) => {
                     let v = stack.pop().unwrap();
                     match v {
-                        Val::Int(mut i) => {
-                            i.sign = !i.sign;
-                            stack.push(Val::Int(i));
-                        }
+                        Val::Int(i) => stack.push(Val::Int(i.negate())),
                         Val::Float(f) => stack.push(Val::Float(-f)),
                         _ => {
                             return Err(Diag {

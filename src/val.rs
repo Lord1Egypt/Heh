@@ -16,7 +16,7 @@ use std::rc::Rc;
 #[derive(Debug, Clone, Default)]
 pub struct OrderedMap {
     entries: Vec<(Val, Val)>,
-    index: HashMap<Val, usize>,
+    index: crate::fasthash::FastMap<Val, usize>,
 }
 
 impl OrderedMap {
@@ -97,8 +97,9 @@ pub enum Val {
     Bool(bool),
     Str(String),
     Range(Box<Val>, Box<Val>, bool), // (start, end, is_inclusive)
+    // Parameter names are refcounted: binding them is per-call work.
     Fn(
-        Vec<String>,
+        Vec<Rc<str>>,
         crate::ast::Block,
         std::rc::Rc<std::cell::RefCell<crate::eval::Scope>>,
     ),
