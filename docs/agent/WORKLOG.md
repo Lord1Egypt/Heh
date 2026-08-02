@@ -165,3 +165,40 @@ PR#. No entry = the step didn't happen. Mohamed reads this first when rating.
 - Verification: 58+ tests green including the VM differential over the whole
   corpus, plus a direct 33-program vm-vs-tree-walk diff.
 - PR: pending
+
+## 2026-08-02 — performance: int fast path, hashing, name binding (Claude)
+- Branch: `perf/small-int-fast-path` -> `perf/scope-lookup`
+- What: took the VM from roughly 0.3x CPython to roughly 0.5-1.15x, ~2x faster
+  than before, on `benches/run.sh`.
+  1. **Machine-word fast path for `int`** — `BigInt` is now
+     `Small(i64) | Large(Big)`, promoting on overflow, which is precisely what
+     SPEC §5.1's implementation note asks for. Every result normalizes back to
+     `Small` when it fits, so one value has one representation and `Eq`/`Ord`/
+     `Hash` stay consistent.
+  2. **`src/fasthash.rs`** — the FxHash mixer for the two interpreter-internal
+     maps (scope vars, ordered-map index). The default SipHash was on the hot
+     path for no benefit; `std/hash` is untouched.
+  3. **`Rc<str>` names** — scope keys, bytecode operands, and `Val::Fn` params.
+     Binding a loop variable was allocating and copying a `String` per
+     iteration (2M allocations in loop_sum); now it is a refcount bump.
+- **Verification, and it earned its keep:** added
+  `tests/bignum_vs_python.rs` — every binary operator over 23 operands sitting
+  on the i64 and u32-limb boundaries, ~13,000 comparisons against CPython.
+  It immediately caught a real bug in the first draft: `1 // -2` returned 1
+  instead of -1, because Rust's `div_euclid` keeps the remainder non-negative
+  while SPEC §6.1 wants the divisor's sign. Without that test the bug ships.
+- Also fixed latent bugs found while removing raw `.limbs`/`.sign` access:
+  `sys.rand.bytes` and `sys.rand.int` read only the lowest limb, so large
+  arguments produced silently wrong bounds.
+- **Negative result, recorded so nobody repeats it:** replacing the scope
+  `HashMap` with a linear-scan `Vec` for small scopes (spilling to a map past
+  12 entries) measured **within noise** across three A/B runs — FxHash on short
+  names is already fast enough that scanning wins nothing. Reverted rather than
+  carry two storage arms forever.
+- **The ≥5x CPython gate is still not met** and is not close on loop-heavy
+  code. What is left is the structural one: locals still resolve by name
+  through a scope chain. Fixing it means a resolver pass assigning frame slots,
+  with correct shadowing and closure upvalues — a real subsystem, not a patch,
+  and the kind of change that ships subtle scoping bugs if rushed. Left
+  undone deliberately.
+- PR: pending
