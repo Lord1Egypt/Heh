@@ -133,6 +133,7 @@ what it means to be a Heh implementation. Everything was built phase by phase
 | Spec | [SPEC.md](SPEC.md) — authoritative, **v1.0, frozen** |
 | Standard library | [docs/STDLIB.md](docs/STDLIB.md) — the complete frozen surface |
 | Diagnostics | [docs/DIAGNOSTICS.md](docs/DIAGNOSTICS.md) |
+| Changes | [CHANGELOG.md](CHANGELOG.md) |
 | Reference implementation | Rust, **zero crates**, single binary `heh` |
 | Examples | [examples/](examples/) |
 | Verification | conformance corpus + `cargo test` (CI on every PR) |

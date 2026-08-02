@@ -1,7 +1,7 @@
 //! heh — the Heh language toolchain (single binary, zero dependencies).
 //!
-//! Subcommands land phase by phase (see docs/agent/TASK_MENU.md):
-//! P1 tokens ✓ · then ast, run, check, fmt, test, get.
+//! One binary carries every subcommand: run, check, test, fmt, get, and the
+//! `tokens`/`ast` dumps used by the conformance tests.
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -22,7 +22,7 @@ Usage:
   heh --version               print the toolchain version
   heh --help                  print this help
 
-Spec: SPEC.md · Plan: docs/agent/TASK_MENU.md";
+Spec: SPEC.md · Docs: https://github.com/Lord1Egypt/Heh";
 
 /// Both engines recurse on the native stack, so Heh programs get a dedicated
 /// thread with a large one. `MAX_CALL_DEPTH` then faults on runaway recursion
