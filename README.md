@@ -129,6 +129,7 @@ what it means to be a Heh implementation. Everything was built phase by phase
 
 | | |
 |---|---|
+| Package | [`heh-lang` on crates.io](https://crates.io/crates/heh-lang) — installs the `heh` command |
 | Spec | [SPEC.md](SPEC.md) — authoritative, **v1.0, frozen** |
 | Standard library | [docs/STDLIB.md](docs/STDLIB.md) — the complete frozen surface |
 | Diagnostics | [docs/DIAGNOSTICS.md](docs/DIAGNOSTICS.md) |
