@@ -47,12 +47,20 @@ run the document.
 Nothing is open. The remaining work is optional and needs an explicit
 go-ahead where noted:
 
-1. **Remaining publishing** — each needs its own go-ahead from Mohamed:
-   crates.io, macOS/Windows binaries (needs cross-compilation targets), repo
-   About/topics (web UI only). The GitHub Release itself is done.
-2. **VM follow-ups** (from P11) — perf benchmarks in `benches/`, and making
-   `--vm` the default after soak testing. Note that `needs_tree_walker()` in
-   `src/compile.rs` now routes three construct families to the tree-walker
-   (closures, optional narrowing, field/index assignment); making the VM the
-   default means encoding those first.
-3. **A demo GIF** for the README (project standard: prefer VHS).
+1. **crates.io — the only open item, and it is blocked on Mohamed.**
+   `cargo publish` is dry-run clean but crates.io rejects the upload:
+   *"A verified email address is required."* He must set and confirm an email
+   at <https://crates.io/settings/profile>, then run `cargo publish` from
+   `main`. Note the crate is **`heh-lang`** — `heh` was taken on crates.io in
+   2022 by an unrelated hex editor; `[[bin]]`/`[lib]` keep the command and
+   library named `heh`.
+2. **Performance is the real open engineering work.** `benches/run.sh` exists
+   and the numbers are recorded in the worklog: the VM beats the tree-walker
+   everywhere (1.01x–2.27x) but reaches only 0.28x–1.02x of CPython, winning
+   only on bigint. The P11 target was ≥5x CPython. The cause is structural, not
+   tuning:
+   - every variable access is a String-keyed HashMap lookup up a `Scope` chain
+     (a real VM resolves locals to slot indices at compile time), and
+   - every integer heap-allocates a `Vec<u32>`; there is no machine-word fast
+     path, though SPEC §5.1 explicitly invites one.
+   Fixing those two is the next milestone, and the harness can prove it.
