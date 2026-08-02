@@ -75,7 +75,7 @@ Heh is one binary with no dependencies. If you have a Rust compiler, you can
 build the entire toolchain:
 
 ```sh
-cargo install heh              # or grab a binary from the Releases page
+cargo install heh-lang         # installs the `heh` command
 echo 'sys.print("Heh lives forever 𓁨")' > hello.heh
 heh run hello.heh
 ```
