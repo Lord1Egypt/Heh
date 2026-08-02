@@ -61,6 +61,9 @@ next performance milestone; the measurement harness now exists to prove it.
 cargo install heh-lang     # the crate is heh-lang; the command is heh
 ```
 
+> The crate is published as **`heh-lang`** because `heh` was taken on crates.io
+> in 2022 by an unrelated project. The installed command is still `heh`.
+
 Or download a binary below — linux x86_64, Windows x86_64, macOS arm64 and
 x86_64. Checksums in `SHA256SUMS.txt`.
 
