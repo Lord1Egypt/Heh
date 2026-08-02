@@ -1,0 +1,14 @@
+# Integers never overflow — no import, no BigInt type, no ceiling.
+fn factorial(n: int) -> int
+    mut acc = 1
+    for i in 1..=n
+        acc *= i
+    acc
+
+sys.print(factorial(60))
+
+# Ranges can be unbounded: this one runs until it decides to stop.
+for k in 0..
+    if k * k > 5_000
+        sys.print("first square past 5000: {k * k}")
+        break

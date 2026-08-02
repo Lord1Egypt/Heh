@@ -14,14 +14,25 @@
 Assets were re-downloaded from the release and verified: checksums match, the
 binary runs, and the source tarball builds and passes all 58 tests.
 
-## Still open — needs a separate go-ahead
+## Round two — all approved and done 2026-08-02
 
-| # | Action | State | Notes |
-|---|---|---|---|
-| 5 | crates.io publish | **not attempted** | `Cargo.toml` has name/version/license/description. Needs `cargo publish` + a token. |
-| 6 | macOS / Windows binaries | not built | Needs cross-compilation targets installed. |
-| 7 | Repo About / topics | unchanged | Web-UI only. |
-| 8 | Demo GIF for README | not made | Project standard prefers VHS. |
+| # | Action | State |
+|---|---|---|
+| 5 | crates.io publish | ✅ `heh` published (see below) |
+| 6 | macOS / Windows binaries | ✅ cross-compiled via cargo-zigbuild in Docker (mingw needed root; Docker did not) |
+| 7 | Repo public + About / topics | ✅ public, description, homepage, 10 topics — `gh repo edit` does this, it is not web-UI-only as I first said |
+| 8 | Demo GIF for README | ✅ `docs/heh-demo.gif`, recorded with VHS from `docs/demo/demo.tape` |
+| 9 | VM completeness + `--vm` default | ✅ whole language encoded, VM is the default |
+| 10 | Benchmarks | ✅ `benches/run.sh` — and the ≥5x CPython target is **not** met, see below |
+
+## Known gap, stated plainly
+
+The bytecode VM beats the tree-walker on every benchmark but is **slower than
+CPython** on 4 of 5 (0.28x–1.02x); it wins only on bigint (3.10x). The P11
+target was ≥5x CPython. The cause is structural: every variable access is a
+string-keyed hash lookup up a scope chain, and every integer heap-allocates a
+`Vec<u32>` with no machine-word fast path — which SPEC §5.1 explicitly invites.
+Fixing those two is the next performance milestone.
 
 ## Verified before handing this over
 
