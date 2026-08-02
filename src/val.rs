@@ -354,7 +354,7 @@ impl fmt::Display for Val {
                     write!(f, "{}", s)
                 }
             }
-            Val::BoundMethod(obj, m) => write!(f, "<bound method {}.{}>", obj.to_string(), m),
+            Val::BoundMethod(obj, m) => write!(f, "<bound method {}.{}>", obj, m),
             Val::None => write!(f, "none"),
         }
     }

@@ -579,15 +579,23 @@ fn cmd_fmt(path: &str, check_mode: bool) -> ExitCode {
             return ExitCode::FAILURE;
         }
         files.sort();
-        let mut worst = ExitCode::SUCCESS;
+        // Tracked as a bool because `ExitCode` is not comparable on the
+        // oldest Rust this toolchain supports.
+        let mut all_ok = true;
         for file in files {
-            if cmd_fmt_file(&file.to_string_lossy(), check_mode) != ExitCode::SUCCESS {
-                worst = ExitCode::FAILURE;
-            }
+            all_ok &= cmd_fmt_file(&file.to_string_lossy(), check_mode);
         }
-        return worst;
+        return if all_ok {
+            ExitCode::SUCCESS
+        } else {
+            ExitCode::FAILURE
+        };
     }
-    cmd_fmt_file(path, check_mode)
+    if cmd_fmt_file(path, check_mode) {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    }
 }
 
 fn find_heh_files(dir: &std::path::Path, out: &mut Vec<PathBuf>) -> std::io::Result<()> {
@@ -605,12 +613,14 @@ fn find_heh_files(dir: &std::path::Path, out: &mut Vec<PathBuf>) -> std::io::Res
     Ok(())
 }
 
-fn cmd_fmt_file(path: &str, check_mode: bool) -> ExitCode {
+/// Format one file. Returns whether it succeeded, so the directory walk can
+/// accumulate a result without comparing `ExitCode`s.
+fn cmd_fmt_file(path: &str, check_mode: bool) -> bool {
     let source = match std::fs::read_to_string(path) {
         Ok(s) => s,
         Err(e) => {
             eprintln!("heh: cannot read '{path}': {e}");
-            return ExitCode::FAILURE;
+            return false;
         }
     };
     // Comments live outside the AST, so formatting needs them alongside it.
@@ -618,14 +628,14 @@ fn cmd_fmt_file(path: &str, check_mode: bool) -> ExitCode {
         Ok(t) => t,
         Err(d) => {
             eprintln!("{}", d.render(path, &source));
-            return ExitCode::FAILURE;
+            return false;
         }
     };
     let ast = match heh::parser::Parser::new(&tokens).parse_file() {
         Ok(a) => a,
         Err(d) => {
             eprintln!("{}", d.render(path, &source));
-            return ExitCode::FAILURE;
+            return false;
         }
     };
 
@@ -633,22 +643,22 @@ fn cmd_fmt_file(path: &str, check_mode: bool) -> ExitCode {
 
     if check_mode {
         if formatted == source {
-            ExitCode::SUCCESS
+            true
         } else {
             eprintln!("{path}: not formatted (run `heh fmt {path}`)");
-            ExitCode::FAILURE
+            false
         }
     } else if formatted == source {
-        ExitCode::SUCCESS
+        true
     } else {
         match std::fs::write(path, &formatted) {
             Ok(_) => {
                 println!("formatted {path}");
-                ExitCode::SUCCESS
+                true
             }
             Err(e) => {
                 eprintln!("heh: cannot write '{path}': {e}");
-                ExitCode::FAILURE
+                false
             }
         }
     }

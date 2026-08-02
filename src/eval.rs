@@ -1097,7 +1097,7 @@ impl Evaluator {
                                     CallArg::Named(k, val_expr) => {
                                         map.insert(
                                             k.clone(),
-                                            self.eval_expr(&val_expr, env.clone())?,
+                                            self.eval_expr(val_expr, env.clone())?,
                                         );
                                     }
                                     _ => {
@@ -1644,11 +1644,9 @@ impl Evaluator {
                     match std::fs::read_dir(s) {
                         Ok(entries) => {
                             let mut list = Vec::new();
-                            for entry in entries {
-                                if let Ok(entry) = entry {
-                                    if let Ok(name) = entry.file_name().into_string() {
-                                        list.push(Val::Str(name));
-                                    }
+                            for entry in entries.flatten() {
+                                if let Ok(name) = entry.file_name().into_string() {
+                                    list.push(Val::Str(name));
                                 }
                             }
                             Ok(Val::Ok(Box::new(Val::List(Rc::new(RefCell::new(list))))))

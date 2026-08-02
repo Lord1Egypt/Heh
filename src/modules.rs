@@ -468,7 +468,11 @@ fn fmt_pad(args: &[Val], left: bool) -> Result<Val, String> {
     if cur >= width {
         return Ok(Val::Str(s));
     }
-    let pad: String = std::iter::repeat_n(fill_ch, (width - cur) as usize).collect();
+    // `repeat().take()` rather than `repeat_n`: the latter is only stable
+    // since Rust 1.82, and the toolchain promises to build on 1.70.
+    let pad: String = std::iter::repeat(fill_ch)
+        .take((width - cur) as usize)
+        .collect();
     Ok(Val::Str(if left {
         format!("{}{}", pad, s)
     } else {
