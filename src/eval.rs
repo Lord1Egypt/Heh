@@ -979,10 +979,7 @@ impl Evaluator {
                 let val = self.eval_expr(inner, env.clone())?;
                 match op {
                     UnOp::Neg => match val {
-                        Val::Int(mut i) => {
-                            i.sign = !i.sign;
-                            Ok(Val::Int(i))
-                        }
+                        Val::Int(i) => Ok(Val::Int(i.negate())),
                         Val::Float(f) => Ok(Val::Float(-f)),
                         _ => Err(Diag {
                             code: "E0104",
@@ -1782,7 +1779,10 @@ impl Evaluator {
                 }
                 if let Val::Int(n) = &arg_vals[0] {
                     use std::io::Read;
-                    let count = n.limbs.first().copied().unwrap_or(0) as usize;
+                    // A silly-large request would try to allocate that much.
+                    let Some(count) = n.to_usize().filter(|c| *c <= 1 << 20) else {
+                        return Ok(Val::Err("sys.rand.bytes: count must be 0..=1048576".into()));
+                    };
                     let mut buf = vec![0u8; count];
                     match std::fs::File::open("/dev/urandom")
                         .and_then(|mut f| f.read_exact(&mut buf))
@@ -1811,10 +1811,11 @@ impl Evaluator {
                 }
                 if let (Val::Int(min), Val::Int(max)) = (&arg_vals[0], &arg_vals[1]) {
                     use std::io::Read;
-                    let min_val = min.limbs.first().copied().unwrap_or(0) as i64
-                        * if min.sign { -1 } else { 1 };
-                    let max_val = max.limbs.first().copied().unwrap_or(0) as i64
-                        * if max.sign { -1 } else { 1 };
+                    let (Some(min_val), Some(max_val)) = (min.to_i64(), max.to_i64()) else {
+                        return Ok(Val::Err(
+                            "sys.rand.int: bounds must fit in a machine word".into(),
+                        ));
+                    };
                     if min_val >= max_val {
                         return Ok(Val::Err("min must be < max".into()));
                     }
