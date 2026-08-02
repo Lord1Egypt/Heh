@@ -378,7 +378,8 @@ fn golden_example_dumps() {
             .unwrap_or_else(|d| panic!("{name}.heh failed to lex:\n{}", d.render(name, &src)));
         let got = dump(&toks);
         let want = std::fs::read_to_string(format!("{root}/tests/golden/lexer/{name}.tokens"))
-            .unwrap_or_else(|e| panic!("missing golden for {name}: {e}"));
+            .unwrap_or_else(|e| panic!("missing golden for {name}: {e}"))
+            .replace("\r\n", "\n");
         assert_eq!(
             got, want,
             "golden mismatch for {name}.heh — if the change is intended, regenerate \

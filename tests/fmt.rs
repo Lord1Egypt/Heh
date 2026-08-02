@@ -45,7 +45,7 @@ fn parse_with_comments(src: &str) -> Option<(ast::File, Vec<lexer::Comment>)> {
 }
 
 fn check_one(path: &Path) {
-    let src = fs::read_to_string(path).unwrap();
+    let src = fs::read_to_string(path).unwrap().replace("\r\n", "\n");
     let name = path.display();
 
     // skip intentional parse-error fixtures
