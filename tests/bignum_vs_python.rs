@@ -46,6 +46,18 @@ fn operands() -> Vec<String> {
     v
 }
 
+/// Joined output with line endings normalized. On Windows CPython's `print`
+/// emits CRLF while Heh emits LF, which is a difference in the harness, not in
+/// arithmetic — without this the comparison fails on Windows for no reason.
+fn normalize(stdout: &[u8], stderr: &[u8]) -> String {
+    format!(
+        "{}{}",
+        String::from_utf8_lossy(stdout),
+        String::from_utf8_lossy(stderr)
+    )
+    .replace("\r\n", "\n")
+}
+
 fn heh_bin() -> &'static str {
     env!("CARGO_BIN_EXE_heh")
 }
@@ -61,11 +73,7 @@ fn run_heh(src: &str) -> String {
         .output()
         .expect("failed to run heh");
     let _ = std::fs::remove_dir_all(&dir);
-    format!(
-        "{}{}",
-        String::from_utf8_lossy(&out.stdout),
-        String::from_utf8_lossy(&out.stderr)
-    )
+    normalize(&out.stdout, &out.stderr)
 }
 
 /// Written to a file rather than passed with `-c`: the generated program is
@@ -77,11 +85,7 @@ fn run_python(src: &str) -> Option<String> {
     std::fs::write(&file, src).ok()?;
     let out = Command::new("python3").arg(&file).output().ok()?;
     let _ = std::fs::remove_dir_all(&dir);
-    Some(format!(
-        "{}{}",
-        String::from_utf8_lossy(&out.stdout),
-        String::from_utf8_lossy(&out.stderr)
-    ))
+    Some(normalize(&out.stdout, &out.stderr))
 }
 
 /// Compare every binary op over every operand pair. Division and modulo by
