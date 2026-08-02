@@ -93,7 +93,7 @@ impl Vm {
                     let v = cur_scope(&scopes)
                         .borrow()
                         .get(name)
-                        .unwrap_or_else(|| Val::Enum(name.clone(), vec![]));
+                        .unwrap_or_else(|| Val::Enum(name.to_string(), vec![]));
                     stack.push(v);
                 }
                 Op::Define(name, is_mut) => {

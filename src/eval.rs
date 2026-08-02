@@ -10,7 +10,12 @@ use crate::val::Val;
 #[derive(Clone)]
 pub struct Scope {
     parent: Option<Rc<RefCell<Scope>>>,
-    vars: HashMap<String, (Val, bool)>, // (value, is_mut)
+    // Interpreter-internal, so it uses the fast hasher rather than the
+    // DoS-resistant default: this map is read on nearly every instruction.
+    // Names are refcounted: binding a loop variable happens once per
+    // iteration, and cloning an `Rc<str>` is a counter bump rather than a
+    // fresh heap allocation and copy.
+    vars: crate::fasthash::FastMap<Rc<str>, (Val, bool)>, // (value, is_mut)
 }
 
 impl std::fmt::Debug for Scope {
@@ -23,7 +28,7 @@ impl Scope {
     pub fn new(parent: Option<Rc<RefCell<Scope>>>) -> Self {
         Self {
             parent,
-            vars: HashMap::new(),
+            vars: crate::fasthash::FastMap::default(),
         }
     }
 
@@ -51,8 +56,8 @@ impl Scope {
         }
     }
 
-    pub fn define(&mut self, name: String, val: Val, is_mut: bool) {
-        self.vars.insert(name, (val, is_mut));
+    pub fn define(&mut self, name: impl Into<Rc<str>>, val: Val, is_mut: bool) {
+        self.vars.insert(name.into(), (val, is_mut));
     }
 }
 
@@ -228,7 +233,7 @@ impl Evaluator {
         );
 
         self.global.borrow_mut().define(
-            "sys".into(),
+            "sys",
             Val::Record("Sys".into(), Rc::new(RefCell::new(sys_map))),
             false,
         );
@@ -418,14 +423,12 @@ impl Evaluator {
             "list",
         ];
         for b in builtins {
-            self.global
-                .borrow_mut()
-                .define(b.into(), Val::BuiltinFn(b), false);
+            self.global.borrow_mut().define(b, Val::BuiltinFn(b), false);
         }
 
         for item in &file.items {
             if let TopItem::Fn(f) = item {
-                let params = f.params.iter().map(|p| p.name.clone()).collect();
+                let params = f.params.iter().map(|p| p.name.as_str().into()).collect();
                 let func = Val::Fn(params, f.body.clone(), self.global.clone());
                 self.global.borrow_mut().define(f.name.clone(), func, false);
             }
@@ -1132,7 +1135,7 @@ impl Evaluator {
                 }
             }
             ExprKind::Closure(params, _, body) => {
-                let p_names = params.iter().map(|p| p.name.clone()).collect();
+                let p_names = params.iter().map(|p| p.name.as_str().into()).collect();
                 Ok(Val::Fn(p_names, body.clone(), env.clone()))
             }
             ExprKind::Try(inner, else_exit) => {
@@ -2101,7 +2104,7 @@ impl Evaluator {
     /// Run a user function value (`Val::Fn`) with already-evaluated args.
     pub fn call_user(
         &mut self,
-        params: Vec<String>,
+        params: Vec<Rc<str>>,
         body: Block,
         closure_env: Rc<RefCell<Scope>>,
         args: Vec<Val>,
@@ -2134,7 +2137,7 @@ impl Evaluator {
 
     fn call_user_inner(
         &mut self,
-        params: Vec<String>,
+        params: Vec<Rc<str>>,
         body: Block,
         closure_env: Rc<RefCell<Scope>>,
         args: Vec<Val>,
