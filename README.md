@@ -5,6 +5,10 @@
 > endless**: easier than Python, fast, secure by default, with no package
 > servers and no expiration date.
 
+<p align="center">
+  <img src="docs/heh-demo.gif" alt="Heh: unbounded integers, infinite ranges, and capabilities that fail closed" width="820">
+</p>
+
 ```heh
 # hello.heh — a complete Heh program
 sys.print("Heh lives forever 𓁨")
@@ -71,10 +75,16 @@ Heh is one binary with no dependencies. If you have a Rust compiler, you can
 build the entire toolchain:
 
 ```sh
+cargo install heh              # or grab a binary from the Releases page
+echo 'sys.print("Heh lives forever 𓁨")' > hello.heh
+heh run hello.heh
+```
+
+Building from source is the same story — one command, no dependencies to fetch:
+
+```sh
 git clone https://github.com/Lord1Egypt/Heh && cd Heh
 cargo build --release          # produces target/release/heh
-echo 'sys.print("Heh lives forever 𓁨")' > hello.heh
-./target/release/heh run hello.heh
 ```
 
 A file with no `fn main` runs top to bottom with `sys` already in scope, so
@@ -85,7 +95,7 @@ entry point.
 
 | Command | Does |
 |---|---|
-| `heh run <file.heh> [args]` | run a program (`--vm` uses the bytecode VM) |
+| `heh run <file.heh> [args]` | run a program on the bytecode VM (`--tree-walk` for the reference evaluator) |
 | `heh check <file.heh>` | parse and type-check without running |
 | `heh test [path]` | run every `fn test_*()` in `*_test.heh` |
 | `heh fmt [--check] <path>` | canonical formatter — no options, comment-preserving |

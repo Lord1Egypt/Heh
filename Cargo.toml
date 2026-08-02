@@ -1,9 +1,19 @@
 [package]
 name = "heh"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
-description = "Heh 𓁨 — the immortal programming language. Zero-dependency reference implementation."
+rust-version = "1.70"
+description = "Heh 𓁨 — the immortal programming language: easier than Python, integers that never overflow, capability-secure I/O, zero dependencies."
 license = "MIT"
+readme = "README.md"
+repository = "https://github.com/Lord1Egypt/Heh"
+homepage = "https://github.com/Lord1Egypt/Heh"
+documentation = "https://github.com/Lord1Egypt/Heh/blob/main/SPEC.md"
+authors = ["Mohamed Mounir (Lord1Egypt)"]
+keywords = ["programming-language", "interpreter", "bignum", "capabilities", "language"]
+categories = ["compilers", "development-tools", "command-line-utilities"]
+# The demo GIF and benchmark corpus are repo material, not crate material.
+exclude = ["docs/demo/", "docs/heh-demo.gif", "benches/", ".github/"]
 
 # HARD RULE: this table stays empty forever. Zero crates. Rust std only.
 [dependencies]

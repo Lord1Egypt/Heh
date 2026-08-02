@@ -1,0 +1,5 @@
+# All I/O arrives through the Sys value handed to main.
+# A function that never receives it cannot do I/O at all.
+fn main(sys: Sys)
+    let notes = try sys.fs.read("notes.txt") else exit
+    sys.print("read {notes.len()} chars")
