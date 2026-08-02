@@ -17,6 +17,18 @@ fn curl_available() -> bool {
         .unwrap_or(false)
 }
 
+/// A `file://` URL curl accepts on every platform. A Windows path is
+/// `C:\dir\file`, which needs forward slashes and the third slash before the
+/// drive letter; a Unix path already starts with one.
+fn file_url(p: &std::path::Path) -> String {
+    let s = p.display().to_string().replace('\\', "/");
+    if s.starts_with('/') {
+        format!("file://{s}")
+    } else {
+        format!("file:///{s}")
+    }
+}
+
 fn fresh_dir(tag: &str) -> PathBuf {
     let mut d = std::env::temp_dir();
     d.push(format!("heh_vendor_{}_{}", tag, std::process::id()));
@@ -42,7 +54,7 @@ fn vendor_get_lock_and_tamper() {
     .unwrap();
 
     // heh get <file:// url> -> vendors the file and writes heh.lock
-    let url = format!("file://{}", lib.display());
+    let url = file_url(&lib);
     let out = Command::new(heh())
         .current_dir(&dir)
         .args(["get", &url])
