@@ -58,7 +58,7 @@ next performance milestone; the measurement harness now exists to prove it.
 ## Install
 
 ```sh
-cargo install heh
+cargo install heh-lang     # the crate is heh-lang; the command is heh
 ```
 
 Or download a binary below — linux x86_64, Windows x86_64, macOS arm64 and

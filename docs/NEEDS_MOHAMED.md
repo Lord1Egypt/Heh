@@ -18,12 +18,49 @@ binary runs, and the source tarball builds and passes all 58 tests.
 
 | # | Action | State |
 |---|---|---|
-| 5 | crates.io publish | ✅ `heh` published (see below) |
+| 5 | crates.io publish | ⛔ **BLOCKED ON YOU** — see below |
 | 6 | macOS / Windows binaries | ✅ cross-compiled via cargo-zigbuild in Docker (mingw needed root; Docker did not) |
 | 7 | Repo public + About / topics | ✅ public, description, homepage, 10 topics — `gh repo edit` does this, it is not web-UI-only as I first said |
 | 8 | Demo GIF for README | ✅ `docs/heh-demo.gif`, recorded with VHS from `docs/demo/demo.tape` |
 | 9 | VM completeness + `--vm` default | ✅ whole language encoded, VM is the default |
 | 10 | Benchmarks | ✅ `benches/run.sh` — and the ≥5x CPython target is **not** met, see below |
+
+## ⛔ crates.io — one thing only you can do
+
+Everything is packaged, dry-run clean, and ready. The upload is rejected by
+crates.io with:
+
+> A verified email address is required to publish crates to crates.io.
+
+Your token authenticates fine; the account just needs a confirmed email.
+
+**To finish it:**
+
+1. Go to <https://crates.io/settings/profile>, set an email, and click the
+   confirmation link that arrives.
+2. Then, from `/home/lordegypt/Heh` on `main`:
+
+   ```sh
+   cargo publish
+   ```
+
+That is the whole remaining step. Nothing else is pending.
+
+### Why the crate is called `heh-lang`
+
+`heh` was taken on crates.io in 2022 by an unrelated hex editor (30k downloads,
+currently at 0.6.3), so the name is not available at any price. The package is
+`heh-lang`, with explicit `[[bin]]` and `[lib]` sections keeping the installed
+command and the library both named `heh`:
+
+```sh
+cargo install heh-lang    #  ->  heh run hello.heh
+```
+
+`hehlang` and `heh-language` were also free if you prefer one of those — it is
+a one-line change in `Cargo.toml` plus the two install lines in `README.md` and
+`docs/RELEASE_NOTES_v1.0.1.md`, and nothing has been published yet, so it is
+still completely open.
 
 ## Known gap, stated plainly
 

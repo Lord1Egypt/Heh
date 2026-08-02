@@ -1,5 +1,7 @@
 [package]
-name = "heh"
+# The crate is `heh-lang` because `heh` was taken on crates.io in 2022 by an
+# unrelated hex editor. The installed command is still `heh` (see [[bin]]).
+name = "heh-lang"
 version = "1.0.1"
 edition = "2021"
 rust-version = "1.70"
@@ -14,6 +16,15 @@ keywords = ["programming-language", "interpreter", "bignum", "capabilities", "la
 categories = ["compilers", "development-tools", "command-line-utilities"]
 # The demo GIF and benchmark corpus are repo material, not crate material.
 exclude = ["docs/demo/", "docs/heh-demo.gif", "benches/", ".github/"]
+
+# The binary keeps the language's name regardless of the crate's.
+[[bin]]
+name = "heh"
+path = "src/main.rs"
+
+[lib]
+name = "heh"
+path = "src/lib.rs"
 
 # HARD RULE: this table stays empty forever. Zero crates. Rust std only.
 [dependencies]
