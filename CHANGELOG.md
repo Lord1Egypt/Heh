@@ -7,6 +7,27 @@ implementation, never the language.
 Full notes for each release are on the
 [Releases page](https://github.com/Lord1Egypt/Heh/releases).
 
+## v1.0.3 — 2026-08-02
+
+A correctness and infrastructure release. No language change.
+
+- **Fixed: the crate did not build on the Rust version it claimed to support.**
+  `Cargo.toml` promises `rust-version = "1.70"`, but the code used
+  `std::iter::repeat_n` (stable only since 1.82) and compared `ExitCode`
+  values. Anyone on Rust 1.70–1.81 running `cargo install heh-lang` hit a
+  compile error. Both are replaced, and the claim is now proven on every PR by
+  a CI job that builds with a real 1.70 toolchain.
+- CI runs the full suite on **macOS and Windows** as well as Linux — release
+  binaries ship for all three, and only one had ever been tested. Doing so
+  found three Windows-only harness bugs (CRLF in byte-exact fixtures, CRLF from
+  CPython in the arithmetic differential, and malformed `file://` URLs), all
+  fixed. `.gitattributes` now pins LF for sources and fixtures.
+- CI also enforces `cargo clippy -- -D warnings`; the tree is clippy-clean.
+- Documentation pruned from 18 markdown files to 6: the agent handoff kit and
+  per-release notes files were scaffolding for a build that is finished. Their
+  content lives on in `AGENTS.md` and `CHANGELOG.md`. Fixed a dangling
+  `docs/agent/TASK_MENU.md` reference in `heh --help`.
+
 ## v1.0.2 — 2026-08-02
 
 Performance. Roughly twice as fast, with no change in behaviour.
