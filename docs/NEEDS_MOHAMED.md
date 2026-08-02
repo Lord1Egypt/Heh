@@ -18,33 +18,22 @@ binary runs, and the source tarball builds and passes all 58 tests.
 
 | # | Action | State |
 |---|---|---|
-| 5 | crates.io publish | ⛔ **BLOCKED ON YOU** — see below |
+| 5 | crates.io publish | ✅ `heh-lang` 1.0.1 live — https://crates.io/crates/heh-lang |
 | 6 | macOS / Windows binaries | ✅ cross-compiled via cargo-zigbuild in Docker (mingw needed root; Docker did not) |
 | 7 | Repo public + About / topics | ✅ public, description, homepage, 10 topics — `gh repo edit` does this, it is not web-UI-only as I first said |
 | 8 | Demo GIF for README | ✅ `docs/heh-demo.gif`, recorded with VHS from `docs/demo/demo.tape` |
 | 9 | VM completeness + `--vm` default | ✅ whole language encoded, VM is the default |
 | 10 | Benchmarks | ✅ `benches/run.sh` — and the ≥5x CPython target is **not** met, see below |
 
-## ⛔ crates.io — one thing only you can do
+## crates.io
 
-Everything is packaged, dry-run clean, and ready. The upload is rejected by
-crates.io with:
+**Published: `heh-lang` 1.0.1** — <https://crates.io/crates/heh-lang>
 
-> A verified email address is required to publish crates to crates.io.
+Verified by installing it fresh into a clean `CARGO_HOME`: `cargo install
+heh-lang` yields a working `heh` binary reporting `heh 1.0.1`.
 
-Your token authenticates fine; the account just needs a confirmed email.
-
-**To finish it:**
-
-1. Go to <https://crates.io/settings/profile>, set an email, and click the
-   confirmation link that arrives.
-2. Then, from `/home/lordegypt/Heh` on `main`:
-
-   ```sh
-   cargo publish
-   ```
-
-That is the whole remaining step. Nothing else is pending.
+The publish was blocked for a while on crates.io requiring a verified email
+address on the account; confirming `mkeshita@outlook.com` cleared it.
 
 ### Why the crate is called `heh-lang`
 

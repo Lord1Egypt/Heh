@@ -47,13 +47,12 @@ run the document.
 Nothing is open. The remaining work is optional and needs an explicit
 go-ahead where noted:
 
-1. **crates.io — the only open item, and it is blocked on Mohamed.**
-   `cargo publish` is dry-run clean but crates.io rejects the upload:
-   *"A verified email address is required."* He must set and confirm an email
-   at <https://crates.io/settings/profile>, then run `cargo publish` from
-   `main`. Note the crate is **`heh-lang`** — `heh` was taken on crates.io in
-   2022 by an unrelated hex editor; `[[bin]]`/`[lib]` keep the command and
-   library named `heh`.
+1. **Publishing is finished.** `heh-lang` 1.0.1 is live on crates.io
+   (<https://crates.io/crates/heh-lang>) — the crate is `heh-lang` because
+   `heh` was taken in 2022 by an unrelated hex editor; `[[bin]]`/`[lib]` keep
+   the command and library named `heh`, so `cargo install heh-lang` gives you
+   `heh`. Publishing a future version is just `cargo publish` from `main`
+   after bumping `Cargo.toml`.
 2. **Performance is the real open engineering work.** `benches/run.sh` exists
    and the numbers are recorded in the worklog: the VM beats the tree-walker
    everywhere (1.01x–2.27x) but reaches only 0.28x–1.02x of CPython, winning
