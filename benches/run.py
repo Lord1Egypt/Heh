@@ -69,9 +69,9 @@ def metadata() -> dict[str, object]:
     rustc = subprocess.run(["rustc", "--version"], capture_output=True, text=True, check=True)
     cpu = platform.processor()
     if not cpu and Path("/proc/cpuinfo").exists():
-        for line in Path("/proc/cpuinfo").read_text(errors="replace").splitlines():
+        for line in Path("/proc/cpuinfo").read_text(encoding="utf-8", errors="replace").splitlines():
             if line.lower().startswith("model name"):
-            cpu = line.split(":", 1)[1].strip()
+                cpu = line.split(":", 1)[1].strip()
                 break
     return {
         "schema_version": 1,
