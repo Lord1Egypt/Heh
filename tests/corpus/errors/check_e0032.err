@@ -1,0 +1,5 @@
+error[E0032]: cannot find imported file './checker_modules/missing.heh'
+ --> tests/corpus/errors/check_e0032.heh:1:1
+  |
+1 | use "./checker_modules/missing.heh"
+  | ^

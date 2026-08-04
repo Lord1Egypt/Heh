@@ -1,0 +1,5 @@
+error[E0054]: field access on non-record
+ --> tests/corpus/errors/check_e0054.heh:2:1
+  |
+2 | value.missing = 2
+  | ^

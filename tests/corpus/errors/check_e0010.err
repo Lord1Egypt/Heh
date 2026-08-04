@@ -1,0 +1,5 @@
+error[E0010]: cannot reassign immutable 'value'
+ --> tests/corpus/errors/check_e0010.heh:2:1
+  |
+2 | value = 2
+  | ^

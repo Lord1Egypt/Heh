@@ -1,0 +1,4 @@
+type Choice = item(value: int)
+match item(1)
+    item(a, b)
+        sys.print(1)

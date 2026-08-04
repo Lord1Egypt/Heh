@@ -1,0 +1,5 @@
+error[E0055]: list index must be int
+ --> tests/corpus/errors/check_e0055.heh:2:11
+  |
+2 | sys.print(values["first"])
+  |           ^

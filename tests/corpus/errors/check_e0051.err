@@ -1,0 +1,5 @@
+error[E0051]: unknown type 'mystery'
+ --> tests/corpus/errors/check_e0051.heh:1:19
+  |
+1 | fn consume(value: mystery)
+  |                   ^

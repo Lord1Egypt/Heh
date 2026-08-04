@@ -1,0 +1,5 @@
+error[E0042]: can only iterate over a list, map, str, or range
+ --> tests/corpus/errors/check_e0042.heh:1:14
+  |
+1 | for value in 1
+  |              ^

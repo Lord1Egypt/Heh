@@ -1,0 +1,1 @@
+let value = try 1 else exit

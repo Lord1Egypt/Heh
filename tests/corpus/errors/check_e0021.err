@@ -1,0 +1,5 @@
+error[E0021]: try on non-result/optional
+ --> tests/corpus/errors/check_e0021.heh:1:13
+  |
+1 | let value = try 1 else exit
+  |             ^

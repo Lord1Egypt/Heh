@@ -1,0 +1,5 @@
+error[E0045]: unknown variant 'maybe' for enum 'Choice'
+ --> tests/corpus/errors/check_e0045.heh:3:5
+  |
+3 |     maybe
+  |     ^

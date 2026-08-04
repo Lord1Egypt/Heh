@@ -1,0 +1,6 @@
+type Choice = yes or no
+match yes
+    maybe
+        sys.print(1)
+    _
+        sys.print(2)

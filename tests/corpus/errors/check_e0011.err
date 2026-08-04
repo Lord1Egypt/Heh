@@ -1,0 +1,5 @@
+error[E0011]: unknown variable 'missing'
+ --> tests/corpus/errors/check_e0011.heh:1:11
+  |
+1 | sys.print(missing)
+  |           ^

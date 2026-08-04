@@ -1,0 +1,5 @@
+error[E0033]: in imported './checker_modules/broken.heh': implicit return type mismatch
+ --> tests/corpus/errors/check_e0033.heh:1:1
+  |
+1 | use "./checker_modules/broken.heh"
+  | ^

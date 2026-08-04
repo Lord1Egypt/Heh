@@ -1,0 +1,5 @@
+error[E0052]: missing type annotation for parameter
+ --> tests/corpus/errors/check_e0052.heh:1:12
+  |
+1 | fn consume(value)
+  |            ^

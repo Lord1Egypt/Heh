@@ -1,0 +1,5 @@
+error[E0057]: index on non-collection
+ --> tests/corpus/errors/check_e0057.heh:1:11
+  |
+1 | sys.print(1[0])
+  |           ^
