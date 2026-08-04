@@ -4,6 +4,7 @@
 use heh::check::Checker;
 use heh::lexer::lex;
 use heh::parser::Parser;
+use std::path::Path;
 
 fn diagnostic_codes(source: &str) -> Vec<&'static str> {
     let tokens = lex(source).expect("test source should lex");
@@ -12,6 +13,16 @@ fn diagnostic_codes(source: &str) -> Vec<&'static str> {
         .expect("test source should parse");
     let mut checker = Checker::new();
     checker.check_file(&file);
+    checker.diags.iter().map(|diag| diag.code).collect()
+}
+
+fn diagnostic_codes_at(source: &str, path: &Path) -> Vec<&'static str> {
+    let tokens = lex(source).expect("test source should lex");
+    let file = Parser::new(&tokens)
+        .parse_file()
+        .expect("test source should parse");
+    let mut checker = Checker::new();
+    checker.check_file_at(&file, path);
     checker.diags.iter().map(|diag| diag.code).collect()
 }
 
@@ -76,4 +87,38 @@ fn infers_polymorphic_builtin_results_and_rejects_bad_conversions() {
     assert!(diagnostic_codes("let x = int_of(42)\n").contains(&"E0040"));
     assert!(diagnostic_codes("let x = list(42)\n").contains(&"E0040"));
     assert!(diagnostic_codes("let x = some()\n").contains(&"E0109"));
+}
+
+#[test]
+fn checks_calls_through_local_module_interfaces() {
+    let root = std::env::temp_dir().join(format!("heh-check-module-{}", std::process::id()));
+    std::fs::create_dir_all(&root).expect("create module fixture directory");
+    std::fs::write(
+        root.join("maths.heh"),
+        "fn add(a: int, b: int) -> int\n    a + b\n",
+    )
+    .expect("write module fixture");
+    let main_path = root.join("main.heh");
+
+    let valid = "use \"./maths.heh\"\nlet answer = maths.add(20, 22)\n";
+    assert!(diagnostic_codes_at(valid, &main_path).is_empty());
+
+    let wrong_type = "use \"./maths.heh\"\nlet answer = maths.add(20, \"22\")\n";
+    assert!(diagnostic_codes_at(wrong_type, &main_path).contains(&"E0040"));
+
+    let wrong_arity = "use \"./maths.heh\"\nlet answer = maths.add(20)\n";
+    assert!(diagnostic_codes_at(wrong_arity, &main_path).contains(&"E0109"));
+
+    std::fs::write(
+        root.join("cycle_a.heh"),
+        "use \"./cycle_b.heh\"\nfn a() -> int\n    1\n",
+    )
+    .expect("write first cycle fixture");
+    std::fs::write(
+        root.join("cycle_b.heh"),
+        "use \"./cycle_a.heh\"\nfn b() -> int\n    2\n",
+    )
+    .expect("write second cycle fixture");
+    let cycle = "use \"./cycle_a.heh\"\nlet answer = cycle_a.a()\n";
+    assert!(diagnostic_codes_at(cycle, &main_path).contains(&"E0030"));
 }

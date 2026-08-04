@@ -1,6 +1,7 @@
 use crate::ast::*;
 use crate::diag::Diag;
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Ty {
@@ -41,6 +42,9 @@ pub struct Checker {
     pub funcs: HashMap<String, FnDecl>,
     // For return type checking
     pub current_fn_ret: Option<Ty>,
+    module_members: HashMap<String, HashMap<String, Ty>>,
+    module_cache: HashMap<PathBuf, (String, HashMap<String, Ty>)>,
+    module_loading: Vec<PathBuf>,
 }
 
 impl Default for Checker {
@@ -59,10 +63,25 @@ impl Checker {
             types: HashMap::new(),
             funcs: HashMap::new(),
             current_fn_ret: None,
+            module_members: HashMap::new(),
+            module_cache: HashMap::new(),
+            module_loading: Vec::new(),
         }
     }
 
     pub fn check_file(&mut self, file: &File) {
+        self.check_file_in(file, Path::new("."));
+    }
+
+    pub fn check_file_at(&mut self, file: &File, path: &Path) {
+        let base = path
+            .parent()
+            .filter(|p| !p.as_os_str().is_empty())
+            .unwrap_or(Path::new("."));
+        self.check_file_in(file, base);
+    }
+
+    fn check_file_in(&mut self, file: &File, base_dir: &Path) {
         // Collect types and functions
         self.define("sys".to_string(), Ty::Namespace("sys".into()), false);
         for name in [
@@ -114,7 +133,10 @@ impl Checker {
             let ty = if u.path.starts_with("std/") {
                 Ty::Namespace(format!("std.{bare}"))
             } else {
-                Ty::Any
+                match self.load_module_interface(&u.path, base_dir, &u.span) {
+                    Some(namespace) => Ty::Namespace(namespace),
+                    None => Ty::Error,
+                }
             };
             self.define(bare, ty, false);
         }
@@ -892,7 +914,14 @@ impl Checker {
                 }
                 match base_ty {
                     Ty::Namespace(namespace) => {
-                        if let Some(ty) = namespace_member(&namespace, field_name) {
+                        let module_ty = self
+                            .module_members
+                            .get(&namespace)
+                            .and_then(|members| members.get(field_name))
+                            .cloned();
+                        if let Some(ty) =
+                            module_ty.or_else(|| namespace_member(&namespace, field_name))
+                        {
                             ty
                         } else {
                             self.diags.push(Diag {
@@ -1104,6 +1133,129 @@ impl Checker {
                 Ty::Any
             }
         }
+    }
+
+    fn load_module_interface(
+        &mut self,
+        import: &str,
+        base_dir: &Path,
+        span: &Span,
+    ) -> Option<String> {
+        let with_ext = if import.ends_with(".heh") {
+            import.into()
+        } else {
+            format!("{import}.heh")
+        };
+        let resolved = base_dir.join(with_ext);
+        let canonical = match resolved.canonicalize() {
+            Ok(path) => path,
+            Err(_) => {
+                self.diags.push(Diag {
+                    code: "E0032",
+                    msg: format!("cannot find imported file '{}'", import),
+                    line: span.line,
+                    col: span.col,
+                });
+                return None;
+            }
+        };
+        if self.module_loading.contains(&canonical) {
+            self.diags.push(Diag {
+                code: "E0030",
+                msg: format!("import cycle through '{}'", import),
+                line: span.line,
+                col: span.col,
+            });
+            return None;
+        }
+        let source = match std::fs::read_to_string(&canonical) {
+            Ok(source) => source,
+            Err(error) => {
+                self.diags.push(Diag {
+                    code: "E0032",
+                    msg: format!("cannot read '{}': {}", import, error),
+                    line: span.line,
+                    col: span.col,
+                });
+                return None;
+            }
+        };
+        let hash = crate::modules::sha256_hex(source.as_bytes());
+        if let Some((cached_hash, members)) = self.module_cache.get(&canonical) {
+            if cached_hash == &hash {
+                let namespace = canonical.to_string_lossy().into_owned();
+                self.module_members
+                    .insert(namespace.clone(), members.clone());
+                return Some(namespace);
+            }
+        }
+        self.module_loading.push(canonical.clone());
+        let tokens = match crate::lexer::lex(&source) {
+            Ok(tokens) => tokens,
+            Err(diag) => {
+                self.diags.push(Diag {
+                    code: "E0033",
+                    msg: format!("in imported '{}': {}", import, diag.msg),
+                    line: span.line,
+                    col: span.col,
+                });
+                self.module_loading.pop();
+                return None;
+            }
+        };
+        let file = match crate::parser::Parser::new(&tokens).parse_file() {
+            Ok(file) => file,
+            Err(diag) => {
+                self.diags.push(Diag {
+                    code: "E0033",
+                    msg: format!("in imported '{}': {}", import, diag.msg),
+                    line: span.line,
+                    col: span.col,
+                });
+                self.module_loading.pop();
+                return None;
+            }
+        };
+        let module_base = canonical.parent().unwrap_or(Path::new("."));
+        for nested in &file.uses {
+            if !nested.path.starts_with("std/") {
+                self.load_module_interface(&nested.path, module_base, &nested.span);
+            }
+        }
+        let mut resolver = Checker::new();
+        for item in &file.items {
+            if let TopItem::Type(decl) = item {
+                resolver.types.insert(decl.name.clone(), decl.clone());
+            }
+        }
+        let mut members = HashMap::new();
+        for item in &file.items {
+            if let TopItem::Fn(function) = item {
+                let params = function
+                    .params
+                    .iter()
+                    .map(|param| {
+                        param
+                            .typ
+                            .as_ref()
+                            .map(|ty| resolver.resolve_type(ty))
+                            .unwrap_or(Ty::Error)
+                    })
+                    .collect();
+                let ret = function
+                    .ret_type
+                    .as_ref()
+                    .map(|ty| resolver.resolve_type(ty))
+                    .unwrap_or(Ty::Unit);
+                members.insert(function.name.clone(), Ty::Fn(params, Box::new(ret)));
+            }
+        }
+        self.diags.extend(resolver.diags);
+        let namespace = canonical.to_string_lossy().into_owned();
+        self.module_cache.insert(canonical, (hash, members.clone()));
+        self.module_members.insert(namespace.clone(), members);
+        self.module_loading.pop();
+        Some(namespace)
     }
 
     fn check_builtin_call(&mut self, name: &str, args: &[Ty], expr: &Expr) -> Ty {

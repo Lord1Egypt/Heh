@@ -477,7 +477,7 @@ impl Evaluator {
         })?;
 
         let mut checker = crate::check::Checker::new();
-        checker.check_file(&module_file);
+        checker.check_file_at(&module_file, &canonical);
         if let Some(d) = checker.diags.into_iter().next() {
             return Err(Diag {
                 code: "E0033",
