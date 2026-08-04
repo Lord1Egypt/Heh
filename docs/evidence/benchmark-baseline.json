@@ -1,0 +1,286 @@
+{
+  "benchmarks": {
+    "bigint": {
+      "answer": "615",
+      "cpython": {
+        "mad_ms": 2.321,
+        "max_ms": 53.196,
+        "median_ms": 40.024,
+        "min_ms": 37.703,
+        "relative_mad_percent": 5.798,
+        "samples_ms": [
+          40.024,
+          37.703,
+          39.403,
+          37.995,
+          45.921,
+          53.196,
+          43.354
+        ]
+      },
+      "speedup_vs_cpython": 3.895,
+      "speedup_vs_tree": 1.201,
+      "tree_walk": {
+        "mad_ms": 0.571,
+        "max_ms": 15.32,
+        "median_ms": 12.341,
+        "min_ms": 11.667,
+        "relative_mad_percent": 4.625,
+        "samples_ms": [
+          14.539,
+          12.867,
+          15.32,
+          12.341,
+          11.667,
+          11.77,
+          12.136
+        ]
+      },
+      "vm": {
+        "mad_ms": 0.646,
+        "max_ms": 11.457,
+        "median_ms": 10.275,
+        "min_ms": 8.635,
+        "relative_mad_percent": 6.289,
+        "samples_ms": [
+          8.858,
+          9.629,
+          8.635,
+          10.733,
+          11.457,
+          10.326,
+          10.275
+        ]
+      }
+    },
+    "fib": {
+      "answer": "46368",
+      "cpython": {
+        "mad_ms": 0.994,
+        "max_ms": 49.922,
+        "median_ms": 48.03,
+        "min_ms": 44.273,
+        "relative_mad_percent": 2.069,
+        "samples_ms": [
+          47.743,
+          47.892,
+          49.725,
+          49.922,
+          49.024,
+          44.273,
+          48.03
+        ]
+      },
+      "speedup_vs_cpython": 0.466,
+      "speedup_vs_tree": 3.353,
+      "tree_walk": {
+        "mad_ms": 14.141,
+        "max_ms": 379.842,
+        "median_ms": 345.833,
+        "min_ms": 313.28,
+        "relative_mad_percent": 4.089,
+        "samples_ms": [
+          359.974,
+          379.842,
+          345.833,
+          313.28,
+          319.103,
+          342.791,
+          354.506
+        ]
+      },
+      "vm": {
+        "mad_ms": 0.855,
+        "max_ms": 104.538,
+        "median_ms": 103.152,
+        "min_ms": 97.985,
+        "relative_mad_percent": 0.829,
+        "samples_ms": [
+          104.188,
+          103.189,
+          103.152,
+          102.416,
+          97.985,
+          104.538,
+          102.297
+        ]
+      }
+    },
+    "loop_sum": {
+      "answer": "1999999000000",
+      "cpython": {
+        "mad_ms": 1.464,
+        "max_ms": 282.107,
+        "median_ms": 272.276,
+        "min_ms": 270.812,
+        "relative_mad_percent": 0.538,
+        "samples_ms": [
+          271.891,
+          275.715,
+          282.107,
+          270.812,
+          272.276,
+          271.202,
+          280.896
+        ]
+      },
+      "speedup_vs_cpython": 0.568,
+      "speedup_vs_tree": 1.732,
+      "tree_walk": {
+        "mad_ms": 21.938,
+        "max_ms": 857.231,
+        "median_ms": 830.046,
+        "min_ms": 804.638,
+        "relative_mad_percent": 2.643,
+        "samples_ms": [
+          808.108,
+          830.046,
+          857.231,
+          804.638,
+          824.83,
+          855.807,
+          835.136
+        ]
+      },
+      "vm": {
+        "mad_ms": 13.33,
+        "max_ms": 533.809,
+        "median_ms": 479.307,
+        "min_ms": 461.36,
+        "relative_mad_percent": 2.781,
+        "samples_ms": [
+          461.36,
+          479.307,
+          475.383,
+          511.306,
+          533.809,
+          492.637,
+          470.473
+        ]
+      }
+    },
+    "maps": {
+      "answer": "60000",
+      "cpython": {
+        "mad_ms": 1.303,
+        "max_ms": 79.312,
+        "median_ms": 74.466,
+        "min_ms": 73.163,
+        "relative_mad_percent": 1.75,
+        "samples_ms": [
+          74.113,
+          74.466,
+          73.163,
+          74.275,
+          77.816,
+          79.312,
+          76.069
+        ]
+      },
+      "speedup_vs_cpython": 0.498,
+      "speedup_vs_tree": 1.007,
+      "tree_walk": {
+        "mad_ms": 1.718,
+        "max_ms": 157.08,
+        "median_ms": 150.651,
+        "min_ms": 148.933,
+        "relative_mad_percent": 1.141,
+        "samples_ms": [
+          148.933,
+          150.651,
+          157.08,
+          150.071,
+          150.636,
+          152.927,
+          153.503
+        ]
+      },
+      "vm": {
+        "mad_ms": 0.902,
+        "max_ms": 153.457,
+        "median_ms": 149.614,
+        "min_ms": 138.175,
+        "relative_mad_percent": 0.603,
+        "samples_ms": [
+          148.711,
+          149.614,
+          147.356,
+          153.457,
+          149.689,
+          150.383,
+          138.175
+        ]
+      }
+    },
+    "strings": {
+      "answer": "348890",
+      "cpython": {
+        "mad_ms": 0.577,
+        "max_ms": 56.224,
+        "median_ms": 51.873,
+        "min_ms": 50.546,
+        "relative_mad_percent": 1.112,
+        "samples_ms": [
+          51.568,
+          51.873,
+          56.224,
+          52.45,
+          52.039,
+          50.546,
+          51.278
+        ]
+      },
+      "speedup_vs_cpython": 1.085,
+      "speedup_vs_tree": 1.158,
+      "tree_walk": {
+        "mad_ms": 1.877,
+        "max_ms": 59.561,
+        "median_ms": 55.384,
+        "min_ms": 53.169,
+        "relative_mad_percent": 3.39,
+        "samples_ms": [
+          55.131,
+          55.384,
+          58.542,
+          54.976,
+          59.561,
+          53.169,
+          57.262
+        ]
+      },
+      "vm": {
+        "mad_ms": 0.715,
+        "max_ms": 49.13,
+        "median_ms": 47.831,
+        "min_ms": 45.634,
+        "relative_mad_percent": 1.495,
+        "samples_ms": [
+          45.634,
+          48.807,
+          47.594,
+          48.487,
+          47.116,
+          47.831,
+          49.13
+        ]
+      }
+    }
+  },
+  "environment": {
+    "architecture": "x86_64",
+    "cpu": "x86_64",
+    "git_commit": "5c7c5c1e23c000d6c1d3b8b8d2ad5b39e32bdee6",
+    "logical_cpus": 12,
+    "os": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "python": "3.13.13",
+    "rustc": "rustc 1.94.1 (e408947bf 2026-03-25)",
+    "schema_version": 1,
+    "timestamp_utc": "2026-08-04T15:46:45Z"
+  },
+  "protocol": {
+    "dispersion": "median_absolute_deviation",
+    "samples": 7,
+    "statistic": "median",
+    "warmups": 1
+  }
+}

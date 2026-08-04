@@ -1,0 +1,5528 @@
+{
+  "schema_version": 1,
+  "scope": "src/**/*.rs",
+  "sites": [
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 81,
+      "path": "src/ast.rs",
+      "source": "Named(String, Vec<TypeExpr>),             // Ident[args]",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 498,
+      "path": "src/ast.rs",
+      "source": "s.push_str(&format!(\" -> {}\", dump_type_expr(r)));",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 547,
+      "path": "src/ast.rs",
+      "source": "dump_expr(left, depth),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 548,
+      "path": "src/ast.rs",
+      "source": "dump_expr(right, depth)",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 556,
+      "path": "src/ast.rs",
+      "source": "format!(\"({ops} {})\", dump_expr(inner, depth))",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 559,
+      "path": "src/ast.rs",
+      "source": "let mut s = format!(\"(call {}\", dump_expr(callee, depth));",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 562,
+      "path": "src/ast.rs",
+      "source": "CallArg::Positional(e) => s.push_str(&format!(\" {}\", dump_expr(e, depth))),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 564,
+      "path": "src/ast.rs",
+      "source": "s.push_str(&format!(\" ({} {})\", n, dump_expr(e, depth)))",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 571,
+      "path": "src/ast.rs",
+      "source": "ExprKind::Field(inner, f) => format!(\"(. {} {})\", dump_expr(inner, depth), f),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 574,
+      "path": "src/ast.rs",
+      "source": "dump_expr(inner, depth),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 575,
+      "path": "src/ast.rs",
+      "source": "dump_expr(idx, depth)",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 580,
+      "path": "src/ast.rs",
+      "source": "s.push_str(&format!(\" {}\", dump_expr(i, depth)));",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 590,
+      "path": "src/ast.rs",
+      "source": "dump_expr(k, depth),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 591,
+      "path": "src/ast.rs",
+      "source": "dump_expr(v, depth)",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 600,
+      "path": "src/ast.rs",
+      "source": "s.push_str(&format!(\" ({} {})\", k, dump_expr(v, depth)));",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 624,
+      "path": "src/ast.rs",
+      "source": "format!(\"(try {} else exit)\", dump_expr(inner, depth))",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 626,
+      "path": "src/ast.rs",
+      "source": "format!(\"(try {})\", dump_expr(inner, depth))",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 646,
+      "path": "src/ast.rs",
+      "source": "InterpPart::Expr(e) => s.push_str(&format!(\" {}\", dump_expr(e, depth))),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 61,
+      "path": "src/bignum.rs",
+      "source": "if bytes[0] == b'-' {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 63,
+      "path": "src/bignum.rs",
+      "source": "bytes = &bytes[1..];",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 64,
+      "path": "src/bignum.rs",
+      "source": "} else if bytes[0] == b'+' {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 65,
+      "path": "src/bignum.rs",
+      "source": "bytes = &bytes[1..];",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 74,
+      "path": "src/bignum.rs",
+      "source": "if bytes.len() >= 2 && bytes[0] == b'0' {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 75,
+      "path": "src/bignum.rs",
+      "source": "match bytes[1] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 78,
+      "path": "src/bignum.rs",
+      "source": "digits = &bytes[2..];",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 82,
+      "path": "src/bignum.rs",
+      "source": "digits = &bytes[2..];",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 86,
+      "path": "src/bignum.rs",
+      "source": "digits = &bytes[2..];",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 118,
+      "path": "src/bignum.rs",
+      "source": "let mut limbs = Vec::with_capacity(self.limbs.len() + 1);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 186,
+      "path": "src/bignum.rs",
+      "source": "let mut limbs = Vec::with_capacity(max_len + 1);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 203,
+      "path": "src/bignum.rs",
+      "source": "let mut limbs = Vec::with_capacity(self.limbs.len());",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 206,
+      "path": "src/bignum.rs",
+      "source": "let a = self.limbs[i] as i64;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 315,
+      "path": "src/bignum.rs",
+      "source": "false.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 318,
+      "path": "src/bignum.rs",
+      "source": "self.sign.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 319,
+      "path": "src/bignum.rs",
+      "source": "self.limbs.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 391,
+      "path": "src/bignum.rs",
+      "source": "let mut limbs = vec![0u32; self.limbs.len() + other.limbs.len()];",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 395,
+      "path": "src/bignum.rs",
+      "source": "let prod = (a as u64) * (b as u64) + (limbs[i + j] as u64) + carry;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 396,
+      "path": "src/bignum.rs",
+      "source": "limbs[i + j] = prod as u32;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 399,
+      "path": "src/bignum.rs",
+      "source": "limbs[i + other.limbs.len()] = carry as u32;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 415,
+      "path": "src/bignum.rs",
+      "source": "panic!(\"division by zero\");",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 417,
+      "path": "src/bignum.rs",
+      "source": "let mut limbs = Vec::with_capacity(self.limbs.len());",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 441,
+      "path": "src/bignum.rs",
+      "source": "panic!(\"division by zero\");",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 450,
+      "path": "src/bignum.rs",
+      "source": "let self_bits = self.limbs.len() * 32 - self.limbs.last().unwrap().leading_zeros() as usize;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 452,
+      "path": "src/bignum.rs",
+      "source": "other.limbs.len() * 32 - other.limbs.last().unwrap().leading_zeros() as usize;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 496,
+      "path": "src/bignum.rs",
+      "source": "let mut limbs = vec![0u32; limb_shift];",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 516,
+      "path": "src/bignum.rs",
+      "source": "let mut limbs = Vec::with_capacity(self.limbs.len());",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 552,
+      "path": "src/bignum.rs",
+      "source": "if e.limbs[0] & 1 == 1 {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 568,
+      "path": "src/bignum.rs",
+      "source": "self.limbs[limb_idx] |= 1 << (bit % 32);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 591,
+      "path": "src/bignum.rs",
+      "source": "write!(f, \"{}\", chunks.last().unwrap())?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 627,
+      "path": "src/bignum.rs",
+      "source": "Err(_) => BigInt::Large(Big::from_u64(n)),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 650,
+      "path": "src/bignum.rs",
+      "source": "BigInt::Large(b) => b.is_zero(),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 704,
+      "path": "src/bignum.rs",
+      "source": "BigInt::Large(b) => b.to_i64(),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 711,
+      "path": "src/bignum.rs",
+      "source": "BigInt::Large(b) => b.to_f64(),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 719,
+      "path": "src/bignum.rs",
+      "source": "BigInt::Large(b) => b.to_usize(),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 724,
+      "path": "src/bignum.rs",
+      "source": "Big::parse(s).map(Self::norm)",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 733,
+      "path": "src/bignum.rs",
+      "source": "Self::norm(Big::from_f64_trunc(f))",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 744,
+      "path": "src/bignum.rs",
+      "source": "let (q, r) = self.big().div_mod(&other.big());",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 765,
+      "path": "src/bignum.rs",
+      "source": "let (q, r) = self.big().div_mod_floor(&other.big());",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 778,
+      "path": "src/bignum.rs",
+      "source": "Self::norm(self.big().pow(&exp.big()))",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 802,
+      "path": "src/bignum.rs",
+      "source": "(BigInt::Small(a), BigInt::Small(b)) => a.cmp(b),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 819,
+      "path": "src/bignum.rs",
+      "source": "(BigInt::Large(a), BigInt::Large(b)) => a.cmp(b),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 830,
+      "path": "src/bignum.rs",
+      "source": "BigInt::Small(v) => v.hash(state),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 831,
+      "path": "src/bignum.rs",
+      "source": "BigInt::Large(b) => b.hash(state),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 52,
+      "path": "src/check.rs",
+      "source": "diags: Vec::new(),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 53,
+      "path": "src/check.rs",
+      "source": "scopes: vec![Scope {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 54,
+      "path": "src/check.rs",
+      "source": "vars: HashMap::new(),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 56,
+      "path": "src/check.rs",
+      "source": "types: HashMap::new(),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 57,
+      "path": "src/check.rs",
+      "source": "funcs: HashMap::new(),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 64,
+      "path": "src/check.rs",
+      "source": "self.define(\"sys\".to_string(), Ty::Any, false); // For now, treat sys as Any",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 65,
+      "path": "src/check.rs",
+      "source": "self.define(\"int_of\".to_string(), Ty::Any, false);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 66,
+      "path": "src/check.rs",
+      "source": "self.define(\"float_of\".to_string(), Ty::Any, false);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 67,
+      "path": "src/check.rs",
+      "source": "self.define(\"str\".to_string(), Ty::Any, false);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type",
+        "input_allocation"
+      ],
+      "line": 72,
+      "path": "src/check.rs",
+      "source": "Ty::Fn(vec![Ty::Any], Box::new(Ty::Int)),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type",
+        "input_allocation"
+      ],
+      "line": 77,
+      "path": "src/check.rs",
+      "source": "Ty::Fn(vec![Ty::Any], Box::new(Ty::Float)),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 80,
+      "path": "src/check.rs",
+      "source": "self.define(\"list\".to_string(), Ty::Any, false);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 81,
+      "path": "src/check.rs",
+      "source": "self.define(\"print\".to_string(), Ty::Any, false); // In case they use it directly",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 82,
+      "path": "src/check.rs",
+      "source": "self.define(\"exit\".to_string(), Ty::Any, false);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 83,
+      "path": "src/check.rs",
+      "source": "self.define(\"len\".to_string(), Ty::Any, false);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 84,
+      "path": "src/check.rs",
+      "source": "self.define(\"push\".to_string(), Ty::Any, false);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 85,
+      "path": "src/check.rs",
+      "source": "self.define(\"pop\".to_string(), Ty::Any, false);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 86,
+      "path": "src/check.rs",
+      "source": "self.define(\"keys\".to_string(), Ty::Any, false);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 87,
+      "path": "src/check.rs",
+      "source": "self.define(\"values\".to_string(), Ty::Any, false);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 88,
+      "path": "src/check.rs",
+      "source": "self.define(\"read\".to_string(), Ty::Any, false);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 89,
+      "path": "src/check.rs",
+      "source": "self.define(\"write\".to_string(), Ty::Any, false);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 90,
+      "path": "src/check.rs",
+      "source": "self.define(\"split\".to_string(), Ty::Any, false);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 91,
+      "path": "src/check.rs",
+      "source": "self.define(\"join\".to_string(), Ty::Any, false);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 93,
+      "path": "src/check.rs",
+      "source": "self.define(\"ok\".to_string(), Ty::Any, false);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 94,
+      "path": "src/check.rs",
+      "source": "self.define(\"err\".to_string(), Ty::Any, false);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 95,
+      "path": "src/check.rs",
+      "source": "self.define(\"some\".to_string(), Ty::Any, false);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 96,
+      "path": "src/check.rs",
+      "source": "self.define(\"none\".to_string(), Ty::Any, false);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 102,
+      "path": "src/check.rs",
+      "source": "kind: TypeDeclKind::Record(vec![]), // Doesn't need real fields since we treat sys as Any",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 111,
+      "path": "src/check.rs",
+      "source": "self.define(bare, Ty::Any, false);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index",
+        "recursion"
+      ],
+      "line": 158,
+      "path": "src/check.rs",
+      "source": "Ty::List(Box::new(self.resolve_type(&args[0])))",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index",
+        "recursion"
+      ],
+      "line": 172,
+      "path": "src/check.rs",
+      "source": "Box::new(self.resolve_type(&args[0])),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index",
+        "recursion"
+      ],
+      "line": 173,
+      "path": "src/check.rs",
+      "source": "Box::new(self.resolve_type(&args[1])),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 187,
+      "path": "src/check.rs",
+      "source": "let decl = self.types.get(name).unwrap().clone();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 204,
+      "path": "src/check.rs",
+      "source": "let p_tys = params.iter().map(|p| self.resolve_type(p)).collect();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 206,
+      "path": "src/check.rs",
+      "source": "Some(r) => self.resolve_type(r),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 265,
+      "path": "src/check.rs",
+      "source": ".unwrap()",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 316,
+      "path": "src/check.rs",
+      "source": "&& lhs_ty != Ty::Any",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 317,
+      "path": "src/check.rs",
+      "source": "&& rhs_ty != Ty::Any",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 330,
+      "path": "src/check.rs",
+      "source": "if !cond_ty.is_error() && cond_ty != Ty::Bool && cond_ty != Ty::Any {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 355,
+      "path": "src/check.rs",
+      "source": "self.check_stmt(stmt);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 372,
+      "path": "src/check.rs",
+      "source": "&& elif_cond_ty != Ty::Any",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 389,
+      "path": "src/check.rs",
+      "source": "if !cond_ty.is_error() && cond_ty != Ty::Bool && cond_ty != Ty::Any {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 406,
+      "path": "src/check.rs",
+      "source": "Ty::Any | Ty::Error => Ty::Any,",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 421,
+      "path": "src/check.rs",
+      "source": "self.check_stmt(stmt);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 439,
+      "path": "src/check.rs",
+      "source": "Pattern::Variant(_, _name, binds) if expr_ty == Ty::Any => {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 443,
+      "path": "src/check.rs",
+      "source": "self.define(b_name.clone(), Ty::Any, false);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 496,
+      "path": "src/check.rs",
+      "source": "self.define(binds[0].clone(), *inner.clone(), false);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 502,
+      "path": "src/check.rs",
+      "source": "self.define(binds[0].clone(), Ty::Str, false);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 508,
+      "path": "src/check.rs",
+      "source": "self.define(binds[0].clone(), *inner.clone(), false);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 518,
+      "path": "src/check.rs",
+      "source": "self.check_stmt(stmt);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 533,
+      "path": "src/check.rs",
+      "source": "&& ret_ty != Ty::Any",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 534,
+      "path": "src/check.rs",
+      "source": "&& *expected != Ty::Any",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 611,
+      "path": "src/check.rs",
+      "source": "Ty::Any | Ty::Error => curr_ty,",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 627,
+      "path": "src/check.rs",
+      "source": "if !idx_ty.is_error() && idx_ty != Ty::Any && idx_ty != Ty::Int {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 638,
+      "path": "src/check.rs",
+      "source": "if !idx_ty.is_error() && idx_ty != Ty::Any && idx_ty != *k {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 648,
+      "path": "src/check.rs",
+      "source": "Ty::Any | Ty::Error => curr_ty,",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 672,
+      "path": "src/check.rs",
+      "source": "Literal::None => Ty::Any, // will be coerced or narrowed",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 678,
+      "path": "src/check.rs",
+      "source": "let f = self.funcs.get(name).unwrap().clone();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 686,
+      "path": "src/check.rs",
+      "source": ".unwrap_or(Ty::Any)",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 706,
+      "path": "src/check.rs",
+      "source": "let l_ty = self.check_expr(left);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 707,
+      "path": "src/check.rs",
+      "source": "let r_ty = self.check_expr(right);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 716,
+      "path": "src/check.rs",
+      "source": "if l_ty == Ty::Any || r_ty == Ty::Any {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 717,
+      "path": "src/check.rs",
+      "source": "Ty::Any",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 741,
+      "path": "src/check.rs",
+      "source": "let comparable = l_ty == Ty::Any",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 742,
+      "path": "src/check.rs",
+      "source": "|| r_ty == Ty::Any",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 760,
+      "path": "src/check.rs",
+      "source": "let logical = l_ty == Ty::Any",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 761,
+      "path": "src/check.rs",
+      "source": "|| r_ty == Ty::Any",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 784,
+      "path": "src/check.rs",
+      "source": "} else if l_ty == Ty::Any || r_ty == Ty::Any {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 785,
+      "path": "src/check.rs",
+      "source": "Ty::Any",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 793,
+      "path": "src/check.rs",
+      "source": "let inner_ty = self.check_expr(inner);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 825,
+      "path": "src/check.rs",
+      "source": "Ty::List(Box::new(Ty::Any))",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 827,
+      "path": "src/check.rs",
+      "source": "let mut elem_ty = Ty::Any;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 829,
+      "path": "src/check.rs",
+      "source": "let t = self.check_expr(elem);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 830,
+      "path": "src/check.rs",
+      "source": "if elem_ty == Ty::Any {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 848,
+      "path": "src/check.rs",
+      "source": "Ty::Map(Box::new(Ty::Any), Box::new(Ty::Any))",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 850,
+      "path": "src/check.rs",
+      "source": "let mut k_ty = Ty::Any;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 851,
+      "path": "src/check.rs",
+      "source": "let mut v_ty = Ty::Any;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 853,
+      "path": "src/check.rs",
+      "source": "let t_k = self.check_expr(k);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 854,
+      "path": "src/check.rs",
+      "source": "let t_v = self.check_expr(v);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 855,
+      "path": "src/check.rs",
+      "source": "if k_ty == Ty::Any {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 866,
+      "path": "src/check.rs",
+      "source": "if v_ty == Ty::Any {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 882,
+      "path": "src/check.rs",
+      "source": "let base_ty = self.check_expr(base);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 902,
+      "path": "src/check.rs",
+      "source": "Ty::Any",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 905,
+      "path": "src/check.rs",
+      "source": "Ty::Any | Ty::Error => Ty::Any,",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 908,
+      "path": "src/check.rs",
+      "source": "Ty::Any",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 913,
+      "path": "src/check.rs",
+      "source": "let base_ty = self.check_expr(base);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 914,
+      "path": "src/check.rs",
+      "source": "let idx_ty = self.check_expr(idx);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 917,
+      "path": "src/check.rs",
+      "source": "if !idx_ty.is_error() && idx_ty != Ty::Any && idx_ty != Ty::Int {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 928,
+      "path": "src/check.rs",
+      "source": "if !idx_ty.is_error() && idx_ty != Ty::Any && idx_ty != *k {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 939,
+      "path": "src/check.rs",
+      "source": "if !idx_ty.is_error() && idx_ty != Ty::Any && idx_ty != Ty::Int {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 949,
+      "path": "src/check.rs",
+      "source": "Ty::Any | Ty::Error => Ty::Any,",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 962,
+      "path": "src/check.rs",
+      "source": "let inner_ty = self.check_expr(inner);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 966,
+      "path": "src/check.rs",
+      "source": "Ty::Any | Ty::Error => Ty::Any,",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 981,
+      "path": "src/check.rs",
+      "source": "self.check_expr(e_in);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 987,
+      "path": "src/check.rs",
+      "source": "let callee_ty = self.check_expr(callee);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 991,
+      "path": "src/check.rs",
+      "source": "CallArg::Positional(a) | CallArg::Named(_, a) => self.check_expr(a),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 1010,
+      "path": "src/check.rs",
+      "source": "f.params.iter().map(|p| p.name.as_str()).collect::<Vec<_>>()",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 1046,
+      "path": "src/check.rs",
+      "source": "Ty::Any | Ty::Error => Ty::Any,",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 1060,
+      "path": "src/check.rs",
+      "source": "self.check_expr(e_in);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 1067,
+      "path": "src/check.rs",
+      "source": "Ty::Any",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 1101,
+      "path": "src/check.rs",
+      "source": "Ty::Any | Ty::Error => true,",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 1110,
+      "path": "src/check.rs",
+      "source": "|| matches!(expected, Ty::Any | Ty::Error)",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 1111,
+      "path": "src/check.rs",
+      "source": "|| matches!(actual, Ty::Any | Ty::Error)",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 126,
+      "path": "src/compile.rs",
+      "source": "ops: Vec::new(),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 127,
+      "path": "src/compile.rs",
+      "source": "consts: Vec::new(),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 129,
+      "path": "src/compile.rs",
+      "source": "loops: Vec::new(),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 130,
+      "path": "src/compile.rs",
+      "source": "closures: Vec::new(),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 156,
+      "path": "src/compile.rs",
+      "source": "let (last, rest) = block.stmts.split_last().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 243,
+      "path": "src/compile.rs",
+      "source": "let depth = self.loops.last().unwrap().scope_depth;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 248,
+      "path": "src/compile.rs",
+      "source": "self.loops.last_mut().unwrap().break_jumps.push(idx);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 251,
+      "path": "src/compile.rs",
+      "source": "let lp = self.loops.last().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 261,
+      "path": "src/compile.rs",
+      "source": "/// `p.x = v`, `l[i] = v`, and any nesting (SPEC \u00a714 `lvalue`). Walks to",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 272,
+      "path": "src/compile.rs",
+      "source": ".expect(\"caller checked the tail is non-empty\");",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 408,
+      "path": "src/compile.rs",
+      "source": "let lp = self.loops.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 428,
+      "path": "src/compile.rs",
+      "source": "let lp = self.loops.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 487,
+      "path": "src/compile.rs",
+      "source": "self.compile_expr(l);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 489,
+      "path": "src/compile.rs",
+      "source": "self.compile_expr(r);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 497,
+      "path": "src/compile.rs",
+      "source": "self.compile_expr(l);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 499,
+      "path": "src/compile.rs",
+      "source": "self.compile_expr(r);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 507,
+      "path": "src/compile.rs",
+      "source": "self.compile_expr(l);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 508,
+      "path": "src/compile.rs",
+      "source": "self.compile_expr(r);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 513,
+      "path": "src/compile.rs",
+      "source": "self.compile_expr(inner);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 525,
+      "path": "src/compile.rs",
+      "source": "self.compile_expr(it);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 531,
+      "path": "src/compile.rs",
+      "source": "self.compile_expr(k);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 532,
+      "path": "src/compile.rs",
+      "source": "self.compile_expr(v);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 539,
+      "path": "src/compile.rs",
+      "source": "self.compile_expr(v);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 544,
+      "path": "src/compile.rs",
+      "source": "self.compile_expr(obj);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 548,
+      "path": "src/compile.rs",
+      "source": "self.compile_expr(obj);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 549,
+      "path": "src/compile.rs",
+      "source": "self.compile_expr(idx);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 553,
+      "path": "src/compile.rs",
+      "source": "self.compile_expr(inner);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 563,
+      "path": "src/compile.rs",
+      "source": "InterpPart::Expr(ex) => self.compile_expr(ex),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 587,
+      "path": "src/compile.rs",
+      "source": "if let CallArg::Positional(a) = &args[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 641,
+      "path": "src/compile.rs",
+      "source": "match &mut self.ops[at] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 643,
+      "path": "src/compile.rs",
+      "source": "_ => panic!(\"patch_jump on non-jump\"),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 647,
+      "path": "src/compile.rs",
+      "source": "match &mut self.ops[at] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 649,
+      "path": "src/compile.rs",
+      "source": "_ => panic!(\"patch_test on non-test\"),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 653,
+      "path": "src/compile.rs",
+      "source": "if let Op::ForNext(_, t) = &mut self.ops[at] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 656,
+      "path": "src/compile.rs",
+      "source": "panic!(\"patch_for_next\");",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 660,
+      "path": "src/compile.rs",
+      "source": "if let Op::MatchArm(_, t) = &mut self.ops[at] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 663,
+      "path": "src/compile.rs",
+      "source": "panic!(\"patch_match_arm\");",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 701,
+      "path": "src/compile.rs",
+      "source": "let mut functions = Vec::with_capacity(fn_decls.len());",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 24,
+      "path": "src/diag.rs",
+      "source": "\"error[{code}]: {msg}\\n{pad}--> {file}:{line}:{col}\\n{pad} |\\n{n} | {src}\\n{pad} | {caret_pad}^\",",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 36,
+      "path": "src/eval.rs",
+      "source": "if let Some((v, _)) = self.vars.get(name) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 39,
+      "path": "src/eval.rs",
+      "source": "p.borrow().get(name)",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 53,
+      "path": "src/eval.rs",
+      "source": "p.borrow_mut().set(name, val)",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 90,
+      "path": "src/eval.rs",
+      "source": "global: Rc::new(RefCell::new(Scope::new(None))),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 92,
+      "path": "src/eval.rs",
+      "source": "loading: Vec::new(),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 174,
+      "path": "src/eval.rs",
+      "source": "for func in [\"get\", \"set\"] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 190,
+      "path": "src/eval.rs",
+      "source": "for func in [\"now\", \"sleep\"] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 206,
+      "path": "src/eval.rs",
+      "source": "for func in [\"bytes\", \"int\", \"float\"] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 270,
+      "path": "src/eval.rs",
+      "source": "let sys_val = self.global.borrow().get(\"sys\").unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 273,
+      "path": "src/eval.rs",
+      "source": ".define(params[0].clone(), sys_val, false);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem"
+      ],
+      "line": 444,
+      "path": "src/eval.rs",
+      "source": "let canonical = resolved.canonicalize().map_err(|_| Diag {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem",
+        "input_allocation"
+      ],
+      "line": 460,
+      "path": "src/eval.rs",
+      "source": "let source = std::fs::read_to_string(&canonical).map_err(|e| Diag {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 543,
+      "path": "src/eval.rs",
+      "source": "/// `p.x = v`, `l[i] = v`, and any nesting of the two (SPEC \u00a714 `lvalue`).",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 565,
+      "path": "src/eval.rs",
+      "source": ".expect(\"caller checked tail is non-empty\");",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 665,
+      "path": "src/eval.rs",
+      "source": "items[n] = val;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 940,
+      "path": "src/eval.rs",
+      "source": "Literal::Int(s) => Ok(Val::Int(BigInt::parse(s).unwrap())),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 941,
+      "path": "src/eval.rs",
+      "source": "Literal::Float(s) => Ok(Val::Float(s.parse().unwrap())),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 950,
+      "path": "src/eval.rs",
+      "source": "Ok(Val::Enum(id.clone(), vec![]))",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 954,
+      "path": "src/eval.rs",
+      "source": "let lval = self.eval_expr(left, env.clone())?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 960,
+      "path": "src/eval.rs",
+      "source": "let rval = self.eval_expr(right, env.clone())?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 967,
+      "path": "src/eval.rs",
+      "source": "let rval = self.eval_expr(right, env.clone())?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 971,
+      "path": "src/eval.rs",
+      "source": "let rval = self.eval_expr(right, env.clone())?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 982,
+      "path": "src/eval.rs",
+      "source": "let val = self.eval_expr(inner, env.clone())?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 1004,
+      "path": "src/eval.rs",
+      "source": "if let CallArg::Positional(a) = &args[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 1005,
+      "path": "src/eval.rs",
+      "source": "let val = self.eval_expr(a, env.clone())?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 1010,
+      "path": "src/eval.rs",
+      "source": "if let CallArg::Positional(a) = &args[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 1011,
+      "path": "src/eval.rs",
+      "source": "let val = self.eval_expr(a, env.clone())?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 1019,
+      "path": "src/eval.rs",
+      "source": "if let CallArg::Positional(a) = &args[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 1020,
+      "path": "src/eval.rs",
+      "source": "let val = self.eval_expr(a, env.clone())?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 1025,
+      "path": "src/eval.rs",
+      "source": "if let CallArg::Positional(a) = &args[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 1026,
+      "path": "src/eval.rs",
+      "source": "let val = self.eval_expr(a, env.clone())?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 1034,
+      "path": "src/eval.rs",
+      "source": "let callee_val = self.eval_expr(callee, env.clone())?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 1040,
+      "path": "src/eval.rs",
+      "source": "arg_vals.push(self.eval_expr(a, env.clone())?);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 1043,
+      "path": "src/eval.rs",
+      "source": "arg_vals.push(self.eval_expr(a, env.clone())?);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 1055,
+      "path": "src/eval.rs",
+      "source": "let mut new_args = vec![*obj];",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 1100,
+      "path": "src/eval.rs",
+      "source": "self.eval_expr(val_expr, env.clone())?,",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 1142,
+      "path": "src/eval.rs",
+      "source": "let val = self.eval_expr(inner, env.clone())?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 1181,
+      "path": "src/eval.rs",
+      "source": "let obj = self.eval_expr(inner, env.clone())?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 1209,
+      "path": "src/eval.rs",
+      "source": "let obj_val = self.eval_expr(obj, env.clone())?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 1210,
+      "path": "src/eval.rs",
+      "source": "let idx_val = self.eval_expr(idx, env.clone())?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 1217,
+      "path": "src/eval.rs",
+      "source": "return Ok(b[idx].clone());",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 1250,
+      "path": "src/eval.rs",
+      "source": "map.insert(k.clone(), self.eval_expr(v, env.clone())?);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 1259,
+      "path": "src/eval.rs",
+      "source": "self.eval_expr(k, env.clone())?,",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 1260,
+      "path": "src/eval.rs",
+      "source": "self.eval_expr(v, env.clone())?,",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 1268,
+      "path": "src/eval.rs",
+      "source": "vals.push(self.eval_expr(item, env.clone())?);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 1278,
+      "path": "src/eval.rs",
+      "source": "let val = self.eval_expr(e, env.clone())?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 1478,
+      "path": "src/eval.rs",
+      "source": "if let Val::Str(url) = &arg_vals[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 1493,
+      "path": "src/eval.rs",
+      "source": "if let Val::Str(s) = &arg_vals[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem",
+        "input_allocation"
+      ],
+      "line": 1503,
+      "path": "src/eval.rs",
+      "source": "match std::fs::read_to_string(s) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 1520,
+      "path": "src/eval.rs",
+      "source": "if let Val::Str(s) = &arg_vals[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem",
+        "input_allocation"
+      ],
+      "line": 1529,
+      "path": "src/eval.rs",
+      "source": "match std::fs::read(s) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 1552,
+      "path": "src/eval.rs",
+      "source": "if let (Val::Str(s), Val::Str(data)) = (&arg_vals[0], &arg_vals[1]) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem"
+      ],
+      "line": 1561,
+      "path": "src/eval.rs",
+      "source": "match std::fs::write(s, data) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 1578,
+      "path": "src/eval.rs",
+      "source": "if let (Val::Str(s), Val::Str(data)) = (&arg_vals[0], &arg_vals[1]) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem"
+      ],
+      "line": 1588,
+      "path": "src/eval.rs",
+      "source": "match std::fs::OpenOptions::new()",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 1612,
+      "path": "src/eval.rs",
+      "source": "if let Val::Str(s) = &arg_vals[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 1635,
+      "path": "src/eval.rs",
+      "source": "if let Val::Str(s) = &arg_vals[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem"
+      ],
+      "line": 1644,
+      "path": "src/eval.rs",
+      "source": "match std::fs::read_dir(s) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 1669,
+      "path": "src/eval.rs",
+      "source": "if let Val::Str(s) = &arg_vals[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem"
+      ],
+      "line": 1679,
+      "path": "src/eval.rs",
+      "source": "match std::fs::remove_file(s) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem"
+      ],
+      "line": 1684,
+      "path": "src/eval.rs",
+      "source": "match std::fs::remove_dir_all(s) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 1704,
+      "path": "src/eval.rs",
+      "source": "if let Val::Str(s) = &arg_vals[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 1722,
+      "path": "src/eval.rs",
+      "source": "if let (Val::Str(k), Val::Str(v)) = (&arg_vals[0], &arg_vals[1]) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 1748,
+      "path": "src/eval.rs",
+      "source": "let Val::Int(ms) = &arg_vals[0] else {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem"
+      ],
+      "line": 1762,
+      "path": "src/eval.rs",
+      "source": "match std::fs::File::open(\"/dev/urandom\").and_then(|mut f| f.read_exact(&mut buf)) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 1781,
+      "path": "src/eval.rs",
+      "source": "if let Val::Int(n) = &arg_vals[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 1787,
+      "path": "src/eval.rs",
+      "source": "let mut buf = vec![0u8; count];",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem"
+      ],
+      "line": 1788,
+      "path": "src/eval.rs",
+      "source": "match std::fs::File::open(\"/dev/urandom\")",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 1813,
+      "path": "src/eval.rs",
+      "source": "if let (Val::Int(min), Val::Int(max)) = (&arg_vals[0], &arg_vals[1]) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem"
+      ],
+      "line": 1824,
+      "path": "src/eval.rs",
+      "source": "match std::fs::File::open(\"/dev/urandom\")",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 1850,
+      "path": "src/eval.rs",
+      "source": "if let Val::List(l) = &arg_vals[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 1880,
+      "path": "src/eval.rs",
+      "source": "let l_val = arg_vals[0].clone();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 1881,
+      "path": "src/eval.rs",
+      "source": "let f_val = arg_vals[1].clone();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 1890,
+      "path": "src/eval.rs",
+      "source": "call_env.borrow_mut().define(params[0].clone(), item, false);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 1933,
+      "path": "src/eval.rs",
+      "source": "let l_val = arg_vals[0].clone();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 1934,
+      "path": "src/eval.rs",
+      "source": "let f_val = arg_vals[1].clone();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 1944,
+      "path": "src/eval.rs",
+      "source": "params[0].clone(),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 2011,
+      "path": "src/eval.rs",
+      "source": "Pattern::Wildcard(_) => Some(vec![]),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 2014,
+      "path": "src/eval.rs",
+      "source": "Literal::Int(s) => Val::Int(BigInt::parse(s).unwrap()),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 2015,
+      "path": "src/eval.rs",
+      "source": "Literal::Float(s) => Val::Float(s.parse().unwrap()),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 2021,
+      "path": "src/eval.rs",
+      "source": "Some(vec![])",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index",
+        "input_allocation"
+      ],
+      "line": 2030,
+      "path": "src/eval.rs",
+      "source": "return Some(vec![(binds[0].clone(), *inner.clone())]);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index",
+        "input_allocation"
+      ],
+      "line": 2036,
+      "path": "src/eval.rs",
+      "source": "return Some(vec![(binds[0].clone(), Val::Err(e.clone()))]);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index",
+        "input_allocation"
+      ],
+      "line": 2042,
+      "path": "src/eval.rs",
+      "source": "return Some(vec![(binds[0].clone(), *inner.clone())]);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 2186,
+      "path": "src/eval.rs",
+      "source": "let mut new_args = vec![*obj];",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 2274,
+      "path": "src/eval.rs",
+      "source": "return Ok(b[idx].clone());",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "network"
+      ],
+      "line": 2322,
+      "path": "src/eval.rs",
+      "source": "/// `sys.net.get(url)` \u2014 HTTP/1.1 over a std TcpStream for `http://`, delegating",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "network"
+      ],
+      "line": 2323,
+      "path": "src/eval.rs",
+      "source": "/// `https://` to the `curl` subprocess (std has no TLS). Returns `ok(body)` or",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "network"
+      ],
+      "line": 2336,
+      "path": "src/eval.rs",
+      "source": "https_get_via_curl(url)",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 2347,
+      "path": "src/eval.rs",
+      "source": "Some(i) => (&host_path[..i], &host_path[i..]),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 2357,
+      "path": "src/eval.rs",
+      "source": "let host = &bracketed[..end];",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 2358,
+      "path": "src/eval.rs",
+      "source": "let suffix = &bracketed[end + 1..];",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "network"
+      ],
+      "line": 2381,
+      "path": "src/eval.rs",
+      "source": "let stream = match std::net::TcpStream::connect(&addr) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 2398,
+      "path": "src/eval.rs",
+      "source": "if let Err(e) = stream.read_to_end(&mut buf) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 2405,
+      "path": "src/eval.rs",
+      "source": "Some(i) => (&buf[..i], &buf[i + 4..]),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index",
+        "input_allocation"
+      ],
+      "line": 2453,
+      "path": "src/eval.rs",
+      "source": "body[..length].to_vec()",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 2455,
+      "path": "src/eval.rs",
+      "source": "body.to_vec()",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 2474,
+      "path": "src/eval.rs",
+      "source": "std::str::from_utf8(&input[..end]).map_err(|_| \"invalid chunk size\".to_string())?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 2478,
+      "path": "src/eval.rs",
+      "source": "input = &input[end + 2..];",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 2482,
+      "path": "src/eval.rs",
+      "source": "if input.len() < size + 2 || &input[size..size + 2] != b\"\\r\\n\" {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 2485,
+      "path": "src/eval.rs",
+      "source": "output.extend_from_slice(&input[..size]);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 2486,
+      "path": "src/eval.rs",
+      "source": "input = &input[size + 2..];",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "network"
+      ],
+      "line": 2490,
+      "path": "src/eval.rs",
+      "source": "fn https_get_via_curl(url: &str) -> Val {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "network"
+      ],
+      "line": 2491,
+      "path": "src/eval.rs",
+      "source": "// std has no TLS; delegate to curl via an arg-list (never a shell string).",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "process",
+        "network"
+      ],
+      "line": 2492,
+      "path": "src/eval.rs",
+      "source": "match std::process::Command::new(\"curl\")",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "network"
+      ],
+      "line": 2505,
+      "path": "src/eval.rs",
+      "source": "Val::Err(format!(\"sys.net.get: curl failed: {}\", err.trim()))",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "network"
+      ],
+      "line": 2508,
+      "path": "src/eval.rs",
+      "source": "Val::Err(\"sys.net.get: https requires the 'curl' program, which was not found\".into())",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "network"
+      ],
+      "line": 2531,
+      "path": "src/eval.rs",
+      "source": "use std::net::TcpListener;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 2536,
+      "path": "src/eval.rs",
+      "source": "assert_eq!(decode_chunked_body(encoded).unwrap(), b\"Wikipedia\");",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 2546,
+      "path": "src/eval.rs",
+      "source": "let listener = TcpListener::bind(\"127.0.0.1:0\").unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 2547,
+      "path": "src/eval.rs",
+      "source": "let address = listener.local_addr().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 2556,
+      "path": "src/eval.rs",
+      "source": "let (mut stream, _) = listener.accept().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 2558,
+      "path": "src/eval.rs",
+      "source": "let _ = stream.read(&mut request);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 2559,
+      "path": "src/eval.rs",
+      "source": "stream.write_all(response.as_bytes()).unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 2566,
+      "path": "src/eval.rs",
+      "source": "other => panic!(\"expected string body, got {other:?}\"),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 2568,
+      "path": "src/eval.rs",
+      "source": "other => panic!(\"expected successful response, got {other:?}\"),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 2570,
+      "path": "src/eval.rs",
+      "source": "server.join().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 37,
+      "path": "src/fasthash.rs",
+      "source": "self.add(u64::from_le_bytes(chunk.try_into().unwrap()));",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 42,
+      "path": "src/fasthash.rs",
+      "source": "self.add(u32::from_le_bytes(chunk.try_into().unwrap()) as u64);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 87,
+      "path": "src/fmt.rs",
+      "source": "if i > 0 && (is_decl(item) || is_decl(&file.items[i - 1])) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 169,
+      "path": "src/fmt.rs",
+      "source": ".collect::<Vec<_>>()",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 203,
+      "path": "src/fmt.rs",
+      "source": ".collect::<Vec<_>>()",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 233,
+      "path": "src/fmt.rs",
+      "source": ".collect::<Vec<_>>()",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 242,
+      "path": "src/fmt.rs",
+      "source": ".collect::<Vec<_>>()",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 245,
+      "path": "src/fmt.rs",
+      "source": "Some(r) => format!(\"fn({}) -> {}\", a, format_type_expr(r)),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 509,
+      "path": "src/fmt.rs",
+      "source": ".collect::<Vec<_>>()",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 519,
+      "path": "src/fmt.rs",
+      "source": ".collect::<Vec<_>>()",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 530,
+      "path": "src/fmt.rs",
+      "source": ".collect::<Vec<_>>()",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 539,
+      "path": "src/fmt.rs",
+      "source": ".collect::<Vec<_>>()",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 554,
+      "path": "src/fmt.rs",
+      "source": ".collect::<Vec<_>>()",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 171,
+      "path": "src/lexer.rs",
+      "source": "let kinds: Vec<String> = toks.iter().map(|t| dump_kind(&t.kind)).collect();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 220,
+      "path": "src/lexer.rs",
+      "source": "indents: vec![0],",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 237,
+      "path": "src/lexer.rs",
+      "source": "let c = self.chars[self.i];",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 314,
+      "path": "src/lexer.rs",
+      "source": "let top = *self.indents.last().unwrap(); // stack always holds 0",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 330,
+      "path": "src/lexer.rs",
+      "source": "while w < *self.indents.last().unwrap() {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 334,
+      "path": "src/lexer.rs",
+      "source": "if w != *self.indents.last().unwrap() {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 377,
+      "path": "src/lexer.rs",
+      "source": "let c = op.chars().next().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 418,
+      "path": "src/lexer.rs",
+      "source": "let own_line = self.chars[..self.i]",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 441,
+      "path": "src/lexer.rs",
+      "source": "let ch = self.cur().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 467,
+      "path": "src/lexer.rs",
+      "source": "let word: String = self.chars[start..self.i].iter().collect();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 483,
+      "path": "src/lexer.rs",
+      "source": "let base = self.peek(1).unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 521,
+      "path": "src/lexer.rs",
+      "source": "let raw: String = self.chars[start..self.i].iter().collect();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 597,
+      "path": "src/lexer.rs",
+      "source": "let c = self.cur().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 711,
+      "path": "src/lexer.rs",
+      "source": "let v = u32::from_str_radix(&hex, 16).unwrap(); // \u22646 hex digits always fit u32",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 17,
+      "path": "src/main.rs",
+      "source": "heh test [dir]              run every fn test_*() in *_test.heh files",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 18,
+      "path": "src/main.rs",
+      "source": "heh fmt [--check] <path>    format a file or directory tree in place",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 96,
+      "path": "src/main.rs",
+      "source": "eprintln!(\"heh: usage: heh run [--vm|--tree-walk] <file.heh> [args...]\");",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 122,
+      "path": "src/main.rs",
+      "source": "eprintln!(\"heh: usage: heh fmt [--check] <file.heh>\");",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem",
+        "input_allocation"
+      ],
+      "line": 135,
+      "path": "src/main.rs",
+      "source": "let source = match std::fs::read_to_string(path) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem",
+        "input_allocation"
+      ],
+      "line": 155,
+      "path": "src/main.rs",
+      "source": "let source = match std::fs::read_to_string(path) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem",
+        "input_allocation"
+      ],
+      "line": 185,
+      "path": "src/main.rs",
+      "source": "let source = match std::fs::read_to_string(path) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem",
+        "input_allocation"
+      ],
+      "line": 260,
+      "path": "src/main.rs",
+      "source": "let source = match std::fs::read_to_string(path) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "network"
+      ],
+      "line": 303,
+      "path": "src/main.rs",
+      "source": "/// with curl. Both run as arg-lists (never a shell string).",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem"
+      ],
+      "line": 310,
+      "path": "src/main.rs",
+      "source": "if let Err(e) = std::fs::create_dir_all(vendor) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem"
+      ],
+      "line": 318,
+      "path": "src/main.rs",
+      "source": "let _ = std::fs::remove_dir_all(&dest);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "network"
+      ],
+      "line": 327,
+      "path": "src/main.rs",
+      "source": "\"curl\",",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "process"
+      ],
+      "line": 383,
+      "path": "src/main.rs",
+      "source": "match std::process::Command::new(program).args(args).output() {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem"
+      ],
+      "line": 412,
+      "path": "src/main.rs",
+      "source": "let mut children: Vec<_> = std::fs::read_dir(dir)?.collect::<Result<Vec<_>, _>>()?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem",
+        "input_allocation"
+      ],
+      "line": 435,
+      "path": "src/main.rs",
+      "source": "let bytes = std::fs::read(&path)?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem",
+        "input_allocation"
+      ],
+      "line": 448,
+      "path": "src/main.rs",
+      "source": "let mut sources: Vec<String> = std::fs::read_to_string(&lock_path)",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem"
+      ],
+      "line": 466,
+      "path": "src/main.rs",
+      "source": "std::fs::write(lock_path, body)?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem",
+        "input_allocation"
+      ],
+      "line": 475,
+      "path": "src/main.rs",
+      "source": "let contents = match std::fs::read_to_string(&lock_path) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem"
+      ],
+      "line": 480,
+      "path": "src/main.rs",
+      "source": ".read_dir()",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem",
+        "input_allocation"
+      ],
+      "line": 561,
+      "path": "src/main.rs",
+      "source": "let source = match std::fs::read_to_string(file) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem"
+      ],
+      "line": 641,
+      "path": "src/main.rs",
+      "source": "for entry in std::fs::read_dir(dir)? {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 652,
+      "path": "src/main.rs",
+      "source": "find_test_files(&path, out)?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 668,
+      "path": "src/main.rs",
+      "source": "/// `heh fmt [--check] <path>` \u2014 a directory formats every `.heh` file under it",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem"
+      ],
+      "line": 699,
+      "path": "src/main.rs",
+      "source": "for entry in std::fs::read_dir(dir)? {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 710,
+      "path": "src/main.rs",
+      "source": "find_heh_files(&path, out)?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem",
+        "input_allocation"
+      ],
+      "line": 721,
+      "path": "src/main.rs",
+      "source": "let source = match std::fs::read_to_string(path) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "filesystem"
+      ],
+      "line": 756,
+      "path": "src/main.rs",
+      "source": "match std::fs::write(path, &formatted) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 62,
+      "path": "src/modules.rs",
+      "source": "let short = f.split('.').nth(1).unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 74,
+      "path": "src/modules.rs",
+      "source": "let module = name.split('.').next().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 102,
+      "path": "src/modules.rs",
+      "source": "as_f64(&args[0], \"pow\")?.powf(as_f64(&args[1], \"pow\")?),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 112,
+      "path": "src/modules.rs",
+      "source": "let s = match &args[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 116,
+      "path": "src/modules.rs",
+      "source": "let n = int_arg(&args[1], \"repeat\")?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 124,
+      "path": "src/modules.rs",
+      "source": "let n = int_arg(&args[0], \"hex\")?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 129,
+      "path": "src/modules.rs",
+      "source": "let x = as_f64(&args[0], \"fixed\")",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 131,
+      "path": "src/modules.rs",
+      "source": "let places = int_arg(&args[1], \"fixed\")?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 141,
+      "path": "src/modules.rs",
+      "source": "let s = match &args[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 152,
+      "path": "src/modules.rs",
+      "source": "match json_write(&args[0]) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 161,
+      "path": "src/modules.rs",
+      "source": "let s = match &args[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 169,
+      "path": "src/modules.rs",
+      "source": "csv_write(&args[0])",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 175,
+      "path": "src/modules.rs",
+      "source": "let bytes = bytes_of(&args[0], \"sha256\")?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 180,
+      "path": "src/modules.rs",
+      "source": "let bytes = bytes_of(&args[0], \"crc32\")?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 188,
+      "path": "src/modules.rs",
+      "source": "Ok(time_parts(millis_arg(&args[0], \"parts\")?))",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 192,
+      "path": "src/modules.rs",
+      "source": "Ok(Val::Str(time_format(millis_arg(&args[0], \"format\")?)))",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 196,
+      "path": "src/modules.rs",
+      "source": "Ok(Val::Bool(is_leap(millis_arg(&args[0], \"is_leap\")?)))",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 200,
+      "path": "src/modules.rs",
+      "source": "let y = millis_arg(&args[0], \"days_in_month\")?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 201,
+      "path": "src/modules.rs",
+      "source": "let m = millis_arg(&args[1], \"days_in_month\")?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 214,
+      "path": "src/modules.rs",
+      "source": "*slot = millis_arg(&args[i], \"from_parts\")?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 216,
+      "path": "src/modules.rs",
+      "source": "let [y, mo, d, h, mi, s] = v;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 262,
+      "path": "src/modules.rs",
+      "source": "let msg = match &args[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 270,
+      "path": "src/modules.rs",
+      "source": "let ok = matches!(&args[0], Val::Bool(true));",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 274,
+      "path": "src/modules.rs",
+      "source": "let msg = match &args[1] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 405,
+      "path": "src/modules.rs",
+      "source": "as_f64(&args[0], who)",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 409,
+      "path": "src/modules.rs",
+      "source": "match (&args[0], &args[1]) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 417,
+      "path": "src/modules.rs",
+      "source": "Val::Str(s) => Ok(s.as_bytes().to_vec()),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 433,
+      "path": "src/modules.rs",
+      "source": "_ => Err(format!(\"hash.{}: expects str or list[int]\", who)),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 438,
+      "path": "src/modules.rs",
+      "source": "let mut s = String::with_capacity(bytes.len() * 2);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 454,
+      "path": "src/modules.rs",
+      "source": "let s = match &args[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 458,
+      "path": "src/modules.rs",
+      "source": "let width = int_arg(&args[1], \"pad\")?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 459,
+      "path": "src/modules.rs",
+      "source": "let fill = match &args[2] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 503,
+      "path": "src/modules.rs",
+      "source": "chars: &'a [char],",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 556,
+      "path": "src/modules.rs",
+      "source": "let val = self.value()?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 639,
+      "path": "src/modules.rs",
+      "source": "let text: String = self.chars[start..self.pos].iter().collect();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 654,
+      "path": "src/modules.rs",
+      "source": "if self.chars[self.pos..].starts_with(&['t', 'r', 'u', 'e']) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 657,
+      "path": "src/modules.rs",
+      "source": "} else if self.chars[self.pos..].starts_with(&['f', 'a', 'l', 's', 'e']) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 666,
+      "path": "src/modules.rs",
+      "source": "if self.chars[self.pos..].starts_with(&['n', 'u', 'l', 'l']) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 710,
+      "path": "src/modules.rs",
+      "source": "json_write_into(item, out)?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 733,
+      "path": "src/modules.rs",
+      "source": "json_write_into(val, out)?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 851,
+      "path": "src/modules.rs",
+      "source": "let mut msg = data.to_vec();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 863,
+      "path": "src/modules.rs",
+      "source": "chunk[i * 4],",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 864,
+      "path": "src/modules.rs",
+      "source": "chunk[i * 4 + 1],",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 865,
+      "path": "src/modules.rs",
+      "source": "chunk[i * 4 + 2],",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 866,
+      "path": "src/modules.rs",
+      "source": "chunk[i * 4 + 3],",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 870,
+      "path": "src/modules.rs",
+      "source": "let s0 = w[i - 15].rotate_right(7) ^ w[i - 15].rotate_right(18) ^ (w[i - 15] >> 3);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 871,
+      "path": "src/modules.rs",
+      "source": "let s1 = w[i - 2].rotate_right(17) ^ w[i - 2].rotate_right(19) ^ (w[i - 2] >> 10);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 872,
+      "path": "src/modules.rs",
+      "source": "w[i] = w[i - 16]",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 874,
+      "path": "src/modules.rs",
+      "source": ".wrapping_add(w[i - 7])",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 878,
+      "path": "src/modules.rs",
+      "source": "(h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7]);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 885,
+      "path": "src/modules.rs",
+      "source": ".wrapping_add(K[i])",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 886,
+      "path": "src/modules.rs",
+      "source": ".wrapping_add(w[i]);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 899,
+      "path": "src/modules.rs",
+      "source": "h[0] = h[0].wrapping_add(a);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 900,
+      "path": "src/modules.rs",
+      "source": "h[1] = h[1].wrapping_add(b);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 901,
+      "path": "src/modules.rs",
+      "source": "h[2] = h[2].wrapping_add(c);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 902,
+      "path": "src/modules.rs",
+      "source": "h[3] = h[3].wrapping_add(d);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 903,
+      "path": "src/modules.rs",
+      "source": "h[4] = h[4].wrapping_add(e);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 904,
+      "path": "src/modules.rs",
+      "source": "h[5] = h[5].wrapping_add(f);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 905,
+      "path": "src/modules.rs",
+      "source": "h[6] = h[6].wrapping_add(g);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 906,
+      "path": "src/modules.rs",
+      "source": "h[7] = h[7].wrapping_add(hh);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 911,
+      "path": "src/modules.rs",
+      "source": "out[i * 4..i * 4 + 4].copy_from_slice(&word.to_be_bytes());",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 965,
+      "path": "src/modules.rs",
+      "source": "c: &'a [char],",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 1003,
+      "path": "src/modules.rs",
+      "source": "Ok(parts.pop().unwrap())",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 1038,
+      "path": "src/modules.rs",
+      "source": "Some('.') => Ok(Node::Any),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 1049,
+      "path": "src/modules.rs",
+      "source": "Some('d') => Ok(Node::Class(vec![ClassItem::Digit], false)),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 1050,
+      "path": "src/modules.rs",
+      "source": "Some('w') => Ok(Node::Class(vec![ClassItem::Word], false)),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 1051,
+      "path": "src/modules.rs",
+      "source": "Some('s') => Ok(Node::Class(vec![ClassItem::Space], false)),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 1052,
+      "path": "src/modules.rs",
+      "source": "Some('D') => Ok(Node::Class(vec![ClassItem::Digit], true)),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 1053,
+      "path": "src/modules.rs",
+      "source": "Some('W') => Ok(Node::Class(vec![ClassItem::Word], true)),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 1054,
+      "path": "src/modules.rs",
+      "source": "Some('S') => Ok(Node::Class(vec![ClassItem::Space], true)),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 1101,
+      "path": "src/modules.rs",
+      "source": "let hi = self.bump().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 1128,
+      "path": "src/modules.rs",
+      "source": ".map(|(s, e, chars)| chars[s..e].iter().collect())",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "dynamic_type"
+      ],
+      "line": 1171,
+      "path": "src/modules.rs",
+      "source": "Node::Any => {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 1204,
+      "path": "src/modules.rs",
+      "source": "match_here(a, chars, pos, origin).or_else(|| match_here(b, chars, pos, origin))",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 1209,
+      "path": "src/modules.rs",
+      "source": "match_here(inner, chars, pos, origin).or(Some(pos))",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 1213,
+      "path": "src/modules.rs",
+      "source": "let next = match_here(inner, chars, pos, origin)?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 1242,
+      "path": "src/modules.rs",
+      "source": "let (head, tail) = parts.split_first().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 1245,
+      "path": "src/modules.rs",
+      "source": "if let Some(final_end) = match_seq(tail, chars, end, origin) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 1258,
+      "path": "src/modules.rs",
+      "source": "let mut ends = vec![pos];",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 1284,
+      "path": "src/modules.rs",
+      "source": "Some(end) if end != pos => vec![end, pos],",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 1285,
+      "path": "src/modules.rs",
+      "source": "_ => vec![pos],",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 1288,
+      "path": "src/modules.rs",
+      "source": "let mut ends = head_ends(a, chars, pos, origin);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 1289,
+      "path": "src/modules.rs",
+      "source": "ends.extend(head_ends(b, chars, pos, origin));",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 1293,
+      "path": "src/modules.rs",
+      "source": "Some(end) => vec![end],",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 1294,
+      "path": "src/modules.rs",
+      "source": "None => vec![],",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 1320,
+      "path": "src/modules.rs",
+      "source": "Regex::compile(p).unwrap().is_match(t)",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 1348,
+      "path": "src/modules.rs",
+      "source": "let re = Regex::compile(\"[0-9]+\").unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 1357,
+      "path": "src/modules.rs",
+      "source": "let re = Regex::compile(\"(a+)+$\").unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 6,
+      "path": "src/parser.rs",
+      "source": "tokens: &'a [Token],",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 11,
+      "path": "src/parser.rs",
+      "source": "pub fn new(tokens: &'a [Token]) -> Self {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 25,
+      "path": "src/parser.rs",
+      "source": "let t = &self.tokens[self.pos];",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 64,
+      "path": "src/parser.rs",
+      "source": "Ok(self.advance().unwrap())",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 73,
+      "path": "src/parser.rs",
+      "source": "return Ok(self.advance().unwrap());",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 82,
+      "path": "src/parser.rs",
+      "source": "return Ok(self.advance().unwrap());",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 143,
+      "path": "src/parser.rs",
+      "source": "let t = self.tokens[self.pos - 1].clone();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 151,
+      "path": "src/parser.rs",
+      "source": "if let StrPart::Text(txt) = &parts[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 175,
+      "path": "src/parser.rs",
+      "source": "self.expect(&TokenKind::Newline, \"newline after use declaration\")?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 296,
+      "path": "src/parser.rs",
+      "source": "self.expect(&TokenKind::Newline, \"newline after enum declaration\")?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 300,
+      "path": "src/parser.rs",
+      "source": "self.expect(&TokenKind::Newline, \"newline before record fields\")?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 301,
+      "path": "src/parser.rs",
+      "source": "self.expect(&TokenKind::Indent, \"indent for record fields\")?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 307,
+      "path": "src/parser.rs",
+      "source": "self.expect(&TokenKind::Newline, \"newline after field\")?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 314,
+      "path": "src/parser.rs",
+      "source": "self.expect(&TokenKind::Dedent, \"dedent after record fields\")?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 336,
+      "path": "src/parser.rs",
+      "source": "args.push(self.parse_type_expr()?);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 345,
+      "path": "src/parser.rs",
+      "source": "ret = Some(Box::new(self.parse_type_expr()?));",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 353,
+      "path": "src/parser.rs",
+      "source": "args.push(self.parse_type_expr()?);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 383,
+      "path": "src/parser.rs",
+      "source": ".expect(&TokenKind::Newline, \"newline before block\")?",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 389,
+      "path": "src/parser.rs",
+      "source": "self.expect(&TokenKind::Indent, \"indent for block\")?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 394,
+      "path": "src/parser.rs",
+      "source": "self.expect(&TokenKind::Dedent, \"dedent after block\")?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 409,
+      "path": "src/parser.rs",
+      "source": "self.expect(&TokenKind::Newline, ctx)?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 417,
+      "path": "src/parser.rs",
+      "source": "self.tokens[self.pos - 1].clone()",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 460,
+      "path": "src/parser.rs",
+      "source": "let t = self.advance().unwrap().clone();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 461,
+      "path": "src/parser.rs",
+      "source": "self.expect(&TokenKind::Newline, \"newline after break\")?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 468,
+      "path": "src/parser.rs",
+      "source": "let t = self.advance().unwrap().clone();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 469,
+      "path": "src/parser.rs",
+      "source": "self.expect(&TokenKind::Newline, \"newline after continue\")?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 605,
+      "path": "src/parser.rs",
+      "source": "self.expect(&TokenKind::Newline, \"newline before match arms\")?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 606,
+      "path": "src/parser.rs",
+      "source": "self.expect(&TokenKind::Indent, \"indent for match arms\")?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 611,
+      "path": "src/parser.rs",
+      "source": "line: self.peek().unwrap().line,",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 612,
+      "path": "src/parser.rs",
+      "source": "col: self.peek().unwrap().col,",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 622,
+      "path": "src/parser.rs",
+      "source": "self.expect(&TokenKind::Dedent, \"dedent after match arms\")?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 662,
+      "path": "src/parser.rs",
+      "source": "Ok(Pattern::Variant(span, name, vec![]))",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 699,
+      "path": "src/parser.rs",
+      "source": "if let StrPart::Text(t) = &parts[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 881,
+      "path": "src/parser.rs",
+      "source": "let right = self.parse_pow_expr()?; // Right-associative",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 1029,
+      "path": "src/parser.rs",
+      "source": "line: sub_parser.peek().unwrap().line,",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 1030,
+      "path": "src/parser.rs",
+      "source": "col: sub_parser.peek().unwrap().col,",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 12,
+      "path": "src/stdlib.rs",
+      "source": "match &args[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 23,
+      "path": "src/stdlib.rs",
+      "source": "if let Val::Str(s) = &args[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 33,
+      "path": "src/stdlib.rs",
+      "source": "if let Val::Str(s) = &args[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 43,
+      "path": "src/stdlib.rs",
+      "source": "if let Val::Str(s) = &args[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 53,
+      "path": "src/stdlib.rs",
+      "source": "if let (Val::Str(s), Val::Str(sep)) = (&args[0], &args[1]) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 67,
+      "path": "src/stdlib.rs",
+      "source": "if let (Val::Str(s), Val::Str(old), Val::Str(new_s)) = (&args[0], &args[1], &args[2]) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 77,
+      "path": "src/stdlib.rs",
+      "source": "if let (Val::Str(s), Val::Str(sub)) = (&args[0], &args[1]) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 87,
+      "path": "src/stdlib.rs",
+      "source": "if let (Val::Str(s), Val::Str(prefix)) = (&args[0], &args[1]) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 97,
+      "path": "src/stdlib.rs",
+      "source": "if let Val::Str(s) = &args[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 109,
+      "path": "src/stdlib.rs",
+      "source": "let val = args.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 110,
+      "path": "src/stdlib.rs",
+      "source": "if let Val::List(l) = &args[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 121,
+      "path": "src/stdlib.rs",
+      "source": "if let Val::List(l) = &args[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 137,
+      "path": "src/stdlib.rs",
+      "source": "match (&args[0], &args[1]) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 141,
+      "path": "src/stdlib.rs",
+      "source": "Some(idx) if idx < b.len() => Ok(Val::Some(Box::new(b[idx].clone()))),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 156,
+      "path": "src/stdlib.rs",
+      "source": "if let (Val::List(l), Val::Str(sep)) = (&args[0], &args[1]) {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 172,
+      "path": "src/stdlib.rs",
+      "source": "let val = args.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 173,
+      "path": "src/stdlib.rs",
+      "source": "let key = args.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 174,
+      "path": "src/stdlib.rs",
+      "source": "if let Val::Map(m) = &args[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 185,
+      "path": "src/stdlib.rs",
+      "source": "if let Val::Map(m) = &args[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 186,
+      "path": "src/stdlib.rs",
+      "source": "m.borrow_mut().remove(&args[1]);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 196,
+      "path": "src/stdlib.rs",
+      "source": "if let Val::Map(m) = &args[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 207,
+      "path": "src/stdlib.rs",
+      "source": "if let Val::Map(m) = &args[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 219,
+      "path": "src/stdlib.rs",
+      "source": "Ok(Val::Str(args[0].to_string()))",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 227,
+      "path": "src/stdlib.rs",
+      "source": "match &args[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 242,
+      "path": "src/stdlib.rs",
+      "source": "match &args[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 254,
+      "path": "src/stdlib.rs",
+      "source": "match &args[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 284,
+      "path": "src/stdlib.rs",
+      "source": "if let Val::Str(s) = &args[0] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 9,
+      "path": "src/val.rs",
+      "source": "/// A `map[K, V]` \u2014 insertion-ordered, as SPEC \u00a75.4 requires. A plain HashMap",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 28,
+      "path": "src/val.rs",
+      "source": "self.entries.len()",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 32,
+      "path": "src/val.rs",
+      "source": "self.entries.is_empty()",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index",
+        "recursion"
+      ],
+      "line": 36,
+      "path": "src/val.rs",
+      "source": "self.index.get(key).map(|&i| &self.entries[i].1)",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 43,
+      "path": "src/val.rs",
+      "source": "Some(&i) => self.entries[i].1 = val,",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 45,
+      "path": "src/val.rs",
+      "source": "self.index.insert(key.clone(), self.entries.len());",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 52,
+      "path": "src/val.rs",
+      "source": "let i = self.index.remove(key)?;",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 53,
+      "path": "src/val.rs",
+      "source": "let (_, val) = self.entries.remove(i);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 63,
+      "path": "src/val.rs",
+      "source": "self.entries.iter().map(|(k, v)| (k, v))",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 173,
+      "path": "src/val.rs",
+      "source": "0u8.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 174,
+      "path": "src/val.rs",
+      "source": "i.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 177,
+      "path": "src/val.rs",
+      "source": "7.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 178,
+      "path": "src/val.rs",
+      "source": "name.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 181,
+      "path": "src/val.rs",
+      "source": "8.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 182,
+      "path": "src/val.rs",
+      "source": "obj.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 183,
+      "path": "src/val.rs",
+      "source": "method.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 186,
+      "path": "src/val.rs",
+      "source": "1u8.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 187,
+      "path": "src/val.rs",
+      "source": "b.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 190,
+      "path": "src/val.rs",
+      "source": "2u8.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 191,
+      "path": "src/val.rs",
+      "source": "s.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 194,
+      "path": "src/val.rs",
+      "source": "3u8.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 195,
+      "path": "src/val.rs",
+      "source": "f.to_bits().hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 198,
+      "path": "src/val.rs",
+      "source": "4u8.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 201,
+      "path": "src/val.rs",
+      "source": "5u8.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 202,
+      "path": "src/val.rs",
+      "source": "Rc::as_ptr(l).hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 205,
+      "path": "src/val.rs",
+      "source": "6u8.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 206,
+      "path": "src/val.rs",
+      "source": "Rc::as_ptr(m).hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 209,
+      "path": "src/val.rs",
+      "source": "7u8.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 210,
+      "path": "src/val.rs",
+      "source": "n.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 211,
+      "path": "src/val.rs",
+      "source": "Rc::as_ptr(r).hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 214,
+      "path": "src/val.rs",
+      "source": "8u8.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 215,
+      "path": "src/val.rs",
+      "source": "n.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 216,
+      "path": "src/val.rs",
+      "source": "v.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 219,
+      "path": "src/val.rs",
+      "source": "5.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 220,
+      "path": "src/val.rs",
+      "source": "inner.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 223,
+      "path": "src/val.rs",
+      "source": "15.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 224,
+      "path": "src/val.rs",
+      "source": "inner.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 227,
+      "path": "src/val.rs",
+      "source": "10u8.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 228,
+      "path": "src/val.rs",
+      "source": "e.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 231,
+      "path": "src/val.rs",
+      "source": "255u8.hash(state);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "recursion"
+      ],
+      "line": 241,
+      "path": "src/val.rs",
+      "source": "(Val::Float(a), Val::Float(b)) => a.partial_cmp(b),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 47,
+      "path": "src/vm.rs",
+      "source": "let chunk = &program.functions[main_idx];",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 53,
+      "path": "src/vm.rs",
+      "source": ".define(chunk.params[0].clone(), sys, false);",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 80,
+      "path": "src/vm.rs",
+      "source": "// Block scopes opened inside this chunk; `scopes[0]` is the chunk's own.",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 81,
+      "path": "src/vm.rs",
+      "source": "let mut scopes: Vec<Rc<RefCell<Scope>>> = vec![scope];",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 85,
+      "path": "src/vm.rs",
+      "source": "match &chunk.ops[ip] {",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 86,
+      "path": "src/vm.rs",
+      "source": "Op::PushConst(i) => stack.push(const_to_val(&chunk.consts[*i])),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 96,
+      "path": "src/vm.rs",
+      "source": ".unwrap_or_else(|| Val::Enum(name.to_string(), vec![]));",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 100,
+      "path": "src/vm.rs",
+      "source": "let v = stack.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 106,
+      "path": "src/vm.rs",
+      "source": "let v = stack.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 112,
+      "path": "src/vm.rs",
+      "source": "let rhs = stack.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 127,
+      "path": "src/vm.rs",
+      "source": "let r = stack.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 128,
+      "path": "src/vm.rs",
+      "source": "let l = stack.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 139,
+      "path": "src/vm.rs",
+      "source": "let v = stack.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 154,
+      "path": "src/vm.rs",
+      "source": "let v = stack.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 181,
+      "path": "src/vm.rs",
+      "source": "let v = stack.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 185,
+      "path": "src/vm.rs",
+      "source": "let v = stack.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 192,
+      "path": "src/vm.rs",
+      "source": "let v = stack.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 204,
+      "path": "src/vm.rs",
+      "source": "let v = stack.last().cloned().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 209,
+      "path": "src/vm.rs",
+      "source": "let (a, b) = (stack[n - 2].clone(), stack[n - 1].clone());",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 216,
+      "path": "src/vm.rs",
+      "source": "let val = stack.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 217,
+      "path": "src/vm.rs",
+      "source": "let obj = stack.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 221,
+      "path": "src/vm.rs",
+      "source": "let val = stack.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 222,
+      "path": "src/vm.rs",
+      "source": "let idx = stack.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 223,
+      "path": "src/vm.rs",
+      "source": "let obj = stack.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 250,
+      "path": "src/vm.rs",
+      "source": "let def = &chunk.closures[*idx];",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 258,
+      "path": "src/vm.rs",
+      "source": "let obj = stack.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 262,
+      "path": "src/vm.rs",
+      "source": "let idx = stack.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 263,
+      "path": "src/vm.rs",
+      "source": "let obj = stack.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 267,
+      "path": "src/vm.rs",
+      "source": "let v = stack.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 270,
+      "path": "src/vm.rs",
+      "source": "other => stack.push(Val::Enum(\"sqrt\".into(), vec![other])),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 275,
+      "path": "src/vm.rs",
+      "source": "let callee = &program.functions[*idx];",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 318,
+      "path": "src/vm.rs",
+      "source": "let callee = stack.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 325,
+      "path": "src/vm.rs",
+      "source": "let v = stack.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 369,
+      "path": "src/vm.rs",
+      "source": "let v = stack.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 376,
+      "path": "src/vm.rs",
+      "source": "let v = stack.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 383,
+      "path": "src/vm.rs",
+      "source": "let v = stack.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 390,
+      "path": "src/vm.rs",
+      "source": "let v = stack.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 395,
+      "path": "src/vm.rs",
+      "source": "let iterable = stack.pop().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 432,
+      "path": "src/vm.rs",
+      "source": "let it = iters.last_mut().unwrap();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "raw_index"
+      ],
+      "line": 465,
+      "path": "src/vm.rs",
+      "source": "let cur = items[*idx].clone();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 488,
+      "path": "src/vm.rs",
+      "source": "let scrutinee = stack.last().unwrap().clone();",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 541,
+      "path": "src/vm.rs",
+      "source": "Const::Int(s) => Val::Int(BigInt::parse(s).unwrap()),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 542,
+      "path": "src/vm.rs",
+      "source": "Const::Float(s) => Val::Float(s.parse().unwrap()),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "unchecked_assumption"
+      ],
+      "line": 551,
+      "path": "src/vm.rs",
+      "source": "scopes.last().expect(\"a chunk always has its own scope\")",
+      "status": "unresolved"
+    }
+  ]
+}

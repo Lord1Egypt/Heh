@@ -20,6 +20,22 @@ jobs:
         run: cargo build --release
       - name: Tests
         run: cargo test --release
+      - name: Phase 0 evidence is current
+        run: python tools/phase0_audit.py check
+      - name: Evidence summary
+        run: python tools/ci_summary.py
+
+  benchmark-smoke:
+    name: Benchmark answers and smoke limits
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build release binary
+        run: cargo build --release
+      - name: Verify representative workloads
+        run: >-
+          benches/run.sh fib strings bigint --samples 3 --warmups 0
+          --max-vm-ms 5000
 
   lint:
     name: Format and lints
