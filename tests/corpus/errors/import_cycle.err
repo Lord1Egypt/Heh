@@ -1,1 +1,5 @@
-E0030
+error[E0030]: import cycle through './import_cycle.heh'
+ --> tests/corpus/errors/import_cycle.heh:1:1
+  |
+1 | use "./import_cycle.heh"
+  | ^

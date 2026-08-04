@@ -1,1 +1,5 @@
-E0003
+error[E0003]: unclosed string literal (strings cannot span lines)
+ --> tests/corpus/errors/syntax_unclosed_string.heh:1:9
+  |
+1 | let s = "hello
+  |         ^

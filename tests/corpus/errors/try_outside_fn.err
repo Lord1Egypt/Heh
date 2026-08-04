@@ -1,1 +1,5 @@
-E0114
+error[E0114]: try propagation requires a compatible result-returning function
+ --> tests/corpus/errors/try_outside_fn.heh:2:13
+  |
+2 |     let x = try int_of("bad")
+  |             ^

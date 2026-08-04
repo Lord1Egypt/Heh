@@ -1,1 +1,5 @@
-E0202
+error[E0202]: call stack too deep (limit 10000) — is this recursion unbounded?
+ --> tests/corpus/errors/deep_recursion.heh:6:9
+  |
+6 |     1 + down(n - 1)
+  |         ^
