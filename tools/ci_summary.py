@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 test_functions = 0
 for path in (ROOT / "tests").glob("*.rs"):
-    lines = path.read_text().splitlines()
+    lines = path.read_text(encoding="utf-8").splitlines()
     test_functions += sum(
         line.strip().startswith("fn ") and index and lines[index - 1].strip() == "#[test]"
         for index, line in enumerate(lines)

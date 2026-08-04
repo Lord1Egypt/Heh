@@ -71,7 +71,7 @@ def metadata() -> dict[str, object]:
     if not cpu and Path("/proc/cpuinfo").exists():
         for line in Path("/proc/cpuinfo").read_text(errors="replace").splitlines():
             if line.lower().startswith("model name"):
-                cpu = line.split(":", 1)[1].strip()
+            cpu = line.split(":", 1)[1].strip()
                 break
     return {
         "schema_version": 1,
@@ -132,7 +132,7 @@ def main() -> int:
     encoded = json.dumps(report, indent=2, sort_keys=True) + "\n"
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(encoded)
+        args.output.write_text(encoded, encoding="utf-8")
     if args.json or args.output:
         if args.json:
             sys.stdout.write(encoded)

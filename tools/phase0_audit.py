@@ -25,13 +25,13 @@ BOUNDARIES = {
 
 def write_json(path: Path, value: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
+    path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def safety_inventory() -> dict[str, object]:
     sites = []
     for path in sorted((ROOT / "src").glob("*.rs")):
-        lines = path.read_text().splitlines()
+        lines = path.read_text(encoding="utf-8").splitlines()
         recursive_lines = direct_recursion_lines(lines)
         for number, line in enumerate(lines, 1):
             kinds = [kind for kind, pattern in BOUNDARIES.items() if pattern.search(line)]
@@ -77,7 +77,7 @@ def section_for(lines: list[str], index: int) -> str:
 
 def spec_inventory() -> dict[str, object]:
     """Conservatively inventory prose/list/table claims; false positives stay visible."""
-    lines = (ROOT / "SPEC.md").read_text().splitlines()
+    lines = (ROOT / "SPEC.md").read_text(encoding="utf-8").splitlines()
     claims = []
     in_fence = False
     paragraph = []
@@ -178,7 +178,7 @@ def check() -> None:
     stale = []
     for name, value in expected.items():
         path = EVIDENCE / name
-        if not path.exists() or json.loads(path.read_text()) != value:
+        if not path.exists() or json.loads(path.read_text(encoding="utf-8")) != value:
             stale.append(str(path.relative_to(ROOT)))
     baseline = EVIDENCE / "benchmark-baseline.json"
     if not baseline.exists():
