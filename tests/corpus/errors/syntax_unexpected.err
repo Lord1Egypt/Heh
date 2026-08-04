@@ -1,1 +1,5 @@
-E0100
+error[E0100]: expected expression, found newline
+ --> tests/corpus/errors/syntax_unexpected.heh:2:12
+  |
+2 |     let x =
+  |            ^

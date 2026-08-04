@@ -1,1 +1,5 @@
-E0020
+error[E0020]: non-exhaustive match
+ --> tests/corpus/errors/match_non_exhaustive.heh:3:5
+  |
+3 |     match x
+  |     ^

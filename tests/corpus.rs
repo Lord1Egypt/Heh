@@ -57,29 +57,50 @@ fn corpus_errors() {
                 let name = path.file_stem().unwrap().to_str().unwrap();
                 let err_path = format!("{}/{}.err", errors_dir, name);
 
-                // We just run AST for now, or run. Since Evaluator I only covers part of language,
-                // and some errors are syntax errors, we can just use `heh run` which does both parsing and eval.
-                let output = Command::new(env!("CARGO_BIN_EXE_heh"))
+                let expected = fs::read_to_string(&err_path)
+                    .unwrap_or_else(|_| panic!("Missing golden stderr for program: {name}"))
+                    .replace("\r\n", "\n");
+                let phase_path = format!("{errors_dir}/{name}.phase");
+                let phase = fs::read_to_string(phase_path).unwrap_or_else(|_| "compile".into());
+
+                let check = Command::new(env!("CARGO_BIN_EXE_heh"))
+                    .arg("check")
+                    .arg(&path)
+                    .output()
+                    .expect("failed to execute heh check");
+                let run = Command::new(env!("CARGO_BIN_EXE_heh"))
                     .arg("run")
                     .arg(&path)
                     .output()
                     .expect("failed to execute heh run");
 
-                let actual_err = String::from_utf8_lossy(&output.stderr);
+                let assert_failure = |command: &str, output: &std::process::Output| {
+                    assert_eq!(output.status.code(), Some(1), "{name}: {command} exit code");
+                    assert!(output.stdout.is_empty(), "{name}: {command} wrote stdout");
+                    assert_eq!(
+                        String::from_utf8_lossy(&output.stderr)
+                            .replace("\r\n", "\n")
+                            .replace('\\', "/"),
+                        expected,
+                        "{name}: {command} stderr"
+                    );
+                };
 
-                if let Ok(expected_err_code) = fs::read_to_string(&err_path) {
-                    let expected_code = expected_err_code.trim();
-                    assert!(actual_err.contains(expected_code),
-                        "Error corpus {} did not contain expected diagnostic {}.\nActual stderr:\n{}",
-                        name, expected_code, actual_err);
-                } else {
-                    panic!("Missing golden error code for program: {}", name);
+                match phase.trim() {
+                    "compile" => {
+                        assert_failure("check", &check);
+                        assert_failure("run", &run);
+                    }
+                    "runtime" => {
+                        assert!(
+                            check.status.success(),
+                            "{name}: check must accept runtime case"
+                        );
+                        assert!(check.stdout.is_empty() && check.stderr.is_empty());
+                        assert_failure("run", &run);
+                    }
+                    other => panic!("{name}: unknown diagnostic phase {other:?}"),
                 }
-                assert!(
-                    !output.status.success(),
-                    "Error corpus {} was expected to fail, but succeeded.",
-                    name
-                );
             }
         }
     }
