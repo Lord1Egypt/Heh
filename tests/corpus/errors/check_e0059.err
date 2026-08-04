@@ -1,0 +1,5 @@
+error[E0059]: function may finish without returning its declared type
+ --> tests/corpus/errors/check_e0059.heh:1:1
+  |
+1 | fn answer() -> int
+  | ^

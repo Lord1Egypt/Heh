@@ -1,0 +1,5 @@
+error[E0110]: break/continue outside loop
+ --> tests/corpus/errors/check_e0110.heh:1:1
+  |
+1 | break
+  | ^

@@ -1,0 +1,5 @@
+error[E0044]: variant 'item' takes 1 args, 2 given
+ --> tests/corpus/errors/check_e0044.heh:3:5
+  |
+3 |     item(a, b)
+  |     ^

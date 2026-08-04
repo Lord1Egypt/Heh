@@ -1,0 +1,2 @@
+for value in 1
+    sys.print(value)

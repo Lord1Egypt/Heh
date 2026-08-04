@@ -1,0 +1,2 @@
+let values = {"one": 1}
+sys.print(values[1])

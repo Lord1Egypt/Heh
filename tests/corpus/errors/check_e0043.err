@@ -1,0 +1,5 @@
+error[E0043]: return outside function
+ --> tests/corpus/errors/check_e0043.heh:1:1
+  |
+1 | return 1
+  | ^

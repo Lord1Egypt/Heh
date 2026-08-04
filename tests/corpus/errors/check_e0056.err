@@ -1,0 +1,5 @@
+error[E0056]: map index type mismatch
+ --> tests/corpus/errors/check_e0056.heh:2:11
+  |
+2 | sys.print(values[1])
+  |           ^

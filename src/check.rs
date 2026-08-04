@@ -1749,8 +1749,18 @@ impl Checker {
                 true
             }
         };
+        let special_arity = match name {
+            "map" | "filter" => Some(2),
+            "some" | "ok" | "err" | "str" | "int" | "float" | "int_of" | "list" => Some(1),
+            _ => None,
+        };
+        if let Some(expected) = special_arity {
+            if !arity(self, expected) {
+                return Ty::Error;
+            }
+        }
         match name {
-            "map" if arity(self, 2) => match (&args[0], callable_unary(&args[1])) {
+            "map" => match (&args[0], callable_unary(&args[1])) {
                 (Ty::List(element), Some((param, ret))) => {
                     if !types_compatible(element, param) {
                         self.builtin_type_error(name, expr);
@@ -1762,7 +1772,7 @@ impl Checker {
                     Ty::Error
                 }
             },
-            "filter" if arity(self, 2) => match (&args[0], callable_unary(&args[1])) {
+            "filter" => match (&args[0], callable_unary(&args[1])) {
                 (Ty::List(element), Some((param, ret))) => {
                     if !types_compatible(element, param) || !types_compatible(&Ty::Bool, ret) {
                         self.builtin_type_error(name, expr);
@@ -1774,30 +1784,30 @@ impl Checker {
                     Ty::Error
                 }
             },
-            "some" if arity(self, 1) => Ty::Optional(Box::new(args[0].clone())),
-            "ok" if arity(self, 1) => Ty::Result(Box::new(args[0].clone())),
-            "err" if arity(self, 1) => {
+            "some" => Ty::Optional(Box::new(args[0].clone())),
+            "ok" => Ty::Result(Box::new(args[0].clone())),
+            "err" => {
                 self.require_builtin_arg(name, &Ty::Str, &args[0], expr);
                 Ty::Result(Box::new(Ty::Infer))
             }
-            "str" if arity(self, 1) => Ty::Str,
-            "int" if arity(self, 1) => {
+            "str" => Ty::Str,
+            "int" => {
                 if !matches!(args[0], Ty::Int | Ty::Float | Ty::Error) {
                     self.builtin_type_error(name, expr);
                 }
                 Ty::Int
             }
-            "float" if arity(self, 1) => {
+            "float" => {
                 if !matches!(args[0], Ty::Int | Ty::Float | Ty::Error) {
                     self.builtin_type_error(name, expr);
                 }
                 Ty::Float
             }
-            "int_of" if arity(self, 1) => {
+            "int_of" => {
                 self.require_builtin_arg(name, &Ty::Str, &args[0], expr);
                 Ty::Result(Box::new(Ty::Int))
             }
-            "list" if arity(self, 1) => match &args[0] {
+            "list" => match &args[0] {
                 Ty::List(inner) => Ty::List(inner.clone()),
                 Ty::Str => Ty::List(Box::new(Ty::Str)),
                 Ty::Map(key, _) => Ty::List(key.clone()),

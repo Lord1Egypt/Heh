@@ -1,0 +1,5 @@
+error[E0040]: list elements must have same type
+ --> tests/corpus/errors/check_e0040.heh:1:14
+  |
+1 | let values = [1, "two"]
+  |              ^

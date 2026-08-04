@@ -1,0 +1,2 @@
+fn answer() -> int
+    let value = 42

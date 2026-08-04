@@ -1,0 +1,2 @@
+if 1
+    sys.print(1)

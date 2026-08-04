@@ -1,0 +1,5 @@
+error[E0050]: list takes 1 type argument
+ --> tests/corpus/errors/check_e0050.heh:1:20
+  |
+1 | fn consume(values: list[int, str])
+  |                    ^

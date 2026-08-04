@@ -1,0 +1,5 @@
+error[E0041]: if condition must be bool
+ --> tests/corpus/errors/check_e0041.heh:1:4
+  |
+1 | if 1
+  |    ^

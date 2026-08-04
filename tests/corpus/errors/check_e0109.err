@@ -1,0 +1,5 @@
+error[E0109]: function takes 1 arguments, 0 given
+ --> tests/corpus/errors/check_e0109.heh:1:1
+  |
+1 | some()
+  | ^

@@ -1,0 +1,2 @@
+fn consume(values: list[int, str])
+    return
