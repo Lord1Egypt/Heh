@@ -13,6 +13,8 @@ pub enum Ty {
     Optional(Box<Ty>),
     Result(Box<Ty>), // `T or error`
     Fn(Vec<Ty>, Box<Ty>),
+    VariadicFn(Box<Ty>, Box<Ty>),
+    Namespace(String),
     Record(String),
     Enum(String),
     Unit,
@@ -61,7 +63,7 @@ impl Checker {
 
     pub fn check_file(&mut self, file: &File) {
         // Collect types and functions
-        self.define("sys".to_string(), Ty::Any, false); // For now, treat sys as Any
+        self.define("sys".to_string(), Ty::Namespace("sys".into()), false);
         self.define("int_of".to_string(), Ty::Any, false);
         self.define("float_of".to_string(), Ty::Any, false);
         self.define("str".to_string(), Ty::Any, false);
@@ -108,7 +110,12 @@ impl Checker {
         for u in &file.uses {
             let last = u.path.rsplit('/').next().unwrap_or(&u.path);
             let bare = last.strip_suffix(".heh").unwrap_or(last).to_string();
-            self.define(bare, Ty::Any, false);
+            let ty = if u.path.starts_with("std/") {
+                Ty::Namespace(format!("std.{bare}"))
+            } else {
+                Ty::Any
+            };
+            self.define(bare, ty, false);
         }
 
         for item in &file.items {
@@ -153,6 +160,7 @@ impl Checker {
                 "float" => Ty::Float,
                 "bool" => Ty::Bool,
                 "str" => Ty::Str,
+                "Sys" => Ty::Namespace("sys".into()),
                 "list" => {
                     if args.len() == 1 {
                         Ty::List(Box::new(self.resolve_type(&args[0])))
@@ -880,7 +888,23 @@ impl Checker {
             }
             ExprKind::Field(base, field_name) => {
                 let base_ty = self.check_expr(base);
+                if let Some(method) = builtin_method(&base_ty, field_name) {
+                    return method;
+                }
                 match base_ty {
+                    Ty::Namespace(namespace) => {
+                        if let Some(ty) = namespace_member(&namespace, field_name) {
+                            ty
+                        } else {
+                            self.diags.push(Diag {
+                                code: "E0053",
+                                msg: format!("unknown field '{}' on '{}'", field_name, namespace),
+                                line: e.span.line,
+                                col: e.span.col,
+                            });
+                            Ty::Error
+                        }
+                    }
                     Ty::Record(name) => {
                         let field_typ = if let Some(TypeDecl {
                             kind: TypeDeclKind::Record(fields),
@@ -1041,6 +1065,19 @@ impl Checker {
                         }
                         *ret
                     }
+                    Ty::VariadicFn(param, ret) => {
+                        for actual in &arg_tys {
+                            if !types_compatible(&param, actual) {
+                                self.diags.push(Diag {
+                                    code: "E0040",
+                                    msg: "function argument type mismatch".into(),
+                                    line: e.span.line,
+                                    col: e.span.col,
+                                });
+                            }
+                        }
+                        *ret
+                    }
                     Ty::Enum(e) => Ty::Enum(e.clone()),
                     Ty::Record(r) => Ty::Record(r.clone()),
                     Ty::Any | Ty::Error => Ty::Any,
@@ -1102,6 +1139,93 @@ impl Checker {
             // Infinite scalar domains require a wildcard arm.
             _ => false,
         }
+    }
+}
+
+fn namespace_member(namespace: &str, field: &str) -> Option<Ty> {
+    let function = |params: Vec<Ty>, ret: Ty| Ty::Fn(params, Box::new(ret));
+    let result = |inner: Ty| Ty::Result(Box::new(inner));
+    let optional = |inner: Ty| Ty::Optional(Box::new(inner));
+    let list = |inner: Ty| Ty::List(Box::new(inner));
+    let member = match (namespace, field) {
+        ("sys", "print") => Ty::VariadicFn(Box::new(Ty::Any), Box::new(Ty::Unit)),
+        ("sys", "input") => function(vec![], result(Ty::Str)),
+        ("sys", "args") => list(Ty::Str),
+        ("sys", capability @ ("fs" | "net" | "env" | "clock" | "rand")) => {
+            Ty::Namespace(format!("sys.{capability}"))
+        }
+        ("sys.fs", "read") => function(vec![Ty::Str], result(Ty::Str)),
+        ("sys.fs", "read_bytes") => function(vec![Ty::Str], result(list(Ty::Int))),
+        ("sys.fs", "write" | "append") => function(vec![Ty::Str, Ty::Str], result(Ty::Unit)),
+        ("sys.fs", "exists") => function(vec![Ty::Str], Ty::Bool),
+        ("sys.fs", "list_dir") => function(vec![Ty::Str], result(list(Ty::Str))),
+        ("sys.fs", "remove") => function(vec![Ty::Str], result(Ty::Unit)),
+        ("sys.net", "get") => function(vec![Ty::Str], result(Ty::Str)),
+        ("sys.env", "get") => function(vec![Ty::Str], optional(Ty::Str)),
+        ("sys.env", "set") => function(vec![Ty::Str, Ty::Str], Ty::Unit),
+        ("sys.clock", "now") => function(vec![], Ty::Int),
+        ("sys.clock", "sleep") => function(vec![Ty::Int], Ty::Unit),
+        ("sys.rand", "bytes") => function(vec![Ty::Int], result(list(Ty::Int))),
+        ("sys.rand", "int") => function(vec![Ty::Int, Ty::Int], result(Ty::Int)),
+        ("sys.rand", "float") => function(vec![], result(Ty::Float)),
+        ("std.math", "sin" | "cos" | "sqrt" | "abs" | "log" | "floor" | "ceil") => {
+            function(vec![Ty::Float], Ty::Float)
+        }
+        ("std.math", "pow") => function(vec![Ty::Float, Ty::Float], Ty::Float),
+        ("std.math", "pi" | "e") => function(vec![], Ty::Float),
+        ("std.fmt", "pad_left" | "pad_right") => function(vec![Ty::Str, Ty::Int, Ty::Str], Ty::Str),
+        ("std.fmt", "repeat") => function(vec![Ty::Str, Ty::Int], Ty::Str),
+        ("std.fmt", "hex") => function(vec![Ty::Int], Ty::Str),
+        ("std.fmt", "fixed") => function(vec![Ty::Float, Ty::Int], Ty::Str),
+        ("std.json", "parse") => function(vec![Ty::Str], result(Ty::Any)),
+        ("std.json", "write") => function(vec![Ty::Any], Ty::Str),
+        ("std.csv", "parse") => function(vec![Ty::Str], list(list(Ty::Str))),
+        ("std.csv", "write") => function(vec![list(list(Ty::Str))], Ty::Str),
+        ("std.hash", "sha256" | "crc32") => function(vec![Ty::Str], Ty::Str),
+        ("std.regex", "is_match") => function(vec![Ty::Str, Ty::Str], Ty::Bool),
+        ("std.regex", "find") => function(vec![Ty::Str, Ty::Str], result(Ty::Str)),
+        ("std.time", "format") => function(vec![Ty::Int], Ty::Str),
+        ("std.time", "parts") => {
+            function(vec![Ty::Int], Ty::Map(Box::new(Ty::Str), Box::new(Ty::Int)))
+        }
+        ("std.time", "from_parts") => function(vec![Ty::Int; 6], result(Ty::Int)),
+        ("std.time", "is_leap") => function(vec![Ty::Int], Ty::Bool),
+        ("std.time", "days_in_month") => function(vec![Ty::Int, Ty::Int], result(Ty::Int)),
+        ("std.debug", "fault") => function(vec![Ty::Str], Ty::Unit),
+        ("std.debug", "assert") => function(vec![Ty::Bool, Ty::Str], Ty::Unit),
+        _ => return None,
+    };
+    Some(member)
+}
+
+fn builtin_method(receiver: &Ty, field: &str) -> Option<Ty> {
+    let function = |params: Vec<Ty>, ret: Ty| Ty::Fn(params, Box::new(ret));
+    match (receiver, field) {
+        (Ty::Str, "len") => Some(function(vec![], Ty::Int)),
+        (Ty::Str, "upper" | "lower" | "trim") => Some(function(vec![], Ty::Str)),
+        (Ty::Str, "split") => Some(function(vec![Ty::Str], Ty::List(Box::new(Ty::Str)))),
+        (Ty::Str, "replace") => Some(function(vec![Ty::Str, Ty::Str], Ty::Str)),
+        (Ty::Str, "contains" | "starts_with") => Some(function(vec![Ty::Str], Ty::Bool)),
+        (Ty::Str, "chars") => Some(function(vec![], Ty::List(Box::new(Ty::Str)))),
+        (Ty::List(inner), "len") | (Ty::Map(_, inner), "len") => {
+            let _ = inner;
+            Some(function(vec![], Ty::Int))
+        }
+        (Ty::List(inner), "push") => Some(function(vec![*inner.clone()], Ty::Unit)),
+        (Ty::List(inner), "pop") => Some(function(vec![], Ty::Result(inner.clone()))),
+        (Ty::List(inner), "get") => Some(function(vec![Ty::Int], Ty::Optional(inner.clone()))),
+        (Ty::List(_), "sort") => Some(function(vec![], Ty::Unit)),
+        (Ty::List(_), "join") => Some(function(vec![Ty::Str], Ty::Str)),
+        (Ty::Map(key, value), "get") => {
+            Some(function(vec![*key.clone()], Ty::Optional(value.clone())))
+        }
+        (Ty::Map(key, value), "set") => {
+            Some(function(vec![*key.clone(), *value.clone()], Ty::Unit))
+        }
+        (Ty::Map(key, _), "remove") => Some(function(vec![*key.clone()], Ty::Unit)),
+        (Ty::Map(key, _), "keys") => Some(function(vec![], Ty::List(key.clone()))),
+        (Ty::Map(_, value), "values") => Some(function(vec![], Ty::List(value.clone()))),
+        _ => None,
     }
 }
 
