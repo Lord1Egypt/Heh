@@ -92,8 +92,8 @@ against CPython across the machine-word boundaries.
 
 ## Where things stand
 
-v1.0.2 is released and published to crates.io as `heh-lang`. All twelve build
-phases are complete and nothing is open.
+v1.0.4 is the current release and is published to crates.io as `heh-lang`.
+All twelve build phases are complete and the language surface remains frozen.
 
 **The one known gap is performance.** The VM runs at roughly 0.5×–1.15× of
 CPython — faster on strings and bignum, slower on loop-heavy code; the original

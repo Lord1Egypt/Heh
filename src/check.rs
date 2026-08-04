@@ -136,9 +136,6 @@ impl Checker {
             }
         }
 
-        // TODO: Register builtins
-        // ...
-
         for item in &file.items {
             match item {
                 TopItem::Fn(f) => self.check_fn(f),
@@ -427,6 +424,14 @@ impl Checker {
             }
             Statement::Match(m) => {
                 let expr_ty = self.check_expr(&m.expr);
+                if !self.match_is_exhaustive(&expr_ty, &m.arms) {
+                    self.diags.push(Diag {
+                        code: "E0020",
+                        msg: "non-exhaustive match".into(),
+                        line: m.span.line,
+                        col: m.span.col,
+                    });
+                }
                 for arm in &m.arms {
                     self.push_scope();
                     // Bind pattern variables based on expr_ty
@@ -509,7 +514,6 @@ impl Checker {
                         Pattern::Wildcard(_) | Pattern::Literal(_) => {}
                     }
 
-                    // TODO: exhaustive match (E0020) and arm typing
                     for stmt in &arm.body.stmts {
                         self.check_stmt(stmt);
                     }
@@ -981,19 +985,62 @@ impl Checker {
             }
             ExprKind::Call(callee, args) => {
                 let callee_ty = self.check_expr(callee);
-                for arg in args {
-                    match arg {
-                        CallArg::Positional(a) => {
-                            self.check_expr(a);
-                        }
-                        CallArg::Named(_, a) => {
-                            self.check_expr(a);
-                        }
-                    }
-                }
-                // TODO: full function signature checking
+                let arg_tys: Vec<_> = args
+                    .iter()
+                    .map(|arg| match arg {
+                        CallArg::Positional(a) | CallArg::Named(_, a) => self.check_expr(a),
+                    })
+                    .collect();
                 match callee_ty {
-                    Ty::Fn(_, ret) => *ret,
+                    Ty::Fn(params, ret) => {
+                        if args.len() != params.len() {
+                            self.diags.push(Diag {
+                                code: "E0109",
+                                msg: format!(
+                                    "function takes {} arguments, {} given",
+                                    params.len(),
+                                    args.len()
+                                ),
+                                line: e.span.line,
+                                col: e.span.col,
+                            });
+                        } else {
+                            let named_params = match &callee.kind {
+                                ExprKind::Ident(name) => self.funcs.get(name).map(|f| {
+                                    f.params.iter().map(|p| p.name.as_str()).collect::<Vec<_>>()
+                                }),
+                                _ => None,
+                            };
+                            for (index, (arg, actual)) in args.iter().zip(&arg_tys).enumerate() {
+                                let expected = match (arg, &named_params) {
+                                    (CallArg::Named(name, _), Some(names)) => names
+                                        .iter()
+                                        .position(|candidate| *candidate == name)
+                                        .and_then(|position| params.get(position)),
+                                    (CallArg::Named(_, _), None) => None,
+                                    (CallArg::Positional(_), _) => params.get(index),
+                                };
+                                if let Some(expected) = expected {
+                                    if !types_compatible(expected, actual) {
+                                        self.diags.push(Diag {
+                                            code: "E0040",
+                                            msg: "function argument type mismatch".into(),
+                                            line: e.span.line,
+                                            col: e.span.col,
+                                        });
+                                    }
+                                } else if let CallArg::Named(name, _) = arg {
+                                    self.diags.push(Diag {
+                                        code: "E0109",
+                                        msg: format!("unknown named argument '{}'", name),
+                                        line: e.span.line,
+                                        col: e.span.col,
+                                    });
+                                }
+                            }
+                        }
+                        *ret
+                    }
                     Ty::Enum(e) => Ty::Enum(e.clone()),
                     Ty::Record(r) => Ty::Record(r.clone()),
                     Ty::Any | Ty::Error => Ty::Any,
@@ -1021,6 +1068,47 @@ impl Checker {
             }
         }
     }
+
+    fn match_is_exhaustive(&self, ty: &Ty, arms: &[MatchArm]) -> bool {
+        if arms
+            .iter()
+            .any(|arm| matches!(arm.pattern, Pattern::Wildcard(_)))
+        {
+            return true;
+        }
+        let has_variant = |wanted: &str| {
+            arms.iter()
+                .any(|arm| matches!(&arm.pattern, Pattern::Variant(_, name, _) if name == wanted))
+        };
+        let has_literal = |wanted: &Literal| {
+            arms.iter()
+                .any(|arm| matches!(&arm.pattern, Pattern::Literal(got) if got == wanted))
+        };
+        match ty {
+            Ty::Enum(name) => self
+                .types
+                .get(name)
+                .and_then(|decl| match &decl.kind {
+                    TypeDeclKind::Enum(variants) => Some(variants),
+                    TypeDeclKind::Record(_) => None,
+                })
+                .is_some_and(|variants| variants.iter().all(|v| has_variant(&v.name))),
+            Ty::Optional(_) => has_variant("some") && has_literal(&Literal::None),
+            Ty::Result(_) => has_variant("ok") && has_variant("err"),
+            Ty::Bool => has_literal(&Literal::Bool(true)) && has_literal(&Literal::Bool(false)),
+            // An unknown type is deliberately not rejected: imported and
+            // capability-returned values currently enter the checker as Any.
+            Ty::Any | Ty::Error => true,
+            // Infinite scalar domains require a wildcard arm.
+            _ => false,
+        }
+    }
+}
+
+fn types_compatible(expected: &Ty, actual: &Ty) -> bool {
+    expected == actual
+        || matches!(expected, Ty::Any | Ty::Error)
+        || matches!(actual, Ty::Any | Ty::Error)
 }
 
 /// Recognise the two `none` comparisons that drive optional narrowing

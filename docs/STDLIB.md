@@ -147,8 +147,9 @@ traversal outside the working directory requires an absolute path.
 - `sys.rand.float() -> float or error` — uniform in `[0.0, 1.0)`, 53 random bits
 
 ### sys.net — `--deny-net`
-- `sys.net.get(url: str) -> str or error` — HTTP/1.1 GET. `http://` uses a
-  std `TcpStream` directly; `https://` shells out to `curl` (the std library
+- `sys.net.get(url: str) -> str or error` — HTTP/1.1 GET, including redirects,
+  chunked bodies, content lengths, and IPv6 authorities. `http://` uses a std
+  `TcpStream` directly; `https://` shells out to `curl` (the std library
   has no TLS), returning a clean error if `curl` is not installed. Returns the
   response body on a 2xx status, otherwise an error.
 

@@ -302,6 +302,10 @@ fn cmd_check(path: &str) -> ExitCode {
 /// `./heh.lock`. A `.git` URL is cloned with git; anything else is fetched
 /// with curl. Both run as arg-lists (never a shell string).
 fn cmd_get(url: &str) -> ExitCode {
+    if url.contains(['\r', '\n']) {
+        eprintln!("heh get: URL contains a forbidden newline");
+        return ExitCode::FAILURE;
+    }
     let vendor = std::path::Path::new("vendor");
     if let Err(e) = std::fs::create_dir_all(vendor) {
         eprintln!("heh get: cannot create vendor/: {e}");
@@ -309,27 +313,29 @@ fn cmd_get(url: &str) -> ExitCode {
     }
 
     let fetch = if url.ends_with(".git") {
-        let name = url
-            .rsplit('/')
-            .next()
-            .unwrap_or("dep")
-            .trim_end_matches(".git");
-        let dest = vendor.join(name);
+        let name = safe_vendor_name(url, "dep", true);
+        let dest = vendor.join(&name);
         let _ = std::fs::remove_dir_all(&dest);
         run_tool(
             "git",
             &["clone", "--depth", "1", url, dest.to_str().unwrap_or("")],
         )
     } else {
-        let name = url
-            .rsplit('/')
-            .next()
-            .filter(|s| !s.is_empty())
-            .unwrap_or("dep.heh");
-        let dest = vendor.join(name);
+        let name = safe_vendor_name(url, "dep.heh", false);
+        let dest = vendor.join(&name);
         run_tool(
             "curl",
-            &["-sSL", "--fail", "-o", dest.to_str().unwrap_or(""), url],
+            &[
+                "-sSL",
+                "--fail",
+                "--proto",
+                "=http,https,file",
+                "--proto-redir",
+                "=http,https",
+                "-o",
+                dest.to_str().unwrap_or(""),
+                url,
+            ],
         )
     };
     if let Err(e) = fetch {
@@ -337,7 +343,7 @@ fn cmd_get(url: &str) -> ExitCode {
         return ExitCode::FAILURE;
     }
 
-    match write_lock(std::path::Path::new(".")) {
+    match write_lock(std::path::Path::new("."), Some(url)) {
         Ok(n) => {
             println!("vendored '{url}' — heh.lock now pins {n} file(s)");
             ExitCode::SUCCESS
@@ -346,6 +352,30 @@ fn cmd_get(url: &str) -> ExitCode {
             eprintln!("heh get: cannot write heh.lock: {e}");
             ExitCode::FAILURE
         }
+    }
+}
+
+fn safe_vendor_name(url: &str, fallback: &str, strip_git_suffix: bool) -> String {
+    let raw = url
+        .split(['?', '#'])
+        .next()
+        .unwrap_or("")
+        .rsplit('/')
+        .next()
+        .unwrap_or("");
+    let candidate = if strip_git_suffix {
+        raw.strip_suffix(".git").unwrap_or(raw)
+    } else {
+        raw
+    };
+    if candidate.is_empty()
+        || candidate == "."
+        || candidate == ".."
+        || candidate.contains(['/', '\\'])
+    {
+        fallback.to_string()
+    } else {
+        candidate.to_string()
     }
 }
 
@@ -379,19 +409,24 @@ fn collect_files(
     root: &std::path::Path,
     out: &mut Vec<(String, String)>,
 ) -> std::io::Result<()> {
-    let mut children: Vec<_> = std::fs::read_dir(dir)?
-        .filter_map(|e| e.ok())
-        .map(|e| e.path())
-        .collect();
-    children.sort();
-    for path in children {
-        if path.is_dir() {
+    let mut children: Vec<_> = std::fs::read_dir(dir)?.collect::<Result<Vec<_>, _>>()?;
+    children.sort_by_key(|entry| entry.file_name());
+    for entry in children {
+        let path = entry.path();
+        let kind = entry.file_type()?;
+        if kind.is_symlink() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("refusing symlink in vendor tree: '{}'", path.display()),
+            ));
+        }
+        if kind.is_dir() {
             // Skip git metadata — it is not source and changes constantly.
             if path.file_name().and_then(|n| n.to_str()) == Some(".git") {
                 continue;
             }
             collect_files(&path, root, out)?;
-        } else if path.is_file() {
+        } else if kind.is_file() {
             let rel = path
                 .strip_prefix(root)
                 .unwrap_or(&path)
@@ -405,14 +440,30 @@ fn collect_files(
 }
 
 /// Write `<root>/heh.lock` from the current vendor tree. Returns the file count.
-fn write_lock(root: &std::path::Path) -> std::io::Result<usize> {
+fn write_lock(root: &std::path::Path, source_url: Option<&str>) -> std::io::Result<usize> {
     let entries = hash_vendor_tree(root)?;
     let mut body =
         String::from("# heh.lock — SHA-256 of every vendored file. Do not edit by hand.\n");
+    let lock_path = root.join("heh.lock");
+    let mut sources: Vec<String> = std::fs::read_to_string(&lock_path)
+        .unwrap_or_default()
+        .lines()
+        .filter_map(|line| line.strip_prefix("# source: ").map(str::to_string))
+        .collect();
+    if let Some(url) = source_url {
+        if !sources.iter().any(|known| known == url) {
+            sources.push(url.to_string());
+        }
+    }
+    sources.sort();
+    sources.dedup();
+    for source in sources {
+        body.push_str(&format!("# source: {source}\n"));
+    }
     for (rel, hash) in &entries {
         body.push_str(&format!("{hash}  {rel}\n"));
     }
-    std::fs::write(root.join("heh.lock"), body)?;
+    std::fs::write(lock_path, body)?;
     Ok(entries.len())
 }
 
@@ -423,8 +474,21 @@ fn verify_lock(base_dir: &std::path::Path) -> Result<(), String> {
     let lock_path = base_dir.join("heh.lock");
     let contents = match std::fs::read_to_string(&lock_path) {
         Ok(c) => c,
-        Err(_) => return Ok(()), // no lockfile: nothing to verify
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            let vendor = base_dir.join("vendor");
+            let has_vendor_files = vendor
+                .read_dir()
+                .map(|mut entries| entries.next().is_some())
+                .unwrap_or(false);
+            return if has_vendor_files {
+                Err("lock verification failed: vendor/ exists but heh.lock is missing".into())
+            } else {
+                Ok(())
+            };
+        }
+        Err(e) => return Err(format!("cannot read '{}': {e}", lock_path.display())),
     };
+    let mut expected = std::collections::BTreeMap::new();
     for line in contents.lines() {
         let line = line.trim();
         if line.is_empty() || line.starts_with('#') {
@@ -433,11 +497,39 @@ fn verify_lock(base_dir: &std::path::Path) -> Result<(), String> {
         let (hash, rel) = line
             .split_once("  ")
             .ok_or_else(|| format!("malformed heh.lock line: '{line}'"))?;
-        let file = base_dir.join(rel);
-        let bytes = std::fs::read(&file)
-            .map_err(|_| format!("lock verification failed: '{rel}' is missing"))?;
-        let actual = heh::modules::sha256_hex(&bytes);
-        if actual != hash {
+        let rel_path = std::path::Path::new(rel);
+        if !rel.starts_with("vendor/")
+            || rel_path.is_absolute()
+            || rel_path
+                .components()
+                .any(|part| matches!(part, std::path::Component::ParentDir))
+        {
+            return Err(format!("invalid path in heh.lock: '{rel}'"));
+        }
+        if hash.len() != 64 || !hash.bytes().all(|b| b.is_ascii_hexdigit()) {
+            return Err(format!("invalid SHA-256 in heh.lock for '{rel}'"));
+        }
+        if expected.insert(rel.to_string(), hash.to_string()).is_some() {
+            return Err(format!("duplicate path in heh.lock: '{rel}'"));
+        }
+    }
+
+    let actual: std::collections::BTreeMap<_, _> = hash_vendor_tree(base_dir)
+        .map_err(|e| format!("lock verification failed: {e}"))?
+        .into_iter()
+        .collect();
+    for rel in expected.keys() {
+        if !actual.contains_key(rel) {
+            return Err(format!("lock verification failed: '{rel}' is missing"));
+        }
+    }
+    for rel in actual.keys() {
+        if !expected.contains_key(rel) {
+            return Err(format!("lock verification failed: unpinned file '{rel}'"));
+        }
+    }
+    for (rel, hash) in expected {
+        if actual.get(&rel) != Some(&hash) {
             return Err(format!(
                 "lock verification failed: '{rel}' has been modified (hash mismatch)"
             ));
@@ -547,8 +639,13 @@ fn find_test_files(dir: &std::path::Path, out: &mut Vec<PathBuf>) -> std::io::Re
         return Ok(());
     }
     for entry in std::fs::read_dir(dir)? {
-        let path = entry?.path();
-        if path.is_dir() {
+        let entry = entry?;
+        let path = entry.path();
+        let kind = entry.file_type()?;
+        if kind.is_symlink() {
+            continue;
+        }
+        if kind.is_dir() {
             if path.file_name().and_then(|n| n.to_str()) == Some(".git") {
                 continue;
             }
@@ -600,8 +697,13 @@ fn cmd_fmt(path: &str, check_mode: bool) -> ExitCode {
 
 fn find_heh_files(dir: &std::path::Path, out: &mut Vec<PathBuf>) -> std::io::Result<()> {
     for entry in std::fs::read_dir(dir)? {
-        let path = entry?.path();
-        if path.is_dir() {
+        let entry = entry?;
+        let path = entry.path();
+        let kind = entry.file_type()?;
+        if kind.is_symlink() {
+            continue;
+        }
+        if kind.is_dir() {
             if path.file_name().and_then(|n| n.to_str()) == Some(".git") {
                 continue;
             }

@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify tag matches crate version
+        shell: bash
+        run: |
+          version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -1)
+          test "v$version" = "$GITHUB_REF_NAME"
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --verify-tag --draft --title "Heh 𓁨 $GITHUB_REF_NAME" --generate-notes
+
+  binaries:
+    needs: create
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            asset: heh-x86_64-linux
+            binary: target/release/heh
+          - os: windows-latest
+            asset: heh-x86_64-windows.exe
+            binary: target/release/heh.exe
+          - os: macos-15-intel
+            asset: heh-x86_64-macos
+            binary: target/release/heh
+          - os: macos-15
+            asset: heh-aarch64-macos
+            binary: target/release/heh
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo test --release --locked
+      - run: cargo build --release --locked
+      - name: Upload release binary
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp "${{ matrix.binary }}" "${{ matrix.asset }}"
+          gh release upload "$GITHUB_REF_NAME" "${{ matrix.asset }}" --clobber
+
+  checksums:
+    needs: binaries
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --pattern 'heh-*'
+      - name: Generate and upload checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sha256sum heh-* > SHA256SUMS.txt
+          gh release upload "$GITHUB_REF_NAME" SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
+          gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false
