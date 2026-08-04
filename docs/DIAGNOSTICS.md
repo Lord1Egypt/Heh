@@ -60,6 +60,7 @@ offending source line with a caret, and a suggestion when one is known.
 | E0056 | map index does not match the key type |
 | E0057 | index on something that is not a collection |
 | E0058 | call on a non-function |
+| E0059 | a non-unit function or closure may finish without producing its declared return type |
 
 ## Parsing — E0100–E0101
 

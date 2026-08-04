@@ -45,6 +45,7 @@ pub struct Checker {
     pub funcs: HashMap<String, FnDecl>,
     // For return type checking
     pub current_fn_ret: Option<Ty>,
+    loop_depth: usize,
     module_members: HashMap<String, HashMap<String, Ty>>,
     module_cache: HashMap<PathBuf, (String, HashMap<String, Ty>)>,
     module_loading: Vec<PathBuf>,
@@ -66,6 +67,7 @@ impl Checker {
             types: HashMap::new(),
             funcs: HashMap::new(),
             current_fn_ret: None,
+            loop_depth: 0,
             module_members: HashMap::new(),
             module_cache: HashMap::new(),
             module_loading: Vec::new(),
@@ -294,9 +296,73 @@ impl Checker {
         };
         let prev_ret = self.current_fn_ret.take();
         self.current_fn_ret = Some(r_ty.clone());
-        self.check_block(&f.body);
+        let (implicit, always_returns) = self.check_function_block(&f.body);
+        if r_ty != Ty::Unit && !always_returns {
+            match implicit {
+                Some(actual) if !types_compatible(&r_ty, &actual) => self.diags.push(Diag {
+                    code: "E0040",
+                    msg: "implicit return type mismatch".into(),
+                    line: f.span.line,
+                    col: f.span.col,
+                }),
+                None => self.diags.push(Diag {
+                    code: "E0059",
+                    msg: "function may finish without returning its declared type".into(),
+                    line: f.span.line,
+                    col: f.span.col,
+                }),
+                _ => {}
+            }
+        }
         self.current_fn_ret = prev_ret;
         self.pop_scope();
+    }
+
+    fn check_function_block(&mut self, block: &Block) -> (Option<Ty>, bool) {
+        self.push_scope();
+        let last = block.stmts.len().saturating_sub(1);
+        let mut implicit = None;
+        for (index, statement) in block.stmts.iter().enumerate() {
+            if index == last {
+                if let Statement::Expr(expr) = statement {
+                    implicit = Some(self.check_expr(expr));
+                    continue;
+                }
+            }
+            self.check_stmt(statement);
+        }
+        let always_returns = self.block_always_returns_typed(block);
+        self.pop_scope();
+        (implicit, always_returns)
+    }
+
+    fn block_always_returns_typed(&mut self, block: &Block) -> bool {
+        let Some(last) = block.stmts.last() else {
+            return false;
+        };
+        match last {
+            Statement::Return(_) => true,
+            Statement::If(branch) => {
+                self.block_always_returns_typed(&branch.then_block)
+                    && branch
+                        .elifs
+                        .iter()
+                        .all(|(_, block)| self.block_always_returns_typed(block))
+                    && branch
+                        .else_block
+                        .as_ref()
+                        .is_some_and(|block| self.block_always_returns_typed(block))
+            }
+            Statement::Match(branch) => {
+                let ty = self.check_expr(&branch.expr);
+                self.match_is_exhaustive(&ty, &branch.arms)
+                    && branch
+                        .arms
+                        .iter()
+                        .all(|arm| self.block_always_returns_typed(&arm.body))
+            }
+            _ => false,
+        }
     }
 
     pub fn push_scope(&mut self) {
@@ -444,7 +510,9 @@ impl Checker {
                         col: w.cond.span.col,
                     });
                 }
+                self.loop_depth += 1;
                 self.check_block(&w.body);
+                self.loop_depth -= 1;
             }
             Statement::For(f) => {
                 let iter_ty = self.check_expr(&f.iter);
@@ -466,10 +534,12 @@ impl Checker {
                 };
                 self.push_scope();
                 self.define(f.name.clone(), elem_ty, false);
+                self.loop_depth += 1;
                 // Can't use self.check_block directly because it pushes a scope.
                 for stmt in &f.body.stmts {
                     self.check_stmt(stmt);
                 }
+                self.loop_depth -= 1;
                 self.pop_scope();
             }
             Statement::Match(m) => {
@@ -597,8 +667,15 @@ impl Checker {
                     });
                 }
             }
-            Statement::Break(_) | Statement::Continue(_) => {
-                // Flow check is technically runtime or could be static, but E0110 handles it mostly.
+            Statement::Break(span) | Statement::Continue(span) => {
+                if self.loop_depth == 0 {
+                    self.diags.push(Diag {
+                        code: "E0110",
+                        msg: "break/continue outside loop".into(),
+                        line: span.line,
+                        col: span.col,
+                    });
+                }
             }
             Statement::Expr(e) => {
                 self.check_expr(e);
@@ -1032,8 +1109,24 @@ impl Checker {
                     }
                 }
             }
-            ExprKind::Try(inner, _) => {
+            ExprKind::Try(inner, else_exit) => {
                 let inner_ty = self.check_expr(inner);
+                if !else_exit {
+                    let legal = matches!(
+                        (&inner_ty, &self.current_fn_ret),
+                        (Ty::Result(_), Some(Ty::Result(_)))
+                            | (Ty::Optional(_), Some(Ty::Optional(_)))
+                    ) || self.current_fn_ret.is_none(); // frozen script-mode behavior
+                    if !legal && !inner_ty.is_error() {
+                        self.diags.push(Diag {
+                            code: "E0114",
+                            msg: "try propagation requires a compatible result-returning function"
+                                .into(),
+                            line: e.span.line,
+                            col: e.span.col,
+                        });
+                    }
+                }
                 match inner_ty {
                     Ty::Result(ok_ty) => *ok_ty,
                     Ty::Optional(inner_ty) => *inner_ty,
@@ -1191,8 +1284,29 @@ impl Checker {
                     .map(|annotation| self.resolve_type(annotation))
                     .unwrap_or(Ty::Unit);
                 let previous = self.current_fn_ret.replace(return_ty.clone());
-                self.check_block(body);
+                let outer_loop_depth = std::mem::replace(&mut self.loop_depth, 0);
+                let (implicit, always_returns) = self.check_function_block(body);
+                if return_ty != Ty::Unit && !always_returns {
+                    match implicit {
+                        Some(actual) if !types_compatible(&return_ty, &actual) => {
+                            self.diags.push(Diag {
+                                code: "E0040",
+                                msg: "implicit closure return type mismatch".into(),
+                                line: e.span.line,
+                                col: e.span.col,
+                            })
+                        }
+                        None => self.diags.push(Diag {
+                            code: "E0059",
+                            msg: "closure may finish without returning its declared type".into(),
+                            line: e.span.line,
+                            col: e.span.col,
+                        }),
+                        _ => {}
+                    }
+                }
                 self.current_fn_ret = previous;
+                self.loop_depth = outer_loop_depth;
                 self.pop_scope();
                 Ty::Fn(param_tys, Box::new(return_ty))
             }
