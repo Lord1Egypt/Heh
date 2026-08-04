@@ -40,7 +40,7 @@ pub enum Op {
     Field(String, u32, u32),
     Index(u32, u32),
     CallUser(usize, usize, u32, u32), // fn index, argc
-    CallValue(usize, Option<Vec<String>>, u32, u32), // argc, named field names
+    CallValue(usize, Option<Vec<Option<String>>>, u32, u32), // argc, argument names
     Sqrt,
     Try(bool, u32, u32),
     Return,
@@ -610,24 +610,34 @@ impl<'a> Compiler<'a> {
                     }
                 }
             }
-            if let Some(&idx) = self.fn_index.get(name) {
-                for arg in args {
-                    match arg {
-                        CallArg::Positional(a) | CallArg::Named(_, a) => self.compile_expr(a),
+            if args.iter().all(|arg| matches!(arg, CallArg::Positional(_))) {
+                if let Some(&idx) = self.fn_index.get(name) {
+                    for arg in args {
+                        match arg {
+                            CallArg::Positional(a) | CallArg::Named(_, a) => self.compile_expr(a),
+                        }
                     }
+                    self.emit(Op::CallUser(idx, args.len(), line, col));
+                    return;
                 }
-                self.emit(Op::CallUser(idx, args.len(), line, col));
-                return;
             }
         }
         // General path: evaluate callee then args, then dispatch on the value.
         self.compile_expr(callee);
-        let mut named: Option<Vec<String>> = None;
+        let has_named = args.iter().any(|arg| matches!(arg, CallArg::Named(_, _)));
+        let mut named = has_named.then(Vec::new);
         for arg in args {
             match arg {
-                CallArg::Positional(a) => self.compile_expr(a),
+                CallArg::Positional(a) => {
+                    if let Some(names) = &mut named {
+                        names.push(None);
+                    }
+                    self.compile_expr(a)
+                }
                 CallArg::Named(n, a) => {
-                    named.get_or_insert_with(Vec::new).push(n.clone());
+                    if let Some(names) = &mut named {
+                        names.push(Some(n.clone()));
+                    }
                     self.compile_expr(a);
                 }
             }

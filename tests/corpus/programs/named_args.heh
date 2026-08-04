@@ -1,0 +1,5 @@
+fn describe(first: str, second: int) -> str
+    "{first}:{second}"
+
+sys.print(describe(second: 2, first: "one"))
+sys.print(describe("three", second: 4))
