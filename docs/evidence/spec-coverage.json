@@ -1,0 +1,645 @@
+{
+  "claims": [
+    {
+      "claim": "> **Heh** (\u1e25\u1e25) \u2014 the Egyptian god of infinity and eternity, holding a palm rib > notched with millions of years. This language is named for him and designed > like him: **small, frozen, and endless**. > > This spec is the single source of truth. The implementation follows the spec, > never the other way around. **This is v1.0: the surface below is frozen.** > Additions may still be proposed against the \u2264100-page budget (\u00a71.3); nothing > here may change meaning or be removed (\u00a71.2 item 12).",
+      "id": "SPEC-L0003",
+      "line_end": 10,
+      "line_start": 3,
+      "section": "preamble",
+      "status": "unmapped",
+      "tests": []
+    },
+    {
+      "claim": "1. **Easier than Python.** 19 keywords, one obvious way to do things, indentation blocks, no ceremony. A beginner reads real Heh code on day one. 2. **Infinite by nature.** Integers are arbitrary-precision \u2014 **overflow does not exist**. Ranges may be unbounded. Nothing in the language has an artificial numeric cliff. 3. **Secure by default.** Capability-based I/O: pure code physically cannot touch files, network, clock, or environment. No `eval`, no null, no exceptions flying across the program. 4. **Reliable.** Static types with inference (annotations only at function boundaries), errors as values, exhaustive `match`, no undefined behavior. 5. **Immortal.** Spec \u2264 100 pages forever. Zero-dependency single-binary toolchain. No package registry \u2014 imports are vendored and content-addressed. After v1.0, **backward compatibility is religion**: code from year 1 runs in year 30.",
+      "id": "SPEC-L0018",
+      "line_end": 31,
+      "line_start": 18,
+      "section": "1. Design charter",
+      "status": "unmapped",
+      "tests": []
+    },
+    {
+      "claim": "Heh will **never** have:",
+      "id": "SPEC-L0035",
+      "line_end": 35,
+      "line_start": 35,
+      "section": "1. Design charter",
+      "status": "unmapped",
+      "tests": []
+    },
+    {
+      "claim": "1. `null` / nil pointer values (absence is `T?` \u2014 see \u00a76.4) 2. Exceptions / try-catch control flow (errors are values \u2014 \u00a77) 3. Integer overflow or wrapping (integers are unbounded \u2014 \u00a75.1) 4. `eval` or runtime code loading 5. Classes, inheritance, or metaclasses (records + enums + functions \u2014 \u00a78) 6. Macros or compile-time metaprogramming 7. Operator overloading 8. Global mutable state (all sharing is explicit via parameters) 9. A central package registry or package server 10. `async`/`await` function coloring (concurrency, when it comes post-1.0, will be structured and colorless) 11. Implicit type coercion (`1 + \"2\"` is a compile error) 12. Breaking changes after v1.0",
+      "id": "SPEC-L0037",
+      "line_end": 49,
+      "line_start": 37,
+      "section": "1. Design charter",
+      "status": "unmapped",
+      "tests": []
+    },
+    {
+      "claim": "- The spec must stay printable at \u2264 100 pages. Every feature proposal competes for that budget; when the budget is spent, the language is finished. - The reference implementation is **Rust, standard library only, zero crates**, a single static binary `heh`. Anyone with a Rust compiler can rebuild the toolchain from source forever; anyone with this document can reimplement the language from scratch. - The conformance corpus (`tests/corpus/`) is part of the spec: an implementation that passes the corpus **is** Heh.",
+      "id": "SPEC-L0053",
+      "line_end": 60,
+      "line_start": 53,
+      "section": "1. Design charter",
+      "status": "unmapped",
+      "tests": []
+    },
+    {
+      "claim": "- Source files are **UTF-8**, extension `.heh`. - Line endings: `\\n`; `\\r\\n` is accepted and normalized to `\\n` by the lexer. - Comments: `#` to end of line. No block comments. - Identifiers: `[a-zA-Z_][a-zA-Z0-9_]*`. Convention: `snake_case` values and functions, `CapWords` types. A leading `_` marks \"internal by convention\" (the language does not enforce privacy).",
+      "id": "SPEC-L0066",
+      "line_end": 71,
+      "line_start": 66,
+      "section": "2. Source text",
+      "status": "mapped",
+      "tests": [
+        "tests/lexer.rs"
+      ]
+    },
+    {
+      "claim": "Blocks are expressed by **indentation**, exactly **4 spaces** per level. Tab characters in indentation are a **compile error** (diagnostic `E0001`).",
+      "id": "SPEC-L0075",
+      "line_end": 76,
+      "line_start": 75,
+      "section": "3. Blocks and layout",
+      "status": "mapped",
+      "tests": [
+        "tests/lexer.rs"
+      ]
+    },
+    {
+      "claim": "The lexer converts layout to synthetic `INDENT` / `DEDENT` / `NEWLINE` tokens:",
+      "id": "SPEC-L0078",
+      "line_end": 78,
+      "line_start": 78,
+      "section": "3. Blocks and layout",
+      "status": "mapped",
+      "tests": [
+        "tests/lexer.rs"
+      ]
+    },
+    {
+      "claim": "1. Track a stack of indentation widths, starting `[0]`. 2. At each physical line that is not blank and not only a comment, measure the leading spaces `w`. - `w >` top of stack: push `w`, emit `INDENT`. `w` must equal top + 4. - `w <` top of stack: pop and emit `DEDENT` until top == `w` (if no exact match: error `E0002`). - `w ==` top: no token. 3. Emit `NEWLINE` at each logical line end. A line ending inside an unclosed `(`, `[`, or `{` continues onto the next physical line (implicit joining; the continuation's indentation is not measured). 4. At end of file, emit `DEDENT` for every stacked level above 0.",
+      "id": "SPEC-L0080",
+      "line_end": 90,
+      "line_start": 80,
+      "section": "3. Blocks and layout",
+      "status": "mapped",
+      "tests": [
+        "tests/lexer.rs"
+      ]
+    },
+    {
+      "claim": "Blank lines and comment-only lines never produce layout tokens.",
+      "id": "SPEC-L0092",
+      "line_end": 92,
+      "line_start": 92,
+      "section": "3. Blocks and layout",
+      "status": "mapped",
+      "tests": [
+        "tests/lexer.rs"
+      ]
+    },
+    {
+      "claim": "Exactly **19 keywords**, frozen:",
+      "id": "SPEC-L0096",
+      "line_end": 96,
+      "line_start": 96,
+      "section": "4. Keywords",
+      "status": "mapped",
+      "tests": [
+        "tests/lexer.rs"
+      ]
+    },
+    {
+      "claim": "`true`, `false`, `none` are literals. `ok`, `err`, `some` are builtin constructors. None of these six are keywords, but all are reserved names (cannot be shadowed).",
+      "id": "SPEC-L0103",
+      "line_end": 105,
+      "line_start": 103,
+      "section": "4. Keywords",
+      "status": "mapped",
+      "tests": [
+        "tests/lexer.rs"
+      ]
+    },
+    {
+      "claim": "Static types, checked before execution. Annotations are **required on function parameters and return types**, **inferred everywhere else** (locals never need annotations).",
+      "id": "SPEC-L0109",
+      "line_end": 111,
+      "line_start": 109,
+      "section": "5. Values and types",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs"
+      ]
+    },
+    {
+      "claim": "`int` is a **signed arbitrary-precision integer**. There is no overflow, no wrap-around, no `i32/i64` zoo. `2 ** 200` just works.",
+      "id": "SPEC-L0115",
+      "line_end": 116,
+      "line_start": 115,
+      "section": "5. Values and types",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs"
+      ]
+    },
+    {
+      "claim": "Literals: `0`, `42`, `1_000_000`, `0xFF`, `0b1010`, `0o755`. Base prefixes are lowercase; `_` separators must sit between two digits.",
+      "id": "SPEC-L0122",
+      "line_end": 123,
+      "line_start": 122,
+      "section": "5. Values and types",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs"
+      ]
+    },
+    {
+      "claim": "IEEE-754 binary64. A float literal has a decimal point (with digits on both sides), a lowercase-`e` exponent, or both: `1.5`, `2.0`, `1e5`, `6.02e23`, `1.5e-3`. `float` has `inf`, `-inf`, and `nan` values (produced by arithmetic; there are no literals for them \u2014 use `std/math`). `int` and `float` never mix implicitly: converting is explicit via the builtins `int(x)` (truncates towards zero; a fault on nan/inf) and `float(x)` (exact for small ints; rounds for huge ones).",
+      "id": "SPEC-L0127",
+      "line_end": 133,
+      "line_start": 127,
+      "section": "5. Values and types",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs"
+      ]
+    },
+    {
+      "claim": "**Display.** A float always prints with a decimal point, so `3.0` is never mistaken for the int `3`. Plain decimal notation is always used \u2014 never an exponent \u2014 because it is exact and needs no threshold rule. `nan`, `inf`, and `-inf` print as those names.",
+      "id": "SPEC-L0135",
+      "line_end": 138,
+      "line_start": 135,
+      "section": "5. Values and types",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs"
+      ]
+    },
+    {
+      "claim": "- `bool`: `true` / `false`. Conditions must be `bool` \u2014 no truthiness (`if list` is a compile error; write `if list.len() > 0`). - `str`: immutable UTF-8 string. Literals use double quotes with escapes `\\n \\t \\\\ \\\" \\{ \\u{1F40D}`. **Interpolation** is built in: `\"sum is {a + b}\"` evaluates the expression and formats it. `{` in a literal is escaped `\\{`.",
+      "id": "SPEC-L0142",
+      "line_end": 146,
+      "line_start": 142,
+      "section": "5. Values and types",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs"
+      ]
+    },
+    {
+      "claim": "- `list[T]` \u2014 dynamic array literal `[1, 2, 3]`. - `map[K, V]` \u2014 ordered hash map, literal `{\"a\": 1, \"b\": 2}`. Key types: `int`, `str`, `bool`. **Insertion order is preserved** (like Python dicts) and is the order used by iteration, `keys()`, `values()`, printing, and `json.write` \u2014 so a program's output does not depend on hash seeding. Re-assigning an existing key keeps its original position. Map equality ignores order. - Collections are reference values (aliasing is visible, like Python). `let` vs `mut` controls **rebinding** of the name, not deep mutation; `str` is always immutable.",
+      "id": "SPEC-L0150",
+      "line_end": 158,
+      "line_start": 150,
+      "section": "5. Values and types",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs"
+      ]
+    },
+    {
+      "claim": "`a..b` is a lazy range value (`a` inclusive, `b` exclusive). `a..=b` includes `b`. **`a..` is an unbounded range** \u2014 it yields values forever:",
+      "id": "SPEC-L0162",
+      "line_end": 163,
+      "line_start": 162,
+      "section": "5. Values and types",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs"
+      ]
+    },
+    {
+      "claim": "Ranges are lazy: an infinite range costs nothing until iterated. Materialize a finite range with `list(0..10)`.",
+      "id": "SPEC-L0171",
+      "line_end": 172,
+      "line_start": 171,
+      "section": "5. Values and types",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs"
+      ]
+    },
+    {
+      "claim": "- `T?` is an optional: either a value of `T` or `none`. Constructed with `some(v)` or `none`. See \u00a76.4 for narrowing. - `T or error` is a result type: `ok(v)` or `err(\"message\")`. See \u00a77.",
+      "id": "SPEC-L0176",
+      "line_end": 178,
+      "line_start": 176,
+      "section": "5. Values and types",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs"
+      ]
+    },
+    {
+      "claim": "`fn(int) -> int` is a type. Functions close over their environment (closures).",
+      "id": "SPEC-L0182",
+      "line_end": 182,
+      "line_start": 182,
+      "section": "5. Values and types",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs"
+      ]
+    },
+    {
+      "claim": "| Level | Operators | |---|---| | 1 | `x.field` `x.method(...)` `f(...)` `x[i]` | | 2 | unary `-` `not` | | 3 | `**` (power, right-assoc) | | 4 | `*` `/` `%` `//` (floor div) | | 5 | `+` `-` | | 6 | `..` `..=` | | 7 | `==` `!=` `<` `<=` `>` `>=` | | 8 | `and` (short-circuit) | | 9 | `or` (short-circuit) |",
+      "id": "SPEC-L0188",
+      "line_end": 198,
+      "line_start": 188,
+      "section": "6. Expressions and statements",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs/arith.heh",
+        "tests/check.rs"
+      ]
+    },
+    {
+      "claim": "`/` on two ints yields `float` (like Python 3); `//` is integer floor division (the quotient rounds towards negative infinity, so `-7 // 2 == -4`); `%` takes the sign of the divisor, so `-7 % 3 == 2` and `7 % -3 == -2`. Division and modulo by zero are a runtime **fault** (\u00a77.3). `**` on two ints is exact and unbounded; a negative exponent is a fault, since `int` stays closed under `**` (use floats for fractional powers).",
+      "id": "SPEC-L0200",
+      "line_end": 205,
+      "line_start": 200,
+      "section": "6. Expressions and statements",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs/arith.heh",
+        "tests/check.rs"
+      ]
+    },
+    {
+      "claim": "> **Unary `-` binds tighter than `**`** (levels 2 and 3 above), so `-2 ** 4` is > `(-2) ** 4` = `16`. This is deliberate \u2014 one rule, no exception carved out for > one operator \u2014 but it is the opposite of Python and of ordinary mathematical > notation, where `-2**4` is `-16`. `heh fmt` keeps the parentheses in > `(-2) ** 4` for exactly this reason.",
+      "id": "SPEC-L0207",
+      "line_end": 211,
+      "line_start": 207,
+      "section": "6. Expressions and statements",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs/arith.heh",
+        "tests/check.rs"
+      ]
+    },
+    {
+      "claim": "Assignment to a `let` name is a compile error `E0010`.",
+      "id": "SPEC-L0222",
+      "line_end": 222,
+      "line_start": 222,
+      "section": "6. Expressions and statements",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs/arith.heh",
+        "tests/check.rs"
+      ]
+    },
+    {
+      "claim": "`break` / `continue` as usual. `if/elif/else`, `match`, and blocks are statements; the **last expression of a function body is its return value** (\u00a76.5).",
+      "id": "SPEC-L0241",
+      "line_end": 243,
+      "line_start": 241,
+      "section": "6. Expressions and statements",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs/arith.heh",
+        "tests/check.rs"
+      ]
+    },
+    {
+      "claim": "No null. `T?` must be narrowed before use:",
+      "id": "SPEC-L0247",
+      "line_end": 247,
+      "line_start": 247,
+      "section": "6. Expressions and statements",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs/arith.heh",
+        "tests/check.rs"
+      ]
+    },
+    {
+      "claim": "Narrowing rules (complete list): inside the true-branch of `if x != none`, and after `if x == none` + `return`/`break`/`continue`, the binding `x` has type `T`. `match` also narrows (\u00a78.2).",
+      "id": "SPEC-L0263",
+      "line_end": 265,
+      "line_start": 263,
+      "section": "6. Expressions and statements",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs/arith.heh",
+        "tests/check.rs"
+      ]
+    },
+    {
+      "claim": "`return expr` exits early; `return` alone returns the unit value (a function with no `->` clause returns unit). Unit is not a value you can bind usefully; it prints as `none`.",
+      "id": "SPEC-L0280",
+      "line_end": 282,
+      "line_start": 280,
+      "section": "6. Expressions and statements",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs/arith.heh",
+        "tests/check.rs"
+      ]
+    },
+    {
+      "claim": "A closure's body is an indented block, so a closure is written as a statement's own value \u2014 `let double = fn(x: int) -> int` and then its body \u2014 and passed on by name: `[1, 2, 3].map(double)`. Layout is suppressed inside `(` `[` `{` (\u00a73), so a block-bodied closure cannot be written inline inside a call's parentheses; bind it first.",
+      "id": "SPEC-L0284",
+      "line_end": 288,
+      "line_start": 284,
+      "section": "6. Expressions and statements",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs/arith.heh",
+        "tests/check.rs"
+      ]
+    },
+    {
+      "claim": "**UFCS (uniform function call syntax):** `x.f(y)` is exactly `f(x, y)` when `x`'s type has no builtin method `f`. This gives method-style chaining without classes:",
+      "id": "SPEC-L0290",
+      "line_end": 292,
+      "line_start": 290,
+      "section": "6. Expressions and statements",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs/arith.heh",
+        "tests/check.rs"
+      ]
+    },
+    {
+      "claim": "`error` is a builtin record: `error(msg: str)`. A function that can fail returns `T or error`:",
+      "id": "SPEC-L0305",
+      "line_end": 306,
+      "line_start": 305,
+      "section": "7. Errors \u2014 values, not explosions",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs/errors.heh",
+        "tests/corpus/errors"
+      ]
+    },
+    {
+      "claim": "`try expr` where `expr: T or error`: if `ok(v)`, the value is `v`; if `err(e)`, the enclosing function returns `err(e)` immediately. `try` is only legal inside a function whose return type is `_ or error`. Handling instead of propagating uses `match`:",
+      "id": "SPEC-L0318",
+      "line_end": 321,
+      "line_start": 318,
+      "section": "7. Errors \u2014 values, not explosions",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs/errors.heh",
+        "tests/corpus/errors"
+      ]
+    },
+    {
+      "claim": "A **fault** stops the program with a diagnostic (file, line, message): index out of bounds, division by zero, explicit `std/debug.fault(msg)`, or a bug in the interpreter. Faults are for **bugs**, not for expected failures \u2014 there is deliberately no way to catch one. APIs that can fail in normal operation return `T or error` or `T?`. The non-faulting lookups are `list.get(i) -> T?` and `map.get(k) -> V?`: a missing index or key is `none`, never a fault.",
+      "id": "SPEC-L0333",
+      "line_end": 338,
+      "line_start": 333,
+      "section": "7. Errors \u2014 values, not explosions",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs/errors.heh",
+        "tests/corpus/errors"
+      ]
+    },
+    {
+      "claim": "Records are reference values with public fields. No methods \u2014 use UFCS:",
+      "id": "SPEC-L0353",
+      "line_end": 353,
+      "line_start": 353,
+      "section": "8. Records, enums, `match`",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs/records.heh",
+        "tests/corpus/programs/enums.heh"
+      ]
+    },
+    {
+      "claim": "`match` must be **exhaustive** (compile error `E0020` if a variant is unhandled); `_` is the wildcard arm. `match` also works on `int`, `str`, `bool`, `T?` (`some(x)` / `none`), and `T or error` (`ok(x)` / `err(e)`) values with literal and binding patterns.",
+      "id": "SPEC-L0377",
+      "line_end": 380,
+      "line_start": 377,
+      "section": "8. Records, enums, `match`",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs/records.heh",
+        "tests/corpus/programs/enums.heh"
+      ]
+    },
+    {
+      "claim": "- `use std/x` loads a stdlib module; `use \"./f.heh\"` loads a sibling file. Both bind a namespace: `json.parse(...)`, `geometry.dist(...)`. - Third-party code lives **inside your repo** under `vendor/`, fetched once by `heh get <git-url-or-https-url>`, which records the source URL and the **SHA-256 of every file** in `heh.lock`. On every run, vendored files are verified against the lock \u2014 a mismatch is a fault. No registry, no resolver, no dependency graph: vendor what you use, commit it, own it forever. - Everything a module defines is importable; `_underscore` names are internal by convention only. - Import cycles are a compile error `E0030`.",
+      "id": "SPEC-L0390",
+      "line_end": 399,
+      "line_start": 390,
+      "section": "9. Modules and imports \u2014 no package servers, ever",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs/imports.heh",
+        "tests/vendor.rs"
+      ]
+    },
+    {
+      "claim": "Heh has **no ambient authority**. All effects flow from a single `Sys` value handed to the entry point; a function that never receives a capability cannot perform I/O, read the clock, or observe randomness. Security review = grep for who receives `sys`.",
+      "id": "SPEC-L0403",
+      "line_end": 406,
+      "line_start": 403,
+      "section": "10. Capabilities \u2014 pure by default",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs/sys_fs.heh",
+        "tests/corpus/programs/sys_deny.heh"
+      ]
+    },
+    {
+      "claim": "`Sys` and its sub-capabilities (each independently passable):",
+      "id": "SPEC-L0414",
+      "line_end": 414,
+      "line_start": 414,
+      "section": "10. Capabilities \u2014 pure by default",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs/sys_fs.heh",
+        "tests/corpus/programs/sys_deny.heh"
+      ]
+    },
+    {
+      "claim": "| Capability | Powers | |---|---| | `sys.print(x)` / `sys.input() -> str or error` | stdio | | `sys.args -> list[str]` | CLI arguments | | `sys.fs` | `read(path) -> str or error`, `read_bytes`, `write`, `append`, `exists`, `list_dir`, `remove` | | `sys.net` | `get(url) -> str or error` (HTTP/HTTPS) | | `sys.env` | `get(name) -> str?`, `set(name, value)` | | `sys.clock` | `now() -> int` (unix millis), `sleep(ms)` | | `sys.rand` | `int(a, b) -> int or error`, `float() -> float`, `bytes(n)` \u2014 OS entropy |",
+      "id": "SPEC-L0416",
+      "line_end": 424,
+      "line_start": 416,
+      "section": "10. Capabilities \u2014 pure by default",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs/sys_fs.heh",
+        "tests/corpus/programs/sys_deny.heh"
+      ]
+    },
+    {
+      "claim": "*(v1.0 has no raw-socket capability. A socket is a handle with a lifetime \u2014 open, read, write, close \u2014 and Heh has no resource-lifecycle construct to hang that on; inventing one at the freeze would be a permanent commitment made in a hurry. `sys.net.get` covers request/response work. Sockets remain a candidate addition against the \u00a71.3 page budget.)*",
+      "id": "SPEC-L0426",
+      "line_end": 430,
+      "line_start": 426,
+      "section": "10. Capabilities \u2014 pure by default",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs/sys_fs.heh",
+        "tests/corpus/programs/sys_deny.heh"
+      ]
+    },
+    {
+      "claim": "The CLI can shrink the root capability: `heh run app.heh --deny-net --deny-fs` makes the corresponding sub-capability's operations return `err(\"capability denied: net\")`. Deny-flags fail closed.",
+      "id": "SPEC-L0432",
+      "line_end": 434,
+      "line_start": 432,
+      "section": "10. Capabilities \u2014 pure by default",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs/sys_fs.heh",
+        "tests/corpus/programs/sys_deny.heh"
+      ]
+    },
+    {
+      "claim": "*(`try expr else exit` is sugar: on `err(e)`, print the error diagnostic to stderr and exit with code 1 \u2014 for scripts and `main`.)*",
+      "id": "SPEC-L0436",
+      "line_end": 437,
+      "line_start": 436,
+      "section": "10. Capabilities \u2014 pure by default",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs/sys_fs.heh",
+        "tests/corpus/programs/sys_deny.heh"
+      ]
+    },
+    {
+      "claim": "If a file contains no `fn main`, its top-level statements execute in order with `sys` bound implicitly \u2014 so hello world is one line:",
+      "id": "SPEC-L0441",
+      "line_end": 442,
+      "line_start": 441,
+      "section": "11. Script mode",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs/script.heh"
+      ]
+    },
+    {
+      "claim": "Script mode is sugar for wrapping the file in `fn main(sys: Sys)`. Files with `fn main` must not have other top-level statements (only `use`, `type`, `fn`, and top-level `let` of constants).",
+      "id": "SPEC-L0448",
+      "line_end": 450,
+      "line_start": 448,
+      "section": "11. Script mode",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs/script.heh"
+      ]
+    },
+    {
+      "claim": "Batteries included, small forever. Builtin methods on core types (`str.upper/lower/split/trim/replace/contains/starts_with/len/chars/...`, `list.push/pop/get/len/sort/map/filter/join/...`, `map.get/set/remove/keys/values/len/...`) plus exactly eight modules:",
+      "id": "SPEC-L0454",
+      "line_end": 457,
+      "line_start": 454,
+      "section": "12. Standard library v1 (frozen surface)",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs/mod_*.heh",
+        "tests/corpus/programs/stdlib_methods.heh"
+      ]
+    },
+    {
+      "claim": "`std/math` \u00b7 `std/json` \u00b7 `std/fmt` \u00b7 `std/time` \u00b7 `std/regex` (RE2-style, no backtracking) \u00b7 `std/csv` \u00b7 `std/hash` (SHA-256, CRC32) \u00b7 `std/debug` (`fault`, `assert`)",
+      "id": "SPEC-L0459",
+      "line_end": 461,
+      "line_start": 459,
+      "section": "12. Standard library v1 (frozen surface)",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs/mod_*.heh",
+        "tests/corpus/programs/stdlib_methods.heh"
+      ]
+    },
+    {
+      "claim": "Every one of these is **pure** \u2014 anything effectful lives on `Sys`. `std/time` is calendar arithmetic over the same unix-millisecond int `sys.clock.now()` returns; it never reads the clock itself, so the instant is always an argument. Builtin methods are called with parentheses, including `len`: `x.len()`. The full frozen signatures are in `docs/STDLIB.md`.",
+      "id": "SPEC-L0463",
+      "line_end": 467,
+      "line_start": 463,
+      "section": "12. Standard library v1 (frozen surface)",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/programs/mod_*.heh",
+        "tests/corpus/programs/stdlib_methods.heh"
+      ]
+    },
+    {
+      "claim": "| Command | Does | |---|---| | `heh run file.heh [args] [--deny-*]` | run a program (`--vm` selects the bytecode VM) | | `heh check file.heh` | parse + type-check only | | `heh fmt [--check] <path>` | canonical formatter, no options, idempotent; a directory formats the whole tree | | `heh test [path]` | runs every `fn test_*()` in `*_test.heh` files | | `heh tokens/ast file.heh` | dump lexer/parser output (dev + conformance) | | `heh get <url>` | vendor a module + record hashes in `heh.lock` |",
+      "id": "SPEC-L0471",
+      "line_end": 478,
+      "line_start": 471,
+      "section": "13. Tooling (one binary)",
+      "status": "mapped",
+      "tests": [
+        "tests/cli.rs",
+        "tests/fmt.rs",
+        "tests/tooling.rs",
+        "tests/vendor.rs"
+      ]
+    },
+    {
+      "claim": "`heh test`: test functions take no params and no `Sys` (tests are pure); `std/debug.assert(cond, msg)` failures mark the test failed. Deterministic order, summary line, exit 1 on any failure.",
+      "id": "SPEC-L0480",
+      "line_end": 482,
+      "line_start": 480,
+      "section": "13. Tooling (one binary)",
+      "status": "mapped",
+      "tests": [
+        "tests/cli.rs",
+        "tests/fmt.rs",
+        "tests/tooling.rs",
+        "tests/vendor.rs"
+      ]
+    },
+    {
+      "claim": "`heh fmt` is comment-preserving: a comment is never deleted. One sharing a line with code stays on that line; otherwise it keeps its own line.",
+      "id": "SPEC-L0484",
+      "line_end": 485,
+      "line_start": 484,
+      "section": "13. Tooling (one binary)",
+      "status": "mapped",
+      "tests": [
+        "tests/cli.rs",
+        "tests/fmt.rs",
+        "tests/tooling.rs",
+        "tests/vendor.rs"
+      ]
+    },
+    {
+      "claim": "Layout tokens INDENT/DEDENT/NEWLINE per \u00a73. Lowercase = lexer tokens.",
+      "id": "SPEC-L0489",
+      "line_end": 489,
+      "line_start": 489,
+      "section": "14. Grammar (EBNF, v0.1)",
+      "status": "unmapped",
+      "tests": []
+    },
+    {
+      "claim": "Every compile/runtime diagnostic shows: stable code (`E0001`\u2026), file, line:column, the offending source line with a caret, and a one-line suggestion when known. Diagnostic **codes and meanings are append-only** (immortality applies to error codes too); exact wording may improve.",
+      "id": "SPEC-L0553",
+      "line_end": 556,
+      "line_start": 553,
+      "section": "15. Diagnostics",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus/errors"
+      ]
+    },
+    {
+      "claim": "`tests/corpus/` holds `programs/*.heh` with expected stdout in `*.out`, and `errors/*.heh` with expected diagnostic codes in `*.err`. **The corpus as of this document is the v1.0 conformance corpus.** It grows and never shrinks; an implementation that passes it is Heh. **Passing the corpus is the definition of being a Heh implementation.** `examples/` mirrors the flagship programs.",
+      "id": "SPEC-L0560",
+      "line_end": 564,
+      "line_start": 560,
+      "section": "16. Conformance",
+      "status": "mapped",
+      "tests": [
+        "tests/corpus.rs",
+        "tests/vm.rs"
+      ]
+    }
+  ],
+  "schema_version": 1,
+  "source": "SPEC.md"
+}
