@@ -222,3 +222,21 @@ fn checks_try_and_loop_control_in_their_lexical_context() {
     let closure_escape = "for x in [1]\n    let bad = fn()\n        break\n";
     assert!(diagnostic_codes(closure_escape).contains(&"E0110"));
 }
+
+#[test]
+fn confines_dynamic_values_to_documented_io_boundaries() {
+    let json = "use std/json\nlet value = try json.parse(\"null\")\nlet count = value.count + 1\nlet encoded = json.write(count)\nsys.print(value, encoded)\n";
+    assert!(diagnostic_codes(json).is_empty());
+
+    let record = "type Point\n    x: int\nlet p = Point(x: 1)\nlet y = p.y\n";
+    assert!(diagnostic_codes(record).contains(&"E0053"));
+    assert!(diagnostic_codes("let y = (1).missing\n").contains(&"E0053"));
+}
+
+#[test]
+fn infers_contextual_literals_without_treating_them_as_dynamic() {
+    let source = "fn take_list(xs: list[int])\n    return\nfn take_map(lookup: map[str, int])\n    return\nfn take_optional(maybe: int?)\n    return\ntake_list([])\ntake_map({})\ntake_optional(none)\nfn fail() -> int or error\n    err(\"no\")\n";
+    assert!(diagnostic_codes(source).is_empty());
+
+    assert!(diagnostic_codes("if none\n    sys.print(1)\n").contains(&"E0041"));
+}
