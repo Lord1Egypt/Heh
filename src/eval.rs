@@ -496,13 +496,30 @@ impl Evaluator {
         sub.loading.push(canonical.clone());
         sub.install_defs(&module_file)?;
 
-        // Harvest exported functions into a namespace record.
+        // Module constants are evaluated once in the isolated module scope.
+        // They remain pure because imported modules receive no `sys` binding.
+        for item in &module_file.items {
+            if let TopItem::Let(binding) = item {
+                sub.eval_let(binding, sub.global.clone())?;
+            }
+        }
+
+        // Everything currently representable as a runtime namespace value is
+        // exported: functions and top-level constants.
         let mut exports = HashMap::new();
         for item in &module_file.items {
-            if let TopItem::Fn(f) = item {
-                if let Some(v) = sub.global.borrow().get(&f.name) {
-                    exports.insert(f.name.clone(), v);
+            match item {
+                TopItem::Fn(function) => {
+                    if let Some(value) = sub.global.borrow().get(&function.name) {
+                        exports.insert(function.name.clone(), value);
+                    }
                 }
+                TopItem::Let(binding) => {
+                    if let Some(value) = sub.global.borrow().get(&binding.name) {
+                        exports.insert(binding.name.clone(), value);
+                    }
+                }
+                TopItem::Type(_) | TopItem::Stmt(_) => {}
             }
         }
         let name = module_bind_name(path);

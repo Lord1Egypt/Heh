@@ -1,0 +1,5 @@
+let answer = 42
+let greeting = "Heh"
+
+fn doubled() -> int
+    answer * 2
