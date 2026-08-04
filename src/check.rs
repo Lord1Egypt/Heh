@@ -21,9 +21,16 @@ pub enum Ty {
     RecordCtor(String, Vec<(String, Ty)>),
     EnumCtor(String, Vec<Ty>),
     Record(String),
+    RecordValue(String, Vec<(String, Ty)>),
     Enum(String),
     Unit,
-    Any,   // Fallback for unresolved types
+    // Runtime-dynamic values are confined to explicitly untyped boundaries:
+    // JSON values and APIs that intentionally accept every runtime value.
+    Any,
+    // A locally polymorphic placeholder for literals/builtins whose type is
+    // determined by context (`none`, `err`, and empty collections). Unlike
+    // `Any`, this never represents a runtime-dynamic API boundary.
+    Infer,
     Error, // To prevent cascading errors
 }
 
@@ -427,12 +434,7 @@ impl Checker {
                     }
                 }
 
-                if !lhs_ty.is_error()
-                    && !rhs_ty.is_error()
-                    && lhs_ty != Ty::Any
-                    && rhs_ty != Ty::Any
-                    && lhs_ty != rhs_ty
-                {
+                if !lhs_ty.is_error() && !rhs_ty.is_error() && !types_compatible(&lhs_ty, &rhs_ty) {
                     self.diags.push(Diag {
                         code: "E0040",
                         msg: "type mismatch in assignment".into(),
@@ -521,7 +523,8 @@ impl Checker {
                     // Iterating a map yields its keys (SPEC §6.3).
                     Ty::Map(key, _) => *key,
                     Ty::Str => Ty::Str,
-                    Ty::Any | Ty::Error => Ty::Any,
+                    Ty::Any => Ty::Any,
+                    Ty::Error => Ty::Error,
                     _ => {
                         self.diags.push(Diag {
                             code: "E0042",
@@ -557,8 +560,8 @@ impl Checker {
                     // Bind pattern variables based on expr_ty
                     match &arm.pattern {
                         Pattern::Variant(_, _name, binds) if expr_ty == Ty::Any => {
-                            // Scrutinee type is unknown (e.g. a module fn returning
-                            // Any); bind every pattern variable permissively.
+                            // A JSON scrutinee has no static shape; its pattern
+                            // payloads are validated by the evaluator.
                             for b_name in binds {
                                 self.define(b_name.clone(), Ty::Any, false);
                             }
@@ -619,7 +622,14 @@ impl Checker {
                                 } else if name == "err" {
                                     if let Ty::Result(_) = &expr_ty {
                                         if binds.len() == 1 {
-                                            self.define(binds[0].clone(), Ty::Str, false);
+                                            self.define(
+                                                binds[0].clone(),
+                                                Ty::RecordValue(
+                                                    "error".into(),
+                                                    vec![("msg".into(), Ty::Str)],
+                                                ),
+                                                false,
+                                            );
                                         }
                                     }
                                 } else if name == "some" {
@@ -731,8 +741,20 @@ impl Checker {
                                 Ty::Error
                             }
                         }
-                        // Any = not statically known (e.g. through a closure);
-                        // the evaluator checks these at runtime.
+                        Ty::RecordValue(name, fields) => fields
+                            .iter()
+                            .find(|(field, _)| field == f)
+                            .map(|(_, ty)| ty.clone())
+                            .unwrap_or_else(|| {
+                                self.diags.push(Diag {
+                                    code: "E0053",
+                                    msg: format!("unknown field '{}' on record '{}'", f, name),
+                                    line: lval.span.line,
+                                    col: lval.span.col,
+                                });
+                                Ty::Error
+                            }),
+                        // A JSON-derived record shape is checked at runtime.
                         Ty::Any | Ty::Error => curr_ty,
                         _ => {
                             self.diags.push(Diag {
@@ -794,7 +816,7 @@ impl Checker {
                 Literal::Float(_) => Ty::Float,
                 Literal::Bool(_) => Ty::Bool,
                 Literal::Str(_) => Ty::Str,
-                Literal::None => Ty::Any, // will be coerced or narrowed
+                Literal::None => Ty::Infer,
             },
             ExprKind::Ident(name) => {
                 if let Some((ty, _)) = self.lookup(name) {
@@ -808,7 +830,7 @@ impl Checker {
                             p.typ
                                 .as_ref()
                                 .map(|t| self.resolve_type(t))
-                                .unwrap_or(Ty::Any)
+                                .unwrap_or(Ty::Error)
                         })
                         .collect();
                     let r_ty = f
@@ -950,12 +972,12 @@ impl Checker {
             }
             ExprKind::List(elems) => {
                 if elems.is_empty() {
-                    Ty::List(Box::new(Ty::Any))
+                    Ty::List(Box::new(Ty::Infer))
                 } else {
-                    let mut elem_ty = Ty::Any;
+                    let mut elem_ty = Ty::Infer;
                     for elem in elems {
                         let t = self.check_expr(elem);
-                        if elem_ty == Ty::Any {
+                        if elem_ty == Ty::Infer {
                             elem_ty = t;
                         } else if !t.is_error() && t != elem_ty {
                             self.diags.push(Diag {
@@ -973,14 +995,14 @@ impl Checker {
             }
             ExprKind::Map(entries) => {
                 if entries.is_empty() {
-                    Ty::Map(Box::new(Ty::Any), Box::new(Ty::Any))
+                    Ty::Map(Box::new(Ty::Infer), Box::new(Ty::Infer))
                 } else {
-                    let mut k_ty = Ty::Any;
-                    let mut v_ty = Ty::Any;
+                    let mut k_ty = Ty::Infer;
+                    let mut v_ty = Ty::Infer;
                     for (k, v) in entries {
                         let t_k = self.check_expr(k);
                         let t_v = self.check_expr(v);
-                        if k_ty == Ty::Any {
+                        if k_ty == Ty::Infer {
                             k_ty = t_k;
                         } else if !t_k.is_error() && t_k != k_ty {
                             self.diags.push(Diag {
@@ -991,7 +1013,7 @@ impl Checker {
                             });
                             k_ty = Ty::Error;
                         }
-                        if v_ty == Ty::Any {
+                        if v_ty == Ty::Infer {
                             v_ty = t_v;
                         } else if !t_v.is_error() && t_v != v_ty {
                             self.diags.push(Diag {
@@ -1049,14 +1071,40 @@ impl Checker {
                         if let Some(t) = field_typ {
                             self.resolve_type(&t)
                         } else {
-                            // Might be UFCS method call
-                            Ty::Any
+                            self.diags.push(Diag {
+                                code: "E0053",
+                                msg: format!("unknown field '{}' on '{}'", field_name, name),
+                                line: e.span.line,
+                                col: e.span.col,
+                            });
+                            Ty::Error
                         }
                     }
-                    Ty::Any | Ty::Error => Ty::Any,
+                    Ty::RecordValue(name, fields) => fields
+                        .iter()
+                        .find(|(field, _)| field == field_name)
+                        .map(|(_, ty)| ty.clone())
+                        .unwrap_or_else(|| {
+                            self.diags.push(Diag {
+                                code: "E0053",
+                                msg: format!("unknown field '{}' on '{}'", field_name, name),
+                                line: e.span.line,
+                                col: e.span.col,
+                            });
+                            Ty::Error
+                        }),
+                    // JSON is the sole value-producing dynamic boundary. Its
+                    // shape is checked by the evaluator when a field is read.
+                    Ty::Any => Ty::Any,
+                    Ty::Error => Ty::Error,
                     _ => {
-                        // Might be UFCS method call (e.g. float.sqrt)
-                        Ty::Any
+                        self.diags.push(Diag {
+                            code: "E0053",
+                            msg: format!("unknown field '{}'", field_name),
+                            line: e.span.line,
+                            col: e.span.col,
+                        });
+                        Ty::Error
                     }
                 }
             }
@@ -1097,7 +1145,8 @@ impl Checker {
                         }
                         Ty::Str
                     }
-                    Ty::Any | Ty::Error => Ty::Any,
+                    Ty::Any => Ty::Any,
+                    Ty::Error => Ty::Error,
                     _ => {
                         self.diags.push(Diag {
                             code: "E0057",
@@ -1130,7 +1179,8 @@ impl Checker {
                 match inner_ty {
                     Ty::Result(ok_ty) => *ok_ty,
                     Ty::Optional(inner_ty) => *inner_ty,
-                    Ty::Any | Ty::Error => Ty::Any,
+                    Ty::Any => Ty::Any,
+                    Ty::Error => Ty::Error,
                     _ => {
                         self.diags.push(Diag {
                             code: "E0021",
@@ -1243,7 +1293,8 @@ impl Checker {
                     }
                     Ty::Enum(e) => Ty::Enum(e.clone()),
                     Ty::Record(r) => Ty::Record(r.clone()),
-                    Ty::Any | Ty::Error => Ty::Any,
+                    Ty::Any => Ty::Any,
+                    Ty::Error => Ty::Error,
                     _ => {
                         self.diags.push(Diag {
                             code: "E0058",
@@ -1255,12 +1306,13 @@ impl Checker {
                     }
                 }
             }
-            ExprKind::Record(name, fields) => {
-                for (_, e_in) in fields {
-                    self.check_expr(e_in);
-                }
-                Ty::Record(name.clone())
-            }
+            ExprKind::Record(name, fields) => Ty::RecordValue(
+                name.clone(),
+                fields
+                    .iter()
+                    .map(|(field, value)| (field.clone(), self.check_expr(value)))
+                    .collect(),
+            ),
             ExprKind::Closure(params, ret, body) => {
                 let mut param_tys = Vec::with_capacity(params.len());
                 self.push_scope();
@@ -1448,7 +1500,7 @@ impl Checker {
                 });
             }
         }
-        Ty::Record(name.into())
+        Ty::RecordValue(name.into(), fields.to_vec())
     }
 
     fn check_enum_constructor(
@@ -1726,7 +1778,7 @@ impl Checker {
             "ok" if arity(self, 1) => Ty::Result(Box::new(args[0].clone())),
             "err" if arity(self, 1) => {
                 self.require_builtin_arg(name, &Ty::Str, &args[0], expr);
-                Ty::Result(Box::new(Ty::Any))
+                Ty::Result(Box::new(Ty::Infer))
             }
             "str" if arity(self, 1) => Ty::Str,
             "int" if arity(self, 1) => {
@@ -1749,7 +1801,8 @@ impl Checker {
                 Ty::List(inner) => Ty::List(inner.clone()),
                 Ty::Str => Ty::List(Box::new(Ty::Str)),
                 Ty::Map(key, _) => Ty::List(key.clone()),
-                Ty::Any | Ty::Error => Ty::List(Box::new(Ty::Any)),
+                Ty::Any => Ty::List(Box::new(Ty::Any)),
+                Ty::Error => Ty::Error,
                 _ => {
                     self.builtin_type_error(name, expr);
                     Ty::Error
@@ -1828,9 +1881,8 @@ impl Checker {
             Ty::Optional(_) => has_variant("some") && has_literal(&Literal::None),
             Ty::Result(_) => has_variant("ok") && has_variant("err"),
             Ty::Bool => has_literal(&Literal::Bool(true)) && has_literal(&Literal::Bool(false)),
-            // An unknown type is deliberately not rejected: imported and
-            // capability-returned values currently enter the checker as Any.
-            Ty::Any | Ty::Error => true,
+            // Runtime-dynamic JSON cannot be proven exhaustive statically.
+            Ty::Any | Ty::Infer | Ty::Error => true,
             // Infinite scalar domains require a wildcard arm.
             _ => false,
         }
@@ -1851,6 +1903,8 @@ fn namespace_member(namespace: &str, field: &str) -> Option<Ty> {
     let optional = |inner: Ty| Ty::Optional(Box::new(inner));
     let list = |inner: Ty| Ty::List(Box::new(inner));
     let member = match (namespace, field) {
+        // Printing and JSON serialization intentionally accept every runtime
+        // value; argument inspection is performed by their runtime encoders.
         ("sys", "print") => Ty::VariadicFn(Box::new(Ty::Any), Box::new(Ty::Unit)),
         ("sys", "input") => function(vec![], result(Ty::Str)),
         ("sys", "args") => list(Ty::Str),
@@ -1880,6 +1934,8 @@ fn namespace_member(namespace: &str, field: &str) -> Option<Ty> {
         ("std.fmt", "repeat") => function(vec![Ty::Str, Ty::Int], Ty::Str),
         ("std.fmt", "hex") => function(vec![Ty::Int], Ty::Str),
         ("std.fmt", "fixed") => function(vec![Ty::Float, Ty::Int], Ty::Str),
+        // Parsed JSON has no frozen static shape/type syntax, so this is the
+        // checker’s only value-producing dynamic boundary.
         ("std.json", "parse") => function(vec![Ty::Str], result(Ty::Any)),
         ("std.json", "write") => function(vec![Ty::Any], Ty::Str),
         ("std.csv", "parse") => function(vec![Ty::Str], list(list(Ty::Str))),
@@ -1919,8 +1975,8 @@ fn builtin_method(receiver: &Ty, field: &str) -> Option<Ty> {
         (Ty::List(inner), "get") => Some(function(vec![Ty::Int], Ty::Optional(inner.clone()))),
         (Ty::List(_), "sort") => Some(function(vec![], Ty::Unit)),
         (Ty::List(inner), "map") => Some(function(
-            vec![Ty::Fn(vec![*inner.clone()], Box::new(Ty::Any))],
-            Ty::List(Box::new(Ty::Any)),
+            vec![Ty::Fn(vec![*inner.clone()], Box::new(Ty::Infer))],
+            Ty::List(Box::new(Ty::Infer)),
         )),
         (Ty::List(inner), "filter") => Some(function(
             vec![Ty::Fn(vec![*inner.clone()], Box::new(Ty::Bool))],
@@ -1942,8 +1998,8 @@ fn builtin_method(receiver: &Ty, field: &str) -> Option<Ty> {
 
 fn types_compatible(expected: &Ty, actual: &Ty) -> bool {
     if expected == actual
-        || matches!(expected, Ty::Any | Ty::Error)
-        || matches!(actual, Ty::Any | Ty::Error)
+        || matches!(expected, Ty::Any | Ty::Infer | Ty::Error)
+        || matches!(actual, Ty::Any | Ty::Infer | Ty::Error)
     {
         return true;
     }
@@ -1970,6 +2026,9 @@ fn types_compatible(expected: &Ty, actual: &Ty) -> bool {
                 && ap.iter().zip(bp).all(|(a, (_, b))| types_compatible(a, b))
                 && types_compatible(ar, br)
         }
+        (Ty::Record(a), Ty::RecordValue(b, _))
+        | (Ty::RecordValue(a, _), Ty::Record(b))
+        | (Ty::RecordValue(a, _), Ty::RecordValue(b, _)) => a == b,
         _ => false,
     }
 }
