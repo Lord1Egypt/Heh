@@ -208,7 +208,7 @@ fn cmd_run(path: &str, run_args: Vec<String>, use_vm: bool) -> ExitCode {
     };
 
     let mut checker = heh::check::Checker::new();
-    checker.check_file(&ast);
+    checker.check_file_at(&ast, std::path::Path::new(path));
     if !checker.diags.is_empty() {
         for d in checker.diags {
             eprintln!("{}", d.render(path, &source));
@@ -283,7 +283,7 @@ fn cmd_check(path: &str) -> ExitCode {
     };
 
     let mut checker = heh::check::Checker::new();
-    checker.check_file(&ast);
+    checker.check_file_at(&ast, std::path::Path::new(path));
     if !checker.diags.is_empty() {
         for d in checker.diags {
             eprintln!("{}", d.render(path, &source));
@@ -580,7 +580,7 @@ fn cmd_test(dir: &str) -> ExitCode {
             }
         };
         let mut checker = heh::check::Checker::new();
-        checker.check_file(&ast);
+        checker.check_file_at(&ast, file);
         if !checker.diags.is_empty() {
             for d in &checker.diags {
                 eprintln!("{}", d.render(&rel.to_string(), &source));
