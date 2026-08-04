@@ -95,12 +95,12 @@ fn checks_calls_through_local_module_interfaces() {
     std::fs::create_dir_all(&root).expect("create module fixture directory");
     std::fs::write(
         root.join("maths.heh"),
-        "fn add(a: int, b: int) -> int\n    a + b\n",
+        "let answer = 42\nfn add(a: int, b: int) -> int\n    a + b\n",
     )
     .expect("write module fixture");
     let main_path = root.join("main.heh");
 
-    let valid = "use \"./maths.heh\"\nlet answer = maths.add(20, 22)\n";
+    let valid = "use \"./maths.heh\"\nlet answer = maths.add(20, 22) + maths.answer\n";
     assert!(diagnostic_codes_at(valid, &main_path).is_empty());
 
     let wrong_type = "use \"./maths.heh\"\nlet answer = maths.add(20, \"22\")\n";
@@ -121,4 +121,12 @@ fn checks_calls_through_local_module_interfaces() {
     .expect("write second cycle fixture");
     let cycle = "use \"./cycle_a.heh\"\nlet answer = cycle_a.a()\n";
     assert!(diagnostic_codes_at(cycle, &main_path).contains(&"E0030"));
+
+    std::fs::write(
+        root.join("broken.heh"),
+        "fn answer() -> int\n    return \"not an int\"\n",
+    )
+    .expect("write invalid module fixture");
+    let broken = "use \"./broken.heh\"\nlet answer = broken.answer()\n";
+    assert!(diagnostic_codes_at(broken, &main_path).contains(&"E0033"));
 }

@@ -1,0 +1,6 @@
+# Imported constants are evaluated once and exposed through the namespace.
+use "./importlib/constants.heh"
+
+sys.print(constants.answer)
+sys.print(constants.greeting)
+sys.print(constants.doubled())

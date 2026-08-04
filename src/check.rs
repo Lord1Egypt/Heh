@@ -1252,9 +1252,35 @@ impl Checker {
         }
         self.diags.extend(resolver.diags);
         let namespace = canonical.to_string_lossy().into_owned();
+        self.module_cache
+            .insert(canonical.clone(), (hash.clone(), members.clone()));
+        self.module_members
+            .insert(namespace.clone(), members.clone());
+        self.module_loading.pop();
+
+        // Check imported code in isolated lexical scopes. Interfaces already
+        // cached above make nested imports deterministic and avoid execution.
+        let mut validator = Checker::new();
+        validator.module_cache = self.module_cache.clone();
+        validator.module_members = self.module_members.clone();
+        validator.check_file_at(&file, &canonical);
+        for item in &file.items {
+            if let TopItem::Let(binding) = item {
+                if let Some((ty, _)) = validator.lookup(&binding.name) {
+                    members.insert(binding.name.clone(), ty);
+                }
+            }
+        }
+        for diag in validator.diags {
+            self.diags.push(Diag {
+                code: "E0033",
+                msg: format!("in imported '{}': {}", import, diag.msg),
+                line: span.line,
+                col: span.col,
+            });
+        }
         self.module_cache.insert(canonical, (hash, members.clone()));
         self.module_members.insert(namespace.clone(), members);
-        self.module_loading.pop();
         Some(namespace)
     }
 
