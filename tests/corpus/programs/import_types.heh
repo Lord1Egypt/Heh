@@ -1,0 +1,7 @@
+use "./importlib/types.heh"
+
+let p = types.Point(x: 3, y: 4)
+let shape = types.circle(2.5)
+sys.print("{p.x},{p.y}")
+sys.print(shape)
+sys.print(types.dot)

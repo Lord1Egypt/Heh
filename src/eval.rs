@@ -519,7 +519,20 @@ impl Evaluator {
                         exports.insert(binding.name.clone(), value);
                     }
                 }
-                TopItem::Type(_) | TopItem::Stmt(_) => {}
+                TopItem::Type(decl) => match &decl.kind {
+                    TypeDeclKind::Record(_) => {
+                        exports.insert(decl.name.clone(), Val::Enum(decl.name.clone(), vec![]));
+                    }
+                    TypeDeclKind::Enum(variants) => {
+                        for variant in variants {
+                            exports.insert(
+                                variant.name.clone(),
+                                Val::Enum(variant.name.clone(), vec![]),
+                            );
+                        }
+                    }
+                },
+                TopItem::Stmt(_) => {}
             }
         }
         let name = module_bind_name(path);

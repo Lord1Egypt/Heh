@@ -564,7 +564,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 59,
+      "line": 61,
       "path": "src/check.rs",
       "source": "diags: Vec::new(),",
       "status": "unresolved"
@@ -573,7 +573,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 60,
+      "line": 62,
       "path": "src/check.rs",
       "source": "scopes: vec![Scope {",
       "status": "unresolved"
@@ -582,7 +582,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 61,
+      "line": 63,
       "path": "src/check.rs",
       "source": "vars: HashMap::new(),",
       "status": "unresolved"
@@ -591,7 +591,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 63,
+      "line": 65,
       "path": "src/check.rs",
       "source": "types: HashMap::new(),",
       "status": "unresolved"
@@ -600,7 +600,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 64,
+      "line": 66,
       "path": "src/check.rs",
       "source": "funcs: HashMap::new(),",
       "status": "unresolved"
@@ -609,7 +609,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 66,
+      "line": 68,
       "path": "src/check.rs",
       "source": "module_members: HashMap::new(),",
       "status": "unresolved"
@@ -618,7 +618,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 67,
+      "line": 69,
       "path": "src/check.rs",
       "source": "module_cache: HashMap::new(),",
       "status": "unresolved"
@@ -627,7 +627,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 68,
+      "line": 70,
       "path": "src/check.rs",
       "source": "module_loading: Vec::new(),",
       "status": "unresolved"
@@ -636,7 +636,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 124,
+      "line": 126,
       "path": "src/check.rs",
       "source": "kind: TypeDeclKind::Record(vec![]), // Doesn't need real fields since we treat sys as Any",
       "status": "unresolved"
@@ -646,7 +646,7 @@
         "raw_index",
         "recursion"
       ],
-      "line": 189,
+      "line": 207,
       "path": "src/check.rs",
       "source": "Ty::List(Box::new(self.resolve_type(&args[0])))",
       "status": "unresolved"
@@ -656,7 +656,7 @@
         "raw_index",
         "recursion"
       ],
-      "line": 203,
+      "line": 221,
       "path": "src/check.rs",
       "source": "Box::new(self.resolve_type(&args[0])),",
       "status": "unresolved"
@@ -666,7 +666,7 @@
         "raw_index",
         "recursion"
       ],
-      "line": 204,
+      "line": 222,
       "path": "src/check.rs",
       "source": "Box::new(self.resolve_type(&args[1])),",
       "status": "unresolved"
@@ -675,7 +675,7 @@
       "kinds": [
         "unchecked_assumption"
       ],
-      "line": 218,
+      "line": 236,
       "path": "src/check.rs",
       "source": "let decl = self.types.get(name).unwrap().clone();",
       "status": "unresolved"
@@ -684,7 +684,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 235,
+      "line": 253,
       "path": "src/check.rs",
       "source": "let p_tys = params.iter().map(|p| self.resolve_type(p)).collect();",
       "status": "unresolved"
@@ -693,7 +693,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 237,
+      "line": 255,
       "path": "src/check.rs",
       "source": "Some(r) => self.resolve_type(r),",
       "status": "unresolved"
@@ -702,7 +702,7 @@
       "kinds": [
         "unchecked_assumption"
       ],
-      "line": 296,
+      "line": 314,
       "path": "src/check.rs",
       "source": ".unwrap()",
       "status": "unresolved"
@@ -711,7 +711,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 347,
+      "line": 365,
       "path": "src/check.rs",
       "source": "&& lhs_ty != Ty::Any",
       "status": "unresolved"
@@ -720,7 +720,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 348,
+      "line": 366,
       "path": "src/check.rs",
       "source": "&& rhs_ty != Ty::Any",
       "status": "unresolved"
@@ -729,7 +729,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 361,
+      "line": 379,
       "path": "src/check.rs",
       "source": "if !cond_ty.is_error() && cond_ty != Ty::Bool && cond_ty != Ty::Any {",
       "status": "unresolved"
@@ -738,7 +738,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 386,
+      "line": 404,
       "path": "src/check.rs",
       "source": "self.check_stmt(stmt);",
       "status": "unresolved"
@@ -747,7 +747,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 403,
+      "line": 421,
       "path": "src/check.rs",
       "source": "&& elif_cond_ty != Ty::Any",
       "status": "unresolved"
@@ -756,7 +756,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 420,
+      "line": 438,
       "path": "src/check.rs",
       "source": "if !cond_ty.is_error() && cond_ty != Ty::Bool && cond_ty != Ty::Any {",
       "status": "unresolved"
@@ -765,7 +765,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 437,
+      "line": 455,
       "path": "src/check.rs",
       "source": "Ty::Any | Ty::Error => Ty::Any,",
       "status": "unresolved"
@@ -774,7 +774,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 452,
+      "line": 470,
       "path": "src/check.rs",
       "source": "self.check_stmt(stmt);",
       "status": "unresolved"
@@ -783,7 +783,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 470,
+      "line": 488,
       "path": "src/check.rs",
       "source": "Pattern::Variant(_, _name, binds) if expr_ty == Ty::Any => {",
       "status": "unresolved"
@@ -792,7 +792,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 474,
+      "line": 492,
       "path": "src/check.rs",
       "source": "self.define(b_name.clone(), Ty::Any, false);",
       "status": "unresolved"
@@ -801,7 +801,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 527,
+      "line": 545,
       "path": "src/check.rs",
       "source": "self.define(binds[0].clone(), *inner.clone(), false);",
       "status": "unresolved"
@@ -810,7 +810,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 533,
+      "line": 551,
       "path": "src/check.rs",
       "source": "self.define(binds[0].clone(), Ty::Str, false);",
       "status": "unresolved"
@@ -819,7 +819,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 539,
+      "line": 557,
       "path": "src/check.rs",
       "source": "self.define(binds[0].clone(), *inner.clone(), false);",
       "status": "unresolved"
@@ -828,7 +828,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 549,
+      "line": 567,
       "path": "src/check.rs",
       "source": "self.check_stmt(stmt);",
       "status": "unresolved"
@@ -837,7 +837,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 640,
+      "line": 658,
       "path": "src/check.rs",
       "source": "Ty::Any | Ty::Error => curr_ty,",
       "status": "unresolved"
@@ -846,7 +846,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 656,
+      "line": 674,
       "path": "src/check.rs",
       "source": "if !idx_ty.is_error() && idx_ty != Ty::Any && idx_ty != Ty::Int {",
       "status": "unresolved"
@@ -855,7 +855,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 667,
+      "line": 685,
       "path": "src/check.rs",
       "source": "if !idx_ty.is_error() && idx_ty != Ty::Any && idx_ty != *k {",
       "status": "unresolved"
@@ -864,7 +864,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 677,
+      "line": 695,
       "path": "src/check.rs",
       "source": "Ty::Any | Ty::Error => curr_ty,",
       "status": "unresolved"
@@ -873,7 +873,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 701,
+      "line": 719,
       "path": "src/check.rs",
       "source": "Literal::None => Ty::Any, // will be coerced or narrowed",
       "status": "unresolved"
@@ -882,7 +882,7 @@
       "kinds": [
         "unchecked_assumption"
       ],
-      "line": 707,
+      "line": 725,
       "path": "src/check.rs",
       "source": "let f = self.funcs.get(name).unwrap().clone();",
       "status": "unresolved"
@@ -891,7 +891,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 715,
+      "line": 733,
       "path": "src/check.rs",
       "source": ".unwrap_or(Ty::Any)",
       "status": "unresolved"
@@ -900,7 +900,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 735,
+      "line": 753,
       "path": "src/check.rs",
       "source": "let l_ty = self.check_expr(left);",
       "status": "unresolved"
@@ -909,7 +909,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 736,
+      "line": 754,
       "path": "src/check.rs",
       "source": "let r_ty = self.check_expr(right);",
       "status": "unresolved"
@@ -918,7 +918,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 745,
+      "line": 763,
       "path": "src/check.rs",
       "source": "if l_ty == Ty::Any || r_ty == Ty::Any {",
       "status": "unresolved"
@@ -927,7 +927,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 746,
+      "line": 764,
       "path": "src/check.rs",
       "source": "Ty::Any",
       "status": "unresolved"
@@ -936,7 +936,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 770,
+      "line": 788,
       "path": "src/check.rs",
       "source": "let comparable = l_ty == Ty::Any",
       "status": "unresolved"
@@ -945,7 +945,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 771,
+      "line": 789,
       "path": "src/check.rs",
       "source": "|| r_ty == Ty::Any",
       "status": "unresolved"
@@ -954,7 +954,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 789,
+      "line": 807,
       "path": "src/check.rs",
       "source": "let logical = l_ty == Ty::Any",
       "status": "unresolved"
@@ -963,7 +963,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 790,
+      "line": 808,
       "path": "src/check.rs",
       "source": "|| r_ty == Ty::Any",
       "status": "unresolved"
@@ -972,7 +972,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 813,
+      "line": 831,
       "path": "src/check.rs",
       "source": "} else if l_ty == Ty::Any || r_ty == Ty::Any {",
       "status": "unresolved"
@@ -981,7 +981,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 814,
+      "line": 832,
       "path": "src/check.rs",
       "source": "Ty::Any",
       "status": "unresolved"
@@ -990,7 +990,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 822,
+      "line": 840,
       "path": "src/check.rs",
       "source": "let inner_ty = self.check_expr(inner);",
       "status": "unresolved"
@@ -999,7 +999,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 854,
+      "line": 872,
       "path": "src/check.rs",
       "source": "Ty::List(Box::new(Ty::Any))",
       "status": "unresolved"
@@ -1008,7 +1008,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 856,
+      "line": 874,
       "path": "src/check.rs",
       "source": "let mut elem_ty = Ty::Any;",
       "status": "unresolved"
@@ -1017,7 +1017,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 858,
+      "line": 876,
       "path": "src/check.rs",
       "source": "let t = self.check_expr(elem);",
       "status": "unresolved"
@@ -1026,7 +1026,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 859,
+      "line": 877,
       "path": "src/check.rs",
       "source": "if elem_ty == Ty::Any {",
       "status": "unresolved"
@@ -1035,7 +1035,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 877,
+      "line": 895,
       "path": "src/check.rs",
       "source": "Ty::Map(Box::new(Ty::Any), Box::new(Ty::Any))",
       "status": "unresolved"
@@ -1044,7 +1044,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 879,
+      "line": 897,
       "path": "src/check.rs",
       "source": "let mut k_ty = Ty::Any;",
       "status": "unresolved"
@@ -1053,7 +1053,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 880,
+      "line": 898,
       "path": "src/check.rs",
       "source": "let mut v_ty = Ty::Any;",
       "status": "unresolved"
@@ -1062,7 +1062,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 882,
+      "line": 900,
       "path": "src/check.rs",
       "source": "let t_k = self.check_expr(k);",
       "status": "unresolved"
@@ -1071,7 +1071,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 883,
+      "line": 901,
       "path": "src/check.rs",
       "source": "let t_v = self.check_expr(v);",
       "status": "unresolved"
@@ -1080,7 +1080,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 884,
+      "line": 902,
       "path": "src/check.rs",
       "source": "if k_ty == Ty::Any {",
       "status": "unresolved"
@@ -1089,7 +1089,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 895,
+      "line": 913,
       "path": "src/check.rs",
       "source": "if v_ty == Ty::Any {",
       "status": "unresolved"
@@ -1098,7 +1098,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 911,
+      "line": 929,
       "path": "src/check.rs",
       "source": "let base_ty = self.check_expr(base);",
       "status": "unresolved"
@@ -1107,7 +1107,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 954,
+      "line": 972,
       "path": "src/check.rs",
       "source": "Ty::Any",
       "status": "unresolved"
@@ -1116,7 +1116,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 957,
+      "line": 975,
       "path": "src/check.rs",
       "source": "Ty::Any | Ty::Error => Ty::Any,",
       "status": "unresolved"
@@ -1125,7 +1125,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 960,
+      "line": 978,
       "path": "src/check.rs",
       "source": "Ty::Any",
       "status": "unresolved"
@@ -1134,7 +1134,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 965,
+      "line": 983,
       "path": "src/check.rs",
       "source": "let base_ty = self.check_expr(base);",
       "status": "unresolved"
@@ -1143,7 +1143,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 966,
+      "line": 984,
       "path": "src/check.rs",
       "source": "let idx_ty = self.check_expr(idx);",
       "status": "unresolved"
@@ -1152,7 +1152,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 969,
+      "line": 987,
       "path": "src/check.rs",
       "source": "if !idx_ty.is_error() && idx_ty != Ty::Any && idx_ty != Ty::Int {",
       "status": "unresolved"
@@ -1161,7 +1161,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 980,
+      "line": 998,
       "path": "src/check.rs",
       "source": "if !idx_ty.is_error() && idx_ty != Ty::Any && idx_ty != *k {",
       "status": "unresolved"
@@ -1170,7 +1170,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 991,
+      "line": 1009,
       "path": "src/check.rs",
       "source": "if !idx_ty.is_error() && idx_ty != Ty::Any && idx_ty != Ty::Int {",
       "status": "unresolved"
@@ -1179,7 +1179,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 1001,
+      "line": 1019,
       "path": "src/check.rs",
       "source": "Ty::Any | Ty::Error => Ty::Any,",
       "status": "unresolved"
@@ -1188,7 +1188,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 1014,
+      "line": 1032,
       "path": "src/check.rs",
       "source": "let inner_ty = self.check_expr(inner);",
       "status": "unresolved"
@@ -1197,7 +1197,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 1018,
+      "line": 1036,
       "path": "src/check.rs",
       "source": "Ty::Any | Ty::Error => Ty::Any,",
       "status": "unresolved"
@@ -1206,7 +1206,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 1033,
+      "line": 1051,
       "path": "src/check.rs",
       "source": "self.check_expr(e_in);",
       "status": "unresolved"
@@ -1215,7 +1215,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 1039,
+      "line": 1057,
       "path": "src/check.rs",
       "source": "let callee_ty = self.check_expr(callee);",
       "status": "unresolved"
@@ -1224,7 +1224,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 1043,
+      "line": 1061,
       "path": "src/check.rs",
       "source": "CallArg::Positional(a) | CallArg::Named(_, a) => self.check_expr(a),",
       "status": "unresolved"
@@ -1233,7 +1233,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1063,
+      "line": 1087,
       "path": "src/check.rs",
       "source": "f.params.iter().map(|p| p.name.as_str()).collect::<Vec<_>>()",
       "status": "unresolved"
@@ -1242,7 +1242,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 1112,
+      "line": 1136,
       "path": "src/check.rs",
       "source": "Ty::Any | Ty::Error => Ty::Any,",
       "status": "unresolved"
@@ -1251,7 +1251,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 1126,
+      "line": 1150,
       "path": "src/check.rs",
       "source": "self.check_expr(e_in);",
       "status": "unresolved"
@@ -1260,7 +1260,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 1133,
+      "line": 1157,
       "path": "src/check.rs",
       "source": "Ty::Any",
       "status": "unresolved"
@@ -1269,7 +1269,7 @@
       "kinds": [
         "filesystem"
       ],
-      "line": 1150,
+      "line": 1282,
       "path": "src/check.rs",
       "source": "let canonical = match resolved.canonicalize() {",
       "status": "unresolved"
@@ -1279,7 +1279,7 @@
         "filesystem",
         "input_allocation"
       ],
-      "line": 1171,
+      "line": 1303,
       "path": "src/check.rs",
       "source": "let source = match std::fs::read_to_string(&canonical) {",
       "status": "unresolved"
@@ -1288,7 +1288,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1306,
+      "line": 1465,
       "path": "src/check.rs",
       "source": "\"some\" if arity(self, 1) => Ty::Optional(Box::new(args[0].clone())),",
       "status": "unresolved"
@@ -1297,7 +1297,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1307,
+      "line": 1466,
       "path": "src/check.rs",
       "source": "\"ok\" if arity(self, 1) => Ty::Result(Box::new(args[0].clone())),",
       "status": "unresolved"
@@ -1306,7 +1306,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1309,
+      "line": 1468,
       "path": "src/check.rs",
       "source": "self.require_builtin_arg(name, &Ty::Str, &args[0], expr);",
       "status": "unresolved"
@@ -1315,7 +1315,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 1310,
+      "line": 1469,
       "path": "src/check.rs",
       "source": "Ty::Result(Box::new(Ty::Any))",
       "status": "unresolved"
@@ -1324,7 +1324,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1314,
+      "line": 1473,
       "path": "src/check.rs",
       "source": "if !matches!(args[0], Ty::Int | Ty::Float | Ty::Error) {",
       "status": "unresolved"
@@ -1333,7 +1333,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1320,
+      "line": 1479,
       "path": "src/check.rs",
       "source": "if !matches!(args[0], Ty::Int | Ty::Float | Ty::Error) {",
       "status": "unresolved"
@@ -1342,7 +1342,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1326,
+      "line": 1485,
       "path": "src/check.rs",
       "source": "self.require_builtin_arg(name, &Ty::Str, &args[0], expr);",
       "status": "unresolved"
@@ -1351,7 +1351,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1329,
+      "line": 1488,
       "path": "src/check.rs",
       "source": "\"list\" if arity(self, 1) => match &args[0] {",
       "status": "unresolved"
@@ -1360,7 +1360,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 1333,
+      "line": 1492,
       "path": "src/check.rs",
       "source": "Ty::Any | Ty::Error => Ty::List(Box::new(Ty::Any)),",
       "status": "unresolved"
@@ -1369,7 +1369,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1357,
+      "line": 1516,
       "path": "src/check.rs",
       "source": "if let Some(Ty::Fn(params, ret)) = builtin_method(&args[0], name) {",
       "status": "unresolved"
@@ -1378,7 +1378,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1361,
+      "line": 1520,
       "path": "src/check.rs",
       "source": "for (expected, actual) in params.iter().zip(&args[1..]) {",
       "status": "unresolved"
@@ -1387,7 +1387,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 1414,
+      "line": 1573,
       "path": "src/check.rs",
       "source": "Ty::Any | Ty::Error => true,",
       "status": "unresolved"
@@ -1396,7 +1396,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 1427,
+      "line": 1586,
       "path": "src/check.rs",
       "source": "(\"sys\", \"print\") => Ty::VariadicFn(Box::new(Ty::Any), Box::new(Ty::Unit)),",
       "status": "unresolved"
@@ -1405,7 +1405,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1428,
+      "line": 1587,
       "path": "src/check.rs",
       "source": "(\"sys\", \"input\") => function(vec![], result(Ty::Str)),",
       "status": "unresolved"
@@ -1414,7 +1414,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1433,
+      "line": 1592,
       "path": "src/check.rs",
       "source": "(\"sys.fs\", \"read\") => function(vec![Ty::Str], result(Ty::Str)),",
       "status": "unresolved"
@@ -1423,7 +1423,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1434,
+      "line": 1593,
       "path": "src/check.rs",
       "source": "(\"sys.fs\", \"read_bytes\") => function(vec![Ty::Str], result(list(Ty::Int))),",
       "status": "unresolved"
@@ -1432,7 +1432,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1435,
+      "line": 1594,
       "path": "src/check.rs",
       "source": "(\"sys.fs\", \"write\" | \"append\") => function(vec![Ty::Str, Ty::Str], result(Ty::Unit)),",
       "status": "unresolved"
@@ -1441,7 +1441,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1436,
+      "line": 1595,
       "path": "src/check.rs",
       "source": "(\"sys.fs\", \"exists\") => function(vec![Ty::Str], Ty::Bool),",
       "status": "unresolved"
@@ -1450,7 +1450,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1437,
+      "line": 1596,
       "path": "src/check.rs",
       "source": "(\"sys.fs\", \"list_dir\") => function(vec![Ty::Str], result(list(Ty::Str))),",
       "status": "unresolved"
@@ -1459,7 +1459,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1438,
+      "line": 1597,
       "path": "src/check.rs",
       "source": "(\"sys.fs\", \"remove\") => function(vec![Ty::Str], result(Ty::Unit)),",
       "status": "unresolved"
@@ -1468,7 +1468,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1439,
+      "line": 1598,
       "path": "src/check.rs",
       "source": "(\"sys.net\", \"get\") => function(vec![Ty::Str], result(Ty::Str)),",
       "status": "unresolved"
@@ -1477,7 +1477,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1440,
+      "line": 1599,
       "path": "src/check.rs",
       "source": "(\"sys.env\", \"get\") => function(vec![Ty::Str], optional(Ty::Str)),",
       "status": "unresolved"
@@ -1486,7 +1486,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1441,
+      "line": 1600,
       "path": "src/check.rs",
       "source": "(\"sys.env\", \"set\") => function(vec![Ty::Str, Ty::Str], Ty::Unit),",
       "status": "unresolved"
@@ -1495,7 +1495,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1442,
+      "line": 1601,
       "path": "src/check.rs",
       "source": "(\"sys.clock\", \"now\") => function(vec![], Ty::Int),",
       "status": "unresolved"
@@ -1504,7 +1504,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1443,
+      "line": 1602,
       "path": "src/check.rs",
       "source": "(\"sys.clock\", \"sleep\") => function(vec![Ty::Int], Ty::Unit),",
       "status": "unresolved"
@@ -1513,7 +1513,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1444,
+      "line": 1603,
       "path": "src/check.rs",
       "source": "(\"sys.rand\", \"bytes\") => function(vec![Ty::Int], result(list(Ty::Int))),",
       "status": "unresolved"
@@ -1522,7 +1522,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1445,
+      "line": 1604,
       "path": "src/check.rs",
       "source": "(\"sys.rand\", \"int\") => function(vec![Ty::Int, Ty::Int], result(Ty::Int)),",
       "status": "unresolved"
@@ -1531,7 +1531,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1446,
+      "line": 1605,
       "path": "src/check.rs",
       "source": "(\"sys.rand\", \"float\") => function(vec![], result(Ty::Float)),",
       "status": "unresolved"
@@ -1540,7 +1540,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1448,
+      "line": 1607,
       "path": "src/check.rs",
       "source": "function(vec![Ty::Float], Ty::Float)",
       "status": "unresolved"
@@ -1549,7 +1549,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1450,
+      "line": 1609,
       "path": "src/check.rs",
       "source": "(\"std.math\", \"pow\") => function(vec![Ty::Float, Ty::Float], Ty::Float),",
       "status": "unresolved"
@@ -1558,7 +1558,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1451,
+      "line": 1610,
       "path": "src/check.rs",
       "source": "(\"std.math\", \"pi\" | \"e\") => function(vec![], Ty::Float),",
       "status": "unresolved"
@@ -1567,7 +1567,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1452,
+      "line": 1611,
       "path": "src/check.rs",
       "source": "(\"std.fmt\", \"pad_left\" | \"pad_right\") => function(vec![Ty::Str, Ty::Int, Ty::Str], Ty::Str),",
       "status": "unresolved"
@@ -1576,7 +1576,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1453,
+      "line": 1612,
       "path": "src/check.rs",
       "source": "(\"std.fmt\", \"repeat\") => function(vec![Ty::Str, Ty::Int], Ty::Str),",
       "status": "unresolved"
@@ -1585,7 +1585,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1454,
+      "line": 1613,
       "path": "src/check.rs",
       "source": "(\"std.fmt\", \"hex\") => function(vec![Ty::Int], Ty::Str),",
       "status": "unresolved"
@@ -1594,7 +1594,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1455,
+      "line": 1614,
       "path": "src/check.rs",
       "source": "(\"std.fmt\", \"fixed\") => function(vec![Ty::Float, Ty::Int], Ty::Str),",
       "status": "unresolved"
@@ -1604,7 +1604,7 @@
         "dynamic_type",
         "input_allocation"
       ],
-      "line": 1456,
+      "line": 1615,
       "path": "src/check.rs",
       "source": "(\"std.json\", \"parse\") => function(vec![Ty::Str], result(Ty::Any)),",
       "status": "unresolved"
@@ -1614,7 +1614,7 @@
         "dynamic_type",
         "input_allocation"
       ],
-      "line": 1457,
+      "line": 1616,
       "path": "src/check.rs",
       "source": "(\"std.json\", \"write\") => function(vec![Ty::Any], Ty::Str),",
       "status": "unresolved"
@@ -1623,7 +1623,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1458,
+      "line": 1617,
       "path": "src/check.rs",
       "source": "(\"std.csv\", \"parse\") => function(vec![Ty::Str], list(list(Ty::Str))),",
       "status": "unresolved"
@@ -1632,7 +1632,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1459,
+      "line": 1618,
       "path": "src/check.rs",
       "source": "(\"std.csv\", \"write\") => function(vec![list(list(Ty::Str))], Ty::Str),",
       "status": "unresolved"
@@ -1641,7 +1641,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1460,
+      "line": 1619,
       "path": "src/check.rs",
       "source": "(\"std.hash\", \"sha256\" | \"crc32\") => function(vec![Ty::Str], Ty::Str),",
       "status": "unresolved"
@@ -1650,7 +1650,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1461,
+      "line": 1620,
       "path": "src/check.rs",
       "source": "(\"std.regex\", \"is_match\") => function(vec![Ty::Str, Ty::Str], Ty::Bool),",
       "status": "unresolved"
@@ -1659,7 +1659,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1462,
+      "line": 1621,
       "path": "src/check.rs",
       "source": "(\"std.regex\", \"find\") => function(vec![Ty::Str, Ty::Str], result(Ty::Str)),",
       "status": "unresolved"
@@ -1668,7 +1668,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1463,
+      "line": 1622,
       "path": "src/check.rs",
       "source": "(\"std.time\", \"format\") => function(vec![Ty::Int], Ty::Str),",
       "status": "unresolved"
@@ -1677,7 +1677,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1465,
+      "line": 1624,
       "path": "src/check.rs",
       "source": "function(vec![Ty::Int], Ty::Map(Box::new(Ty::Str), Box::new(Ty::Int)))",
       "status": "unresolved"
@@ -1686,7 +1686,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1467,
+      "line": 1626,
       "path": "src/check.rs",
       "source": "(\"std.time\", \"from_parts\") => function(vec![Ty::Int; 6], result(Ty::Int)),",
       "status": "unresolved"
@@ -1695,7 +1695,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1468,
+      "line": 1627,
       "path": "src/check.rs",
       "source": "(\"std.time\", \"is_leap\") => function(vec![Ty::Int], Ty::Bool),",
       "status": "unresolved"
@@ -1704,7 +1704,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1469,
+      "line": 1628,
       "path": "src/check.rs",
       "source": "(\"std.time\", \"days_in_month\") => function(vec![Ty::Int, Ty::Int], result(Ty::Int)),",
       "status": "unresolved"
@@ -1713,7 +1713,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1470,
+      "line": 1629,
       "path": "src/check.rs",
       "source": "(\"std.debug\", \"fault\") => function(vec![Ty::Str], Ty::Unit),",
       "status": "unresolved"
@@ -1722,7 +1722,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1471,
+      "line": 1630,
       "path": "src/check.rs",
       "source": "(\"std.debug\", \"assert\") => function(vec![Ty::Bool, Ty::Str], Ty::Unit),",
       "status": "unresolved"
@@ -1731,7 +1731,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1480,
+      "line": 1639,
       "path": "src/check.rs",
       "source": "(Ty::Str, \"len\") => Some(function(vec![], Ty::Int)),",
       "status": "unresolved"
@@ -1740,7 +1740,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1481,
+      "line": 1640,
       "path": "src/check.rs",
       "source": "(Ty::Str, \"upper\" | \"lower\" | \"trim\") => Some(function(vec![], Ty::Str)),",
       "status": "unresolved"
@@ -1749,7 +1749,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1482,
+      "line": 1641,
       "path": "src/check.rs",
       "source": "(Ty::Str, \"split\") => Some(function(vec![Ty::Str], Ty::List(Box::new(Ty::Str)))),",
       "status": "unresolved"
@@ -1758,7 +1758,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1483,
+      "line": 1642,
       "path": "src/check.rs",
       "source": "(Ty::Str, \"replace\") => Some(function(vec![Ty::Str, Ty::Str], Ty::Str)),",
       "status": "unresolved"
@@ -1767,7 +1767,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1484,
+      "line": 1643,
       "path": "src/check.rs",
       "source": "(Ty::Str, \"contains\" | \"starts_with\") => Some(function(vec![Ty::Str], Ty::Bool)),",
       "status": "unresolved"
@@ -1776,7 +1776,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1485,
+      "line": 1644,
       "path": "src/check.rs",
       "source": "(Ty::Str, \"chars\") => Some(function(vec![], Ty::List(Box::new(Ty::Str)))),",
       "status": "unresolved"
@@ -1785,7 +1785,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1488,
+      "line": 1647,
       "path": "src/check.rs",
       "source": "Some(function(vec![], Ty::Int))",
       "status": "unresolved"
@@ -1794,7 +1794,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1490,
+      "line": 1649,
       "path": "src/check.rs",
       "source": "(Ty::List(inner), \"push\") => Some(function(vec![*inner.clone()], Ty::Unit)),",
       "status": "unresolved"
@@ -1803,7 +1803,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1491,
+      "line": 1650,
       "path": "src/check.rs",
       "source": "(Ty::List(inner), \"pop\") => Some(function(vec![], Ty::Result(inner.clone()))),",
       "status": "unresolved"
@@ -1812,7 +1812,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1492,
+      "line": 1651,
       "path": "src/check.rs",
       "source": "(Ty::List(inner), \"get\") => Some(function(vec![Ty::Int], Ty::Optional(inner.clone()))),",
       "status": "unresolved"
@@ -1821,7 +1821,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1493,
+      "line": 1652,
       "path": "src/check.rs",
       "source": "(Ty::List(_), \"sort\") => Some(function(vec![], Ty::Unit)),",
       "status": "unresolved"
@@ -1831,7 +1831,7 @@
         "dynamic_type",
         "input_allocation"
       ],
-      "line": 1495,
+      "line": 1654,
       "path": "src/check.rs",
       "source": "vec![Ty::Fn(vec![*inner.clone()], Box::new(Ty::Any))],",
       "status": "unresolved"
@@ -1840,7 +1840,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 1496,
+      "line": 1655,
       "path": "src/check.rs",
       "source": "Ty::List(Box::new(Ty::Any)),",
       "status": "unresolved"
@@ -1849,7 +1849,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1499,
+      "line": 1658,
       "path": "src/check.rs",
       "source": "vec![Ty::Fn(vec![*inner.clone()], Box::new(Ty::Bool))],",
       "status": "unresolved"
@@ -1858,7 +1858,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1502,
+      "line": 1661,
       "path": "src/check.rs",
       "source": "(Ty::List(_), \"join\") => Some(function(vec![Ty::Str], Ty::Str)),",
       "status": "unresolved"
@@ -1867,7 +1867,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1504,
+      "line": 1663,
       "path": "src/check.rs",
       "source": "Some(function(vec![*key.clone()], Ty::Optional(value.clone())))",
       "status": "unresolved"
@@ -1876,7 +1876,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1507,
+      "line": 1666,
       "path": "src/check.rs",
       "source": "Some(function(vec![*key.clone(), *value.clone()], Ty::Unit))",
       "status": "unresolved"
@@ -1885,7 +1885,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1509,
+      "line": 1668,
       "path": "src/check.rs",
       "source": "(Ty::Map(key, _), \"remove\") => Some(function(vec![*key.clone()], Ty::Unit)),",
       "status": "unresolved"
@@ -1894,7 +1894,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1510,
+      "line": 1669,
       "path": "src/check.rs",
       "source": "(Ty::Map(key, _), \"keys\") => Some(function(vec![], Ty::List(key.clone()))),",
       "status": "unresolved"
@@ -1903,7 +1903,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1511,
+      "line": 1670,
       "path": "src/check.rs",
       "source": "(Ty::Map(_, value), \"values\") => Some(function(vec![], Ty::List(value.clone()))),",
       "status": "unresolved"
@@ -1912,7 +1912,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 1518,
+      "line": 1677,
       "path": "src/check.rs",
       "source": "|| matches!(expected, Ty::Any | Ty::Error)",
       "status": "unresolved"
@@ -1921,7 +1921,7 @@
       "kinds": [
         "dynamic_type"
       ],
-      "line": 1519,
+      "line": 1678,
       "path": "src/check.rs",
       "source": "|| matches!(actual, Ty::Any | Ty::Error)",
       "status": "unresolved"
@@ -1930,7 +1930,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 1526,
+      "line": 1685,
       "path": "src/check.rs",
       "source": "| (Ty::Result(a), Ty::Result(b)) => types_compatible(a, b),",
       "status": "unresolved"
@@ -1939,7 +1939,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 1527,
+      "line": 1686,
       "path": "src/check.rs",
       "source": "(Ty::Map(ak, av), Ty::Map(bk, bv)) => types_compatible(ak, bk) && types_compatible(av, bv),",
       "status": "unresolved"
@@ -1948,7 +1948,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 1530,
+      "line": 1689,
       "path": "src/check.rs",
       "source": "&& ap.iter().zip(bp).all(|(a, b)| types_compatible(a, b))",
       "status": "unresolved"
@@ -1957,7 +1957,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 1531,
+      "line": 1690,
       "path": "src/check.rs",
       "source": "&& types_compatible(ar, br)",
       "status": "unresolved"
@@ -2424,9 +2424,27 @@
     },
     {
       "kinds": [
+        "input_allocation"
+      ],
+      "line": 524,
+      "path": "src/eval.rs",
+      "source": "exports.insert(decl.name.clone(), Val::Enum(decl.name.clone(), vec![]));",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
+        "input_allocation"
+      ],
+      "line": 530,
+      "path": "src/eval.rs",
+      "source": "Val::Enum(variant.name.clone(), vec![]),",
+      "status": "unresolved"
+    },
+    {
+      "kinds": [
         "raw_index"
       ],
-      "line": 560,
+      "line": 573,
       "path": "src/eval.rs",
       "source": "/// `p.x = v`, `l[i] = v`, and any nesting of the two (SPEC \u00a714 `lvalue`).",
       "status": "unresolved"
@@ -2435,7 +2453,7 @@
       "kinds": [
         "unchecked_assumption"
       ],
-      "line": 582,
+      "line": 595,
       "path": "src/eval.rs",
       "source": ".expect(\"caller checked tail is non-empty\");",
       "status": "unresolved"
@@ -2444,7 +2462,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 682,
+      "line": 695,
       "path": "src/eval.rs",
       "source": "items[n] = val;",
       "status": "unresolved"
@@ -2453,7 +2471,7 @@
       "kinds": [
         "unchecked_assumption"
       ],
-      "line": 957,
+      "line": 970,
       "path": "src/eval.rs",
       "source": "Literal::Int(s) => Ok(Val::Int(BigInt::parse(s).unwrap())),",
       "status": "unresolved"
@@ -2462,7 +2480,7 @@
       "kinds": [
         "unchecked_assumption"
       ],
-      "line": 958,
+      "line": 971,
       "path": "src/eval.rs",
       "source": "Literal::Float(s) => Ok(Val::Float(s.parse().unwrap())),",
       "status": "unresolved"
@@ -2471,7 +2489,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 967,
+      "line": 980,
       "path": "src/eval.rs",
       "source": "Ok(Val::Enum(id.clone(), vec![]))",
       "status": "unresolved"
@@ -2480,7 +2498,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 971,
+      "line": 984,
       "path": "src/eval.rs",
       "source": "let lval = self.eval_expr(left, env.clone())?;",
       "status": "unresolved"
@@ -2489,7 +2507,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 977,
+      "line": 990,
       "path": "src/eval.rs",
       "source": "let rval = self.eval_expr(right, env.clone())?;",
       "status": "unresolved"
@@ -2498,7 +2516,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 984,
+      "line": 997,
       "path": "src/eval.rs",
       "source": "let rval = self.eval_expr(right, env.clone())?;",
       "status": "unresolved"
@@ -2507,7 +2525,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 988,
+      "line": 1001,
       "path": "src/eval.rs",
       "source": "let rval = self.eval_expr(right, env.clone())?;",
       "status": "unresolved"
@@ -2516,7 +2534,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 999,
+      "line": 1012,
       "path": "src/eval.rs",
       "source": "let val = self.eval_expr(inner, env.clone())?;",
       "status": "unresolved"
@@ -2525,7 +2543,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1021,
+      "line": 1034,
       "path": "src/eval.rs",
       "source": "if let CallArg::Positional(a) = &args[0] {",
       "status": "unresolved"
@@ -2534,7 +2552,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 1022,
+      "line": 1035,
       "path": "src/eval.rs",
       "source": "let val = self.eval_expr(a, env.clone())?;",
       "status": "unresolved"
@@ -2543,7 +2561,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1027,
+      "line": 1040,
       "path": "src/eval.rs",
       "source": "if let CallArg::Positional(a) = &args[0] {",
       "status": "unresolved"
@@ -2552,7 +2570,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 1028,
+      "line": 1041,
       "path": "src/eval.rs",
       "source": "let val = self.eval_expr(a, env.clone())?;",
       "status": "unresolved"
@@ -2561,7 +2579,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1036,
+      "line": 1049,
       "path": "src/eval.rs",
       "source": "if let CallArg::Positional(a) = &args[0] {",
       "status": "unresolved"
@@ -2570,7 +2588,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 1037,
+      "line": 1050,
       "path": "src/eval.rs",
       "source": "let val = self.eval_expr(a, env.clone())?;",
       "status": "unresolved"
@@ -2579,7 +2597,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1042,
+      "line": 1055,
       "path": "src/eval.rs",
       "source": "if let CallArg::Positional(a) = &args[0] {",
       "status": "unresolved"
@@ -2588,7 +2606,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 1043,
+      "line": 1056,
       "path": "src/eval.rs",
       "source": "let val = self.eval_expr(a, env.clone())?;",
       "status": "unresolved"
@@ -2597,7 +2615,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 1051,
+      "line": 1064,
       "path": "src/eval.rs",
       "source": "let callee_val = self.eval_expr(callee, env.clone())?;",
       "status": "unresolved"
@@ -2606,7 +2624,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 1057,
+      "line": 1070,
       "path": "src/eval.rs",
       "source": "arg_vals.push(self.eval_expr(a, env.clone())?);",
       "status": "unresolved"
@@ -2615,7 +2633,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 1060,
+      "line": 1073,
       "path": "src/eval.rs",
       "source": "arg_vals.push(self.eval_expr(a, env.clone())?);",
       "status": "unresolved"
@@ -2624,7 +2642,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1072,
+      "line": 1085,
       "path": "src/eval.rs",
       "source": "let mut new_args = vec![*obj];",
       "status": "unresolved"
@@ -2633,7 +2651,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 1117,
+      "line": 1130,
       "path": "src/eval.rs",
       "source": "self.eval_expr(val_expr, env.clone())?,",
       "status": "unresolved"
@@ -2642,7 +2660,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 1159,
+      "line": 1172,
       "path": "src/eval.rs",
       "source": "let val = self.eval_expr(inner, env.clone())?;",
       "status": "unresolved"
@@ -2651,7 +2669,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 1198,
+      "line": 1211,
       "path": "src/eval.rs",
       "source": "let obj = self.eval_expr(inner, env.clone())?;",
       "status": "unresolved"
@@ -2660,7 +2678,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 1226,
+      "line": 1239,
       "path": "src/eval.rs",
       "source": "let obj_val = self.eval_expr(obj, env.clone())?;",
       "status": "unresolved"
@@ -2669,7 +2687,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 1227,
+      "line": 1240,
       "path": "src/eval.rs",
       "source": "let idx_val = self.eval_expr(idx, env.clone())?;",
       "status": "unresolved"
@@ -2678,7 +2696,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1234,
+      "line": 1247,
       "path": "src/eval.rs",
       "source": "return Ok(b[idx].clone());",
       "status": "unresolved"
@@ -2687,7 +2705,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 1267,
+      "line": 1280,
       "path": "src/eval.rs",
       "source": "map.insert(k.clone(), self.eval_expr(v, env.clone())?);",
       "status": "unresolved"
@@ -2696,7 +2714,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 1276,
+      "line": 1289,
       "path": "src/eval.rs",
       "source": "self.eval_expr(k, env.clone())?,",
       "status": "unresolved"
@@ -2705,7 +2723,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 1277,
+      "line": 1290,
       "path": "src/eval.rs",
       "source": "self.eval_expr(v, env.clone())?,",
       "status": "unresolved"
@@ -2714,7 +2732,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 1285,
+      "line": 1298,
       "path": "src/eval.rs",
       "source": "vals.push(self.eval_expr(item, env.clone())?);",
       "status": "unresolved"
@@ -2723,7 +2741,7 @@
       "kinds": [
         "recursion"
       ],
-      "line": 1295,
+      "line": 1308,
       "path": "src/eval.rs",
       "source": "let val = self.eval_expr(e, env.clone())?;",
       "status": "unresolved"
@@ -2732,7 +2750,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1495,
+      "line": 1508,
       "path": "src/eval.rs",
       "source": "if let Val::Str(url) = &arg_vals[0] {",
       "status": "unresolved"
@@ -2741,7 +2759,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1510,
+      "line": 1523,
       "path": "src/eval.rs",
       "source": "if let Val::Str(s) = &arg_vals[0] {",
       "status": "unresolved"
@@ -2751,7 +2769,7 @@
         "filesystem",
         "input_allocation"
       ],
-      "line": 1520,
+      "line": 1533,
       "path": "src/eval.rs",
       "source": "match std::fs::read_to_string(s) {",
       "status": "unresolved"
@@ -2760,7 +2778,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1537,
+      "line": 1550,
       "path": "src/eval.rs",
       "source": "if let Val::Str(s) = &arg_vals[0] {",
       "status": "unresolved"
@@ -2770,7 +2788,7 @@
         "filesystem",
         "input_allocation"
       ],
-      "line": 1546,
+      "line": 1559,
       "path": "src/eval.rs",
       "source": "match std::fs::read(s) {",
       "status": "unresolved"
@@ -2779,7 +2797,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1569,
+      "line": 1582,
       "path": "src/eval.rs",
       "source": "if let (Val::Str(s), Val::Str(data)) = (&arg_vals[0], &arg_vals[1]) {",
       "status": "unresolved"
@@ -2788,7 +2806,7 @@
       "kinds": [
         "filesystem"
       ],
-      "line": 1578,
+      "line": 1591,
       "path": "src/eval.rs",
       "source": "match std::fs::write(s, data) {",
       "status": "unresolved"
@@ -2797,7 +2815,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1595,
+      "line": 1608,
       "path": "src/eval.rs",
       "source": "if let (Val::Str(s), Val::Str(data)) = (&arg_vals[0], &arg_vals[1]) {",
       "status": "unresolved"
@@ -2806,7 +2824,7 @@
       "kinds": [
         "filesystem"
       ],
-      "line": 1605,
+      "line": 1618,
       "path": "src/eval.rs",
       "source": "match std::fs::OpenOptions::new()",
       "status": "unresolved"
@@ -2815,7 +2833,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1629,
+      "line": 1642,
       "path": "src/eval.rs",
       "source": "if let Val::Str(s) = &arg_vals[0] {",
       "status": "unresolved"
@@ -2824,7 +2842,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1652,
+      "line": 1665,
       "path": "src/eval.rs",
       "source": "if let Val::Str(s) = &arg_vals[0] {",
       "status": "unresolved"
@@ -2833,7 +2851,7 @@
       "kinds": [
         "filesystem"
       ],
-      "line": 1661,
+      "line": 1674,
       "path": "src/eval.rs",
       "source": "match std::fs::read_dir(s) {",
       "status": "unresolved"
@@ -2842,7 +2860,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1686,
+      "line": 1699,
       "path": "src/eval.rs",
       "source": "if let Val::Str(s) = &arg_vals[0] {",
       "status": "unresolved"
@@ -2851,7 +2869,7 @@
       "kinds": [
         "filesystem"
       ],
-      "line": 1696,
+      "line": 1709,
       "path": "src/eval.rs",
       "source": "match std::fs::remove_file(s) {",
       "status": "unresolved"
@@ -2860,7 +2878,7 @@
       "kinds": [
         "filesystem"
       ],
-      "line": 1701,
+      "line": 1714,
       "path": "src/eval.rs",
       "source": "match std::fs::remove_dir_all(s) {",
       "status": "unresolved"
@@ -2869,7 +2887,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1721,
+      "line": 1734,
       "path": "src/eval.rs",
       "source": "if let Val::Str(s) = &arg_vals[0] {",
       "status": "unresolved"
@@ -2878,7 +2896,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1739,
+      "line": 1752,
       "path": "src/eval.rs",
       "source": "if let (Val::Str(k), Val::Str(v)) = (&arg_vals[0], &arg_vals[1]) {",
       "status": "unresolved"
@@ -2887,7 +2905,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1765,
+      "line": 1778,
       "path": "src/eval.rs",
       "source": "let Val::Int(ms) = &arg_vals[0] else {",
       "status": "unresolved"
@@ -2896,7 +2914,7 @@
       "kinds": [
         "filesystem"
       ],
-      "line": 1779,
+      "line": 1792,
       "path": "src/eval.rs",
       "source": "match std::fs::File::open(\"/dev/urandom\").and_then(|mut f| f.read_exact(&mut buf)) {",
       "status": "unresolved"
@@ -2905,7 +2923,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1798,
+      "line": 1811,
       "path": "src/eval.rs",
       "source": "if let Val::Int(n) = &arg_vals[0] {",
       "status": "unresolved"
@@ -2914,7 +2932,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 1804,
+      "line": 1817,
       "path": "src/eval.rs",
       "source": "let mut buf = vec![0u8; count];",
       "status": "unresolved"
@@ -2923,7 +2941,7 @@
       "kinds": [
         "filesystem"
       ],
-      "line": 1805,
+      "line": 1818,
       "path": "src/eval.rs",
       "source": "match std::fs::File::open(\"/dev/urandom\")",
       "status": "unresolved"
@@ -2932,7 +2950,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1830,
+      "line": 1843,
       "path": "src/eval.rs",
       "source": "if let (Val::Int(min), Val::Int(max)) = (&arg_vals[0], &arg_vals[1]) {",
       "status": "unresolved"
@@ -2941,7 +2959,7 @@
       "kinds": [
         "filesystem"
       ],
-      "line": 1841,
+      "line": 1854,
       "path": "src/eval.rs",
       "source": "match std::fs::File::open(\"/dev/urandom\")",
       "status": "unresolved"
@@ -2950,7 +2968,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1867,
+      "line": 1880,
       "path": "src/eval.rs",
       "source": "if let Val::List(l) = &arg_vals[0] {",
       "status": "unresolved"
@@ -2959,7 +2977,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1897,
+      "line": 1910,
       "path": "src/eval.rs",
       "source": "let l_val = arg_vals[0].clone();",
       "status": "unresolved"
@@ -2968,7 +2986,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1898,
+      "line": 1911,
       "path": "src/eval.rs",
       "source": "let f_val = arg_vals[1].clone();",
       "status": "unresolved"
@@ -2977,7 +2995,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1907,
+      "line": 1920,
       "path": "src/eval.rs",
       "source": "call_env.borrow_mut().define(params[0].clone(), item, false);",
       "status": "unresolved"
@@ -2986,7 +3004,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1950,
+      "line": 1963,
       "path": "src/eval.rs",
       "source": "let l_val = arg_vals[0].clone();",
       "status": "unresolved"
@@ -2995,7 +3013,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1951,
+      "line": 1964,
       "path": "src/eval.rs",
       "source": "let f_val = arg_vals[1].clone();",
       "status": "unresolved"
@@ -3004,7 +3022,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 1961,
+      "line": 1974,
       "path": "src/eval.rs",
       "source": "params[0].clone(),",
       "status": "unresolved"
@@ -3013,7 +3031,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 2028,
+      "line": 2041,
       "path": "src/eval.rs",
       "source": "Pattern::Wildcard(_) => Some(vec![]),",
       "status": "unresolved"
@@ -3022,7 +3040,7 @@
       "kinds": [
         "unchecked_assumption"
       ],
-      "line": 2031,
+      "line": 2044,
       "path": "src/eval.rs",
       "source": "Literal::Int(s) => Val::Int(BigInt::parse(s).unwrap()),",
       "status": "unresolved"
@@ -3031,7 +3049,7 @@
       "kinds": [
         "unchecked_assumption"
       ],
-      "line": 2032,
+      "line": 2045,
       "path": "src/eval.rs",
       "source": "Literal::Float(s) => Val::Float(s.parse().unwrap()),",
       "status": "unresolved"
@@ -3040,7 +3058,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 2038,
+      "line": 2051,
       "path": "src/eval.rs",
       "source": "Some(vec![])",
       "status": "unresolved"
@@ -3050,7 +3068,7 @@
         "raw_index",
         "input_allocation"
       ],
-      "line": 2047,
+      "line": 2060,
       "path": "src/eval.rs",
       "source": "return Some(vec![(binds[0].clone(), *inner.clone())]);",
       "status": "unresolved"
@@ -3060,7 +3078,7 @@
         "raw_index",
         "input_allocation"
       ],
-      "line": 2053,
+      "line": 2066,
       "path": "src/eval.rs",
       "source": "return Some(vec![(binds[0].clone(), Val::Err(e.clone()))]);",
       "status": "unresolved"
@@ -3070,7 +3088,7 @@
         "raw_index",
         "input_allocation"
       ],
-      "line": 2059,
+      "line": 2072,
       "path": "src/eval.rs",
       "source": "return Some(vec![(binds[0].clone(), *inner.clone())]);",
       "status": "unresolved"
@@ -3079,7 +3097,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 2203,
+      "line": 2216,
       "path": "src/eval.rs",
       "source": "let mut new_args = vec![*obj];",
       "status": "unresolved"
@@ -3088,7 +3106,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 2291,
+      "line": 2304,
       "path": "src/eval.rs",
       "source": "return Ok(b[idx].clone());",
       "status": "unresolved"
@@ -3097,7 +3115,7 @@
       "kinds": [
         "network"
       ],
-      "line": 2339,
+      "line": 2352,
       "path": "src/eval.rs",
       "source": "/// `sys.net.get(url)` \u2014 HTTP/1.1 over a std TcpStream for `http://`, delegating",
       "status": "unresolved"
@@ -3106,7 +3124,7 @@
       "kinds": [
         "network"
       ],
-      "line": 2340,
+      "line": 2353,
       "path": "src/eval.rs",
       "source": "/// `https://` to the `curl` subprocess (std has no TLS). Returns `ok(body)` or",
       "status": "unresolved"
@@ -3115,7 +3133,7 @@
       "kinds": [
         "network"
       ],
-      "line": 2353,
+      "line": 2366,
       "path": "src/eval.rs",
       "source": "https_get_via_curl(url)",
       "status": "unresolved"
@@ -3124,7 +3142,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 2364,
+      "line": 2377,
       "path": "src/eval.rs",
       "source": "Some(i) => (&host_path[..i], &host_path[i..]),",
       "status": "unresolved"
@@ -3133,7 +3151,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 2374,
+      "line": 2387,
       "path": "src/eval.rs",
       "source": "let host = &bracketed[..end];",
       "status": "unresolved"
@@ -3142,7 +3160,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 2375,
+      "line": 2388,
       "path": "src/eval.rs",
       "source": "let suffix = &bracketed[end + 1..];",
       "status": "unresolved"
@@ -3151,7 +3169,7 @@
       "kinds": [
         "network"
       ],
-      "line": 2398,
+      "line": 2411,
       "path": "src/eval.rs",
       "source": "let stream = match std::net::TcpStream::connect(&addr) {",
       "status": "unresolved"
@@ -3160,7 +3178,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 2415,
+      "line": 2428,
       "path": "src/eval.rs",
       "source": "if let Err(e) = stream.read_to_end(&mut buf) {",
       "status": "unresolved"
@@ -3169,7 +3187,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 2422,
+      "line": 2435,
       "path": "src/eval.rs",
       "source": "Some(i) => (&buf[..i], &buf[i + 4..]),",
       "status": "unresolved"
@@ -3179,7 +3197,7 @@
         "raw_index",
         "input_allocation"
       ],
-      "line": 2470,
+      "line": 2483,
       "path": "src/eval.rs",
       "source": "body[..length].to_vec()",
       "status": "unresolved"
@@ -3188,7 +3206,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 2472,
+      "line": 2485,
       "path": "src/eval.rs",
       "source": "body.to_vec()",
       "status": "unresolved"
@@ -3197,7 +3215,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 2491,
+      "line": 2504,
       "path": "src/eval.rs",
       "source": "std::str::from_utf8(&input[..end]).map_err(|_| \"invalid chunk size\".to_string())?;",
       "status": "unresolved"
@@ -3206,7 +3224,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 2495,
+      "line": 2508,
       "path": "src/eval.rs",
       "source": "input = &input[end + 2..];",
       "status": "unresolved"
@@ -3215,7 +3233,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 2499,
+      "line": 2512,
       "path": "src/eval.rs",
       "source": "if input.len() < size + 2 || &input[size..size + 2] != b\"\\r\\n\" {",
       "status": "unresolved"
@@ -3224,7 +3242,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 2502,
+      "line": 2515,
       "path": "src/eval.rs",
       "source": "output.extend_from_slice(&input[..size]);",
       "status": "unresolved"
@@ -3233,7 +3251,7 @@
       "kinds": [
         "raw_index"
       ],
-      "line": 2503,
+      "line": 2516,
       "path": "src/eval.rs",
       "source": "input = &input[size + 2..];",
       "status": "unresolved"
@@ -3242,7 +3260,7 @@
       "kinds": [
         "network"
       ],
-      "line": 2507,
+      "line": 2520,
       "path": "src/eval.rs",
       "source": "fn https_get_via_curl(url: &str) -> Val {",
       "status": "unresolved"
@@ -3251,7 +3269,7 @@
       "kinds": [
         "network"
       ],
-      "line": 2508,
+      "line": 2521,
       "path": "src/eval.rs",
       "source": "// std has no TLS; delegate to curl via an arg-list (never a shell string).",
       "status": "unresolved"
@@ -3261,7 +3279,7 @@
         "process",
         "network"
       ],
-      "line": 2509,
+      "line": 2522,
       "path": "src/eval.rs",
       "source": "match std::process::Command::new(\"curl\")",
       "status": "unresolved"
@@ -3270,7 +3288,7 @@
       "kinds": [
         "network"
       ],
-      "line": 2522,
+      "line": 2535,
       "path": "src/eval.rs",
       "source": "Val::Err(format!(\"sys.net.get: curl failed: {}\", err.trim()))",
       "status": "unresolved"
@@ -3279,7 +3297,7 @@
       "kinds": [
         "network"
       ],
-      "line": 2525,
+      "line": 2538,
       "path": "src/eval.rs",
       "source": "Val::Err(\"sys.net.get: https requires the 'curl' program, which was not found\".into())",
       "status": "unresolved"
@@ -3288,7 +3306,7 @@
       "kinds": [
         "network"
       ],
-      "line": 2548,
+      "line": 2561,
       "path": "src/eval.rs",
       "source": "use std::net::TcpListener;",
       "status": "unresolved"
@@ -3297,7 +3315,7 @@
       "kinds": [
         "unchecked_assumption"
       ],
-      "line": 2553,
+      "line": 2566,
       "path": "src/eval.rs",
       "source": "assert_eq!(decode_chunked_body(encoded).unwrap(), b\"Wikipedia\");",
       "status": "unresolved"
@@ -3306,7 +3324,7 @@
       "kinds": [
         "unchecked_assumption"
       ],
-      "line": 2563,
+      "line": 2576,
       "path": "src/eval.rs",
       "source": "let listener = TcpListener::bind(\"127.0.0.1:0\").unwrap();",
       "status": "unresolved"
@@ -3315,7 +3333,7 @@
       "kinds": [
         "unchecked_assumption"
       ],
-      "line": 2564,
+      "line": 2577,
       "path": "src/eval.rs",
       "source": "let address = listener.local_addr().unwrap();",
       "status": "unresolved"
@@ -3324,7 +3342,7 @@
       "kinds": [
         "unchecked_assumption"
       ],
-      "line": 2573,
+      "line": 2586,
       "path": "src/eval.rs",
       "source": "let (mut stream, _) = listener.accept().unwrap();",
       "status": "unresolved"
@@ -3333,7 +3351,7 @@
       "kinds": [
         "input_allocation"
       ],
-      "line": 2575,
+      "line": 2588,
       "path": "src/eval.rs",
       "source": "let _ = stream.read(&mut request);",
       "status": "unresolved"
@@ -3342,7 +3360,7 @@
       "kinds": [
         "unchecked_assumption"
       ],
-      "line": 2576,
+      "line": 2589,
       "path": "src/eval.rs",
       "source": "stream.write_all(response.as_bytes()).unwrap();",
       "status": "unresolved"
@@ -3351,7 +3369,7 @@
       "kinds": [
         "unchecked_assumption"
       ],
-      "line": 2583,
+      "line": 2596,
       "path": "src/eval.rs",
       "source": "other => panic!(\"expected string body, got {other:?}\"),",
       "status": "unresolved"
@@ -3360,7 +3378,7 @@
       "kinds": [
         "unchecked_assumption"
       ],
-      "line": 2585,
+      "line": 2598,
       "path": "src/eval.rs",
       "source": "other => panic!(\"expected successful response, got {other:?}\"),",
       "status": "unresolved"
@@ -3369,7 +3387,7 @@
       "kinds": [
         "unchecked_assumption"
       ],
-      "line": 2587,
+      "line": 2600,
       "path": "src/eval.rs",
       "source": "server.join().unwrap();",
       "status": "unresolved"
