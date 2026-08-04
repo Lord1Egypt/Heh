@@ -183,3 +183,42 @@ fn validates_named_arguments_by_parameter_identity() {
     );
     assert!(diagnostic_codes(&format!("{function}let x = combine(a: 1)\n")).contains(&"E0109"));
 }
+
+#[test]
+fn checks_implicit_returns_and_all_reachable_fallthrough_paths() {
+    let implicit = "fn answer() -> int\n    42\n";
+    assert!(diagnostic_codes(implicit).is_empty());
+
+    let wrong_implicit = "fn answer() -> int\n    \"forty-two\"\n";
+    assert!(diagnostic_codes(wrong_implicit).contains(&"E0040"));
+
+    let missing = "fn answer() -> int\n    let x = 42\n";
+    assert!(diagnostic_codes(missing).contains(&"E0059"));
+
+    let complete_if =
+        "fn choose(flag: bool) -> int\n    if flag\n        return 1\n    else\n        return 2\n";
+    assert!(diagnostic_codes(complete_if).is_empty());
+
+    let partial_if = "fn choose(flag: bool) -> int\n    if flag\n        return 1\n";
+    assert!(diagnostic_codes(partial_if).contains(&"E0059"));
+
+    let complete_match = "type Choice = yes or no\nfn choose(value: Choice) -> int\n    match value\n        yes\n            return 1\n        no\n            return 2\n";
+    assert!(diagnostic_codes(complete_match).is_empty());
+}
+
+#[test]
+fn checks_try_and_loop_control_in_their_lexical_context() {
+    let legal_try =
+        "fn parse(s: str) -> int or error\n    let value = try int_of(s)\n    ok(value)\n";
+    assert!(diagnostic_codes(legal_try).is_empty());
+
+    let illegal_try = "fn parse(s: str) -> int\n    let value = try int_of(s)\n    value\n";
+    assert!(diagnostic_codes(illegal_try).contains(&"E0114"));
+
+    assert!(diagnostic_codes("break\n").contains(&"E0110"));
+    assert!(diagnostic_codes("continue\n").contains(&"E0110"));
+    assert!(diagnostic_codes("for x in [1]\n    break\n").is_empty());
+
+    let closure_escape = "for x in [1]\n    let bad = fn()\n        break\n";
+    assert!(diagnostic_codes(closure_escape).contains(&"E0110"));
+}
