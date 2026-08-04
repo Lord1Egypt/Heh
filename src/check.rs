@@ -15,6 +15,7 @@ pub enum Ty {
     Fn(Vec<Ty>, Box<Ty>),
     VariadicFn(Box<Ty>, Box<Ty>),
     Namespace(String),
+    Builtin(String),
     Record(String),
     Enum(String),
     Unit,
@@ -64,38 +65,38 @@ impl Checker {
     pub fn check_file(&mut self, file: &File) {
         // Collect types and functions
         self.define("sys".to_string(), Ty::Namespace("sys".into()), false);
-        self.define("int_of".to_string(), Ty::Any, false);
-        self.define("float_of".to_string(), Ty::Any, false);
-        self.define("str".to_string(), Ty::Any, false);
-        // The explicit conversions (SPEC §5.2, §5.5). These carry real result
-        // types so `int(x) + 1` still checks as int arithmetic.
-        self.define(
-            "int".to_string(),
-            Ty::Fn(vec![Ty::Any], Box::new(Ty::Int)),
-            false,
-        );
-        self.define(
-            "float".to_string(),
-            Ty::Fn(vec![Ty::Any], Box::new(Ty::Float)),
-            false,
-        );
-        self.define("list".to_string(), Ty::Any, false);
-        self.define("print".to_string(), Ty::Any, false); // In case they use it directly
-        self.define("exit".to_string(), Ty::Any, false);
-        self.define("len".to_string(), Ty::Any, false);
-        self.define("push".to_string(), Ty::Any, false);
-        self.define("pop".to_string(), Ty::Any, false);
-        self.define("keys".to_string(), Ty::Any, false);
-        self.define("values".to_string(), Ty::Any, false);
-        self.define("read".to_string(), Ty::Any, false);
-        self.define("write".to_string(), Ty::Any, false);
-        self.define("split".to_string(), Ty::Any, false);
-        self.define("join".to_string(), Ty::Any, false);
-
-        self.define("ok".to_string(), Ty::Any, false);
-        self.define("err".to_string(), Ty::Any, false);
-        self.define("some".to_string(), Ty::Any, false);
-        self.define("none".to_string(), Ty::Any, false);
+        for name in [
+            "len",
+            "upper",
+            "lower",
+            "trim",
+            "split",
+            "replace",
+            "contains",
+            "starts_with",
+            "chars",
+            "push",
+            "pop",
+            "get",
+            "sort",
+            "map",
+            "filter",
+            "join",
+            "set",
+            "remove",
+            "keys",
+            "values",
+            "int_of",
+            "str",
+            "int",
+            "float",
+            "list",
+            "ok",
+            "err",
+            "some",
+        ] {
+            self.define(name.into(), Ty::Builtin(name.into()), false);
+        }
 
         self.types.insert(
             "Sys".to_string(),
@@ -537,9 +538,7 @@ impl Checker {
                 if let Some(expected) = &self.current_fn_ret {
                     if !ret_ty.is_error()
                         && !expected.is_error()
-                        && ret_ty != *expected
-                        && ret_ty != Ty::Any
-                        && *expected != Ty::Any
+                        && !types_compatible(expected, &ret_ty)
                     {
                         self.diags.push(Diag {
                             code: "E0040",
@@ -1016,6 +1015,7 @@ impl Checker {
                     })
                     .collect();
                 match callee_ty {
+                    Ty::Builtin(name) => self.check_builtin_call(&name, &arg_tys, e),
                     Ty::Fn(params, ret) => {
                         if args.len() != params.len() {
                             self.diags.push(Diag {
@@ -1104,6 +1104,104 @@ impl Checker {
                 Ty::Any
             }
         }
+    }
+
+    fn check_builtin_call(&mut self, name: &str, args: &[Ty], expr: &Expr) -> Ty {
+        let arity = |checker: &mut Checker, expected: usize| {
+            if args.len() != expected {
+                checker.diags.push(Diag {
+                    code: "E0109",
+                    msg: format!(
+                        "function takes {} arguments, {} given",
+                        expected,
+                        args.len()
+                    ),
+                    line: expr.span.line,
+                    col: expr.span.col,
+                });
+                false
+            } else {
+                true
+            }
+        };
+        match name {
+            "some" if arity(self, 1) => Ty::Optional(Box::new(args[0].clone())),
+            "ok" if arity(self, 1) => Ty::Result(Box::new(args[0].clone())),
+            "err" if arity(self, 1) => {
+                self.require_builtin_arg(name, &Ty::Str, &args[0], expr);
+                Ty::Result(Box::new(Ty::Any))
+            }
+            "str" if arity(self, 1) => Ty::Str,
+            "int" if arity(self, 1) => {
+                if !matches!(args[0], Ty::Int | Ty::Float | Ty::Error) {
+                    self.builtin_type_error(name, expr);
+                }
+                Ty::Int
+            }
+            "float" if arity(self, 1) => {
+                if !matches!(args[0], Ty::Int | Ty::Float | Ty::Error) {
+                    self.builtin_type_error(name, expr);
+                }
+                Ty::Float
+            }
+            "int_of" if arity(self, 1) => {
+                self.require_builtin_arg(name, &Ty::Str, &args[0], expr);
+                Ty::Result(Box::new(Ty::Int))
+            }
+            "list" if arity(self, 1) => match &args[0] {
+                Ty::List(inner) => Ty::List(inner.clone()),
+                Ty::Str => Ty::List(Box::new(Ty::Str)),
+                Ty::Map(key, _) => Ty::List(key.clone()),
+                Ty::Any | Ty::Error => Ty::List(Box::new(Ty::Any)),
+                _ => {
+                    self.builtin_type_error(name, expr);
+                    Ty::Error
+                }
+            },
+            _ => self.check_method_style_builtin(name, args, expr, arity),
+        }
+    }
+
+    fn check_method_style_builtin<F>(
+        &mut self,
+        name: &str,
+        args: &[Ty],
+        expr: &Expr,
+        arity: F,
+    ) -> Ty
+    where
+        F: Fn(&mut Checker, usize) -> bool,
+    {
+        if args.is_empty() {
+            arity(self, 1);
+            return Ty::Error;
+        }
+        if let Some(Ty::Fn(params, ret)) = builtin_method(&args[0], name) {
+            if !arity(self, params.len() + 1) {
+                return *ret;
+            }
+            for (expected, actual) in params.iter().zip(&args[1..]) {
+                self.require_builtin_arg(name, expected, actual, expr);
+            }
+            return *ret;
+        }
+        self.builtin_type_error(name, expr);
+        Ty::Error
+    }
+
+    fn require_builtin_arg(&mut self, name: &str, expected: &Ty, actual: &Ty, expr: &Expr) {
+        if !types_compatible(expected, actual) {
+            self.builtin_type_error(name, expr);
+        }
+    }
+
+    fn builtin_type_error(&mut self, name: &str, expr: &Expr) {
+        self.diags.push(Diag {
+            code: "E0040",
+            msg: format!("invalid argument type for builtin '{}'", name),
+            line: expr.span.line,
+            col: expr.span.col,
+        });
     }
 
     fn match_is_exhaustive(&self, ty: &Ty, arms: &[MatchArm]) -> bool {
@@ -1215,6 +1313,14 @@ fn builtin_method(receiver: &Ty, field: &str) -> Option<Ty> {
         (Ty::List(inner), "pop") => Some(function(vec![], Ty::Result(inner.clone()))),
         (Ty::List(inner), "get") => Some(function(vec![Ty::Int], Ty::Optional(inner.clone()))),
         (Ty::List(_), "sort") => Some(function(vec![], Ty::Unit)),
+        (Ty::List(inner), "map") => Some(function(
+            vec![Ty::Fn(vec![*inner.clone()], Box::new(Ty::Any))],
+            Ty::List(Box::new(Ty::Any)),
+        )),
+        (Ty::List(inner), "filter") => Some(function(
+            vec![Ty::Fn(vec![*inner.clone()], Box::new(Ty::Bool))],
+            Ty::List(inner.clone()),
+        )),
         (Ty::List(_), "join") => Some(function(vec![Ty::Str], Ty::Str)),
         (Ty::Map(key, value), "get") => {
             Some(function(vec![*key.clone()], Ty::Optional(value.clone())))
@@ -1230,9 +1336,24 @@ fn builtin_method(receiver: &Ty, field: &str) -> Option<Ty> {
 }
 
 fn types_compatible(expected: &Ty, actual: &Ty) -> bool {
-    expected == actual
+    if expected == actual
         || matches!(expected, Ty::Any | Ty::Error)
         || matches!(actual, Ty::Any | Ty::Error)
+    {
+        return true;
+    }
+    match (expected, actual) {
+        (Ty::List(a), Ty::List(b))
+        | (Ty::Optional(a), Ty::Optional(b))
+        | (Ty::Result(a), Ty::Result(b)) => types_compatible(a, b),
+        (Ty::Map(ak, av), Ty::Map(bk, bv)) => types_compatible(ak, bk) && types_compatible(av, bv),
+        (Ty::Fn(ap, ar), Ty::Fn(bp, br)) => {
+            ap.len() == bp.len()
+                && ap.iter().zip(bp).all(|(a, b)| types_compatible(a, b))
+                && types_compatible(ar, br)
+        }
+        _ => false,
+    }
 }
 
 /// Recognise the two `none` comparisons that drive optional narrowing
