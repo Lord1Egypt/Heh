@@ -7,6 +7,25 @@ implementation, never the language.
 Full notes for each release are on the
 [Releases page](https://github.com/Lord1Egypt/Heh/releases).
 
+## v1.0.4 — 2026-08-04
+
+A security and static-correctness hardening release. No language change.
+
+- `heh.lock` verification is now complete rather than one-sided: unpinned
+  additions, missing locks, duplicate or escaping paths, malformed hashes,
+  missing files, modified files, and symlinks all fail closed. Lockfiles also
+  retain the source URLs recorded by `heh get` as required by SPEC §9.
+- `heh get` sanitizes destination names, rejects newline-bearing URLs, and
+  restricts curl protocols and redirect protocols.
+- Recursive `heh test` and `heh fmt` discovery no longer follows symlinks.
+- The static checker now rejects non-exhaustive enum, optional, result, bool,
+  and scalar matches with `E0020`, and validates user-function arity and
+  argument types before execution.
+- Plain HTTP GET now supports redirects, IPv6 authorities, chunked transfer
+  encoding, and validated `Content-Length` bodies.
+- Regression coverage was added for every corrected security and checker
+  behavior.
+
 ## v1.0.3 — 2026-08-02
 
 A correctness and infrastructure release. No language change.

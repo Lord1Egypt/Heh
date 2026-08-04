@@ -76,6 +76,10 @@ fn vendor_get_lock_and_tamper() {
         lock.contains("vendor/greetlib.heh"),
         "lock missing entry: {lock}"
     );
+    assert!(
+        lock.contains(&format!("# source: {url}")),
+        "lock missing source URL: {lock}"
+    );
 
     // run with a valid lock -> success
     let out = Command::new(heh())
@@ -108,5 +112,72 @@ fn vendor_get_lock_and_tamper() {
         "expected hash mismatch, got: {stderr}"
     );
 
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn lock_rejects_unpinned_files_and_missing_lock() {
+    if !curl_available() {
+        eprintln!("skipping vendor test: curl not available");
+        return;
+    }
+
+    let dir = fresh_dir("completeness");
+    let lib = dir.join("dep.heh");
+    fs::write(&lib, "let answer = 42\n").unwrap();
+    fs::write(dir.join("app.heh"), "sys.print(\"ok\")\n").unwrap();
+    let url = file_url(&lib);
+    let fetched = Command::new(heh())
+        .current_dir(&dir)
+        .args(["get", &url])
+        .output()
+        .unwrap();
+    assert!(fetched.status.success());
+
+    fs::write(dir.join("vendor/unpinned.heh"), "let hidden = true\n").unwrap();
+    let out = Command::new(heh())
+        .current_dir(&dir)
+        .args(["run", "app.heh"])
+        .output()
+        .unwrap();
+    assert!(!out.status.success());
+    assert!(String::from_utf8_lossy(&out.stderr).contains("unpinned file"));
+
+    fs::remove_file(dir.join("vendor/unpinned.heh")).unwrap();
+    fs::remove_file(dir.join("heh.lock")).unwrap();
+    let out = Command::new(heh())
+        .current_dir(&dir)
+        .args(["run", "app.heh"])
+        .output()
+        .unwrap();
+    assert!(!out.status.success());
+    assert!(String::from_utf8_lossy(&out.stderr).contains("heh.lock is missing"));
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[cfg(unix)]
+#[test]
+fn lock_rejects_vendor_symlinks() {
+    use std::os::unix::fs::symlink;
+
+    let dir = fresh_dir("symlink");
+    fs::create_dir(dir.join("vendor")).unwrap();
+    fs::write(dir.join("outside.heh"), "let escaped = true\n").unwrap();
+    symlink(dir.join("outside.heh"), dir.join("vendor/escaped.heh")).unwrap();
+    fs::write(dir.join("app.heh"), "sys.print(\"ok\")\n").unwrap();
+    fs::write(
+        dir.join("heh.lock"),
+        "# deliberately empty: the symlink must still be rejected\n",
+    )
+    .unwrap();
+
+    let out = Command::new(heh())
+        .current_dir(&dir)
+        .args(["run", "app.heh"])
+        .output()
+        .unwrap();
+    assert!(!out.status.success());
+    assert!(String::from_utf8_lossy(&out.stderr).contains("refusing symlink"));
     let _ = fs::remove_dir_all(&dir);
 }

@@ -2323,8 +2323,15 @@ fn module_bind_name(path: &str) -> String {
 /// `https://` to the `curl` subprocess (std has no TLS). Returns `ok(body)` or
 /// `err(msg)`; never panics, fails closed on any error.
 fn http_get(url: &str) -> Val {
+    http_get_with_redirects(url, 0)
+}
+
+fn http_get_with_redirects(url: &str, redirects: u8) -> Val {
+    if redirects > 5 {
+        return Val::Err("sys.net.get: too many redirects".into());
+    }
     if let Some(rest) = url.strip_prefix("http://") {
-        http_get_plain(rest)
+        http_get_plain(rest, redirects)
     } else if url.starts_with("https://") {
         https_get_via_curl(url)
     } else {
@@ -2332,7 +2339,7 @@ fn http_get(url: &str) -> Val {
     }
 }
 
-fn http_get_plain(host_path: &str) -> Val {
+fn http_get_plain(host_path: &str, redirects: u8) -> Val {
     use std::io::{Read, Write};
     use std::time::Duration;
 
@@ -2340,12 +2347,34 @@ fn http_get_plain(host_path: &str) -> Val {
         Some(i) => (&host_path[..i], &host_path[i..]),
         None => (host_path, "/"),
     };
-    let (host, port) = match authority.rsplit_once(':') {
-        Some((h, p)) => match p.parse::<u16>() {
-            Ok(port) => (h.to_string(), port),
-            Err(_) => return Val::Err(format!("sys.net.get: bad port in '{}'", authority)),
-        },
-        None => (authority.to_string(), 80u16),
+    if authority.is_empty() {
+        return Val::Err("sys.net.get: URL has no host".into());
+    }
+    let (host, port) = if let Some(bracketed) = authority.strip_prefix('[') {
+        let Some(end) = bracketed.find(']') else {
+            return Val::Err(format!("sys.net.get: bad IPv6 host in '{}'", authority));
+        };
+        let host = &bracketed[..end];
+        let suffix = &bracketed[end + 1..];
+        let port = if suffix.is_empty() {
+            80
+        } else if let Some(port) = suffix.strip_prefix(':') {
+            match port.parse::<u16>() {
+                Ok(port) => port,
+                Err(_) => return Val::Err(format!("sys.net.get: bad port in '{}'", authority)),
+            }
+        } else {
+            return Val::Err(format!("sys.net.get: bad authority '{}'", authority));
+        };
+        (host.to_string(), port)
+    } else {
+        match authority.rsplit_once(':') {
+            Some((h, p)) => match p.parse::<u16>() {
+                Ok(port) => (h.to_string(), port),
+                Err(_) => return Val::Err(format!("sys.net.get: bad port in '{}'", authority)),
+            },
+            None => (authority.to_string(), 80u16),
+        }
     };
 
     let addr = format!("{}:{}", host, port);
@@ -2359,7 +2388,7 @@ fn http_get_plain(host_path: &str) -> Val {
 
     let req = format!(
         "GET {} HTTP/1.1\r\nHost: {}\r\nUser-Agent: heh\r\nAccept: */*\r\nConnection: close\r\n\r\n",
-        path, host
+        path, authority
     );
     if let Err(e) = stream.write_all(req.as_bytes()) {
         return Val::Err(format!("sys.net.get: write failed: {}", e));
@@ -2376,21 +2405,85 @@ fn http_get_plain(host_path: &str) -> Val {
         Some(i) => (&buf[..i], &buf[i + 4..]),
         None => return Val::Err("sys.net.get: malformed response (no header terminator)".into()),
     };
-    let status_line = String::from_utf8_lossy(head)
-        .lines()
-        .next()
-        .unwrap_or("")
-        .to_string();
+    let headers = String::from_utf8_lossy(head);
+    let status_line = headers.lines().next().unwrap_or("").to_string();
     let code = status_line
         .split_whitespace()
         .nth(1)
         .and_then(|c| c.parse::<u16>().ok());
+    let header = |wanted: &str| {
+        headers.lines().skip(1).find_map(|line| {
+            let (name, value) = line.split_once(':')?;
+            name.eq_ignore_ascii_case(wanted)
+                .then(|| value.trim().to_string())
+        })
+    };
     match code {
-        Some(c) if (200..300).contains(&c) => Val::Ok(Box::new(Val::Str(
-            String::from_utf8_lossy(body).into_owned(),
-        ))),
+        Some(c) if (300..400).contains(&c) => match header("location") {
+            Some(location) => {
+                let next = if location.starts_with("http://") || location.starts_with("https://") {
+                    location
+                } else if location.starts_with('/') {
+                    format!("http://{}{}", authority, location)
+                } else {
+                    let base = path.rsplit_once('/').map(|(base, _)| base).unwrap_or("");
+                    format!("http://{}{}/{}", authority, base, location)
+                };
+                http_get_with_redirects(&next, redirects + 1)
+            }
+            None => Val::Err(format!("sys.net.get: HTTP {} redirect without Location", c)),
+        },
+        Some(c) if (200..300).contains(&c) => {
+            let decoded = if header("transfer-encoding").is_some_and(|value| {
+                value
+                    .split(',')
+                    .any(|v| v.trim().eq_ignore_ascii_case("chunked"))
+            }) {
+                match decode_chunked_body(body) {
+                    Ok(decoded) => decoded,
+                    Err(message) => return Val::Err(format!("sys.net.get: {message}")),
+                }
+            } else if let Some(length) = header("content-length") {
+                let Ok(length) = length.parse::<usize>() else {
+                    return Val::Err("sys.net.get: invalid Content-Length".into());
+                };
+                if body.len() < length {
+                    return Val::Err("sys.net.get: truncated response body".into());
+                }
+                body[..length].to_vec()
+            } else {
+                body.to_vec()
+            };
+            Val::Ok(Box::new(Val::Str(
+                String::from_utf8_lossy(&decoded).into_owned(),
+            )))
+        }
         Some(c) => Val::Err(format!("sys.net.get: HTTP {}", c)),
         None => Val::Err(format!("sys.net.get: bad status line '{}'", status_line)),
+    }
+}
+
+fn decode_chunked_body(mut input: &[u8]) -> Result<Vec<u8>, String> {
+    let mut output = Vec::new();
+    loop {
+        let end = input
+            .windows(2)
+            .position(|window| window == b"\r\n")
+            .ok_or_else(|| "malformed chunked response".to_string())?;
+        let size_text =
+            std::str::from_utf8(&input[..end]).map_err(|_| "invalid chunk size".to_string())?;
+        let size_text = size_text.split(';').next().unwrap_or("").trim();
+        let size =
+            usize::from_str_radix(size_text, 16).map_err(|_| "invalid chunk size".to_string())?;
+        input = &input[end + 2..];
+        if size == 0 {
+            return Ok(output);
+        }
+        if input.len() < size + 2 || &input[size..size + 2] != b"\r\n" {
+            return Err("truncated chunked response".into());
+        }
+        output.extend_from_slice(&input[..size]);
+        input = &input[size + 2..];
     }
 }
 
@@ -2429,4 +2522,51 @@ fn rewrite_top_level_try(d: Diag) -> Diag {
         };
     }
     d
+}
+
+#[cfg(test)]
+mod http_tests {
+    use super::{decode_chunked_body, http_get, Val};
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+
+    #[test]
+    fn decodes_chunked_body_and_extensions() {
+        let encoded = b"4;name=value\r\nWiki\r\n5\r\npedia\r\n0\r\n\r\n";
+        assert_eq!(decode_chunked_body(encoded).unwrap(), b"Wikipedia");
+    }
+
+    #[test]
+    fn rejects_truncated_chunked_body() {
+        assert!(decode_chunked_body(b"5\r\nabc\r\n0\r\n\r\n").is_err());
+    }
+
+    #[test]
+    fn plain_http_follows_redirect_and_decodes_chunks() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = std::thread::spawn(move || {
+            for response in [
+                format!(
+                    "HTTP/1.1 302 Found\r\nLocation: http://{address}/final\r\nContent-Length: 0\r\n\r\n"
+                ),
+                "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n3\r\nHeh\r\n0\r\n\r\n"
+                    .to_string(),
+            ] {
+                let (mut stream, _) = listener.accept().unwrap();
+                let mut request = [0; 1024];
+                let _ = stream.read(&mut request);
+                stream.write_all(response.as_bytes()).unwrap();
+            }
+        });
+
+        match http_get(&format!("http://{address}/start")) {
+            Val::Ok(value) => match *value {
+                Val::Str(body) => assert_eq!(body, "Heh"),
+                other => panic!("expected string body, got {other:?}"),
+            },
+            other => panic!("expected successful response, got {other:?}"),
+        }
+        server.join().unwrap();
+    }
 }
