@@ -139,6 +139,7 @@ what it means to be a Heh implementation. Everything was built phase by phase
 | Standard library | [docs/STDLIB.md](docs/STDLIB.md) — the complete frozen surface |
 | Diagnostics | [docs/DIAGNOSTICS.md](docs/DIAGNOSTICS.md) |
 | Changes | [CHANGELOG.md](CHANGELOG.md) |
+| Roadmap | [docs/ROADMAP_TO_10.md](docs/ROADMAP_TO_10.md) — measurable path from v1.0.4 to a fully hardened toolchain |
 | Reference implementation | Rust, **zero crates**, single binary `heh` |
 | Examples | [examples/](examples/) |
 | Verification | conformance corpus + `cargo test` (CI on every PR) |
