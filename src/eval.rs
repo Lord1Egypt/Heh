@@ -1147,14 +1147,30 @@ impl Evaluator {
                     }
                     // One call path for both engines, so the arity check and
                     // the recursion guard cannot drift between them.
-                    Val::Fn(params, body, closure_env) => self.call_user(
-                        params,
-                        body,
-                        closure_env,
-                        arg_vals,
-                        callee.span.line,
-                        callee.span.col,
-                    ),
+                    Val::Fn(params, body, closure_env) => {
+                        let names = args
+                            .iter()
+                            .map(|arg| match arg {
+                                CallArg::Positional(_) => None,
+                                CallArg::Named(name, _) => Some(name.clone()),
+                            })
+                            .collect();
+                        let ordered = order_call_args(
+                            &params,
+                            arg_vals,
+                            Some(names),
+                            callee.span.line,
+                            callee.span.col,
+                        )?;
+                        self.call_user(
+                            params,
+                            body,
+                            closure_env,
+                            ordered,
+                            callee.span.line,
+                            callee.span.col,
+                        )
+                    }
                     Val::BuiltinFn(name) => self.call_builtin(name, arg_vals, callee),
                     _ => Err(Diag {
                         code: "E0111",
@@ -2202,7 +2218,7 @@ impl Evaluator {
         &mut self,
         callee_val: Val,
         arg_vals: Vec<Val>,
-        named: Option<Vec<String>>,
+        named: Option<Vec<Option<String>>>,
         line: u32,
         col: u32,
     ) -> Result<Val, Diag> {
@@ -2238,6 +2254,14 @@ impl Evaluator {
                 if let Some(field_names) = named {
                     let mut map = std::collections::HashMap::new();
                     for (k, v) in field_names.into_iter().zip(arg_vals) {
+                        let Some(k) = k else {
+                            return Err(Diag {
+                                code: "E0106",
+                                msg: "positional arg in record literal".into(),
+                                line,
+                                col,
+                            });
+                        };
                         map.insert(k, v);
                     }
                     Ok(Val::Record(name, Rc::new(RefCell::new(map))))
@@ -2246,7 +2270,8 @@ impl Evaluator {
                 }
             }
             Val::Fn(params, body, closure_env) => {
-                self.call_user(params, body, closure_env, arg_vals, line, col)
+                let ordered = order_call_args(&params, arg_vals, named, line, col)?;
+                self.call_user(params, body, closure_env, ordered, line, col)
             }
             Val::BuiltinFn(name) => self.run_builtin(name, arg_vals, line, col),
             _ => Err(Diag {
@@ -2538,6 +2563,75 @@ fn https_get_via_curl(url: &str) -> Val {
             Val::Err("sys.net.get: https requires the 'curl' program, which was not found".into())
         }
     }
+}
+
+fn order_call_args(
+    params: &[Rc<str>],
+    args: Vec<Val>,
+    names: Option<Vec<Option<String>>>,
+    line: u32,
+    col: u32,
+) -> Result<Vec<Val>, Diag> {
+    let Some(names) = names else {
+        return Ok(args);
+    };
+    if names.len() != args.len() || args.len() != params.len() {
+        return Err(Diag {
+            code: "E0109",
+            msg: "argument count mismatch".into(),
+            line,
+            col,
+        });
+    }
+    let mut ordered = vec![None; params.len()];
+    let mut positional = 0usize;
+    let mut saw_named = false;
+    for (name, value) in names.into_iter().zip(args) {
+        let index = if let Some(name) = name {
+            saw_named = true;
+            params
+                .iter()
+                .position(|param| param.as_ref() == name)
+                .ok_or(Diag {
+                    code: "E0109",
+                    msg: format!("unknown named argument '{}'", name),
+                    line,
+                    col,
+                })?
+        } else {
+            if saw_named {
+                return Err(Diag {
+                    code: "E0109",
+                    msg: "positional argument after named argument".into(),
+                    line,
+                    col,
+                });
+            }
+            let index = positional;
+            positional += 1;
+            index
+        };
+        if index >= ordered.len() || ordered[index].is_some() {
+            return Err(Diag {
+                code: "E0109",
+                msg: "duplicate or excess argument".into(),
+                line,
+                col,
+            });
+        }
+        ordered[index] = Some(value);
+    }
+    ordered
+        .into_iter()
+        .map(|value| {
+            value.ok_or(Diag {
+                code: "E0109",
+                msg: "missing function argument".into(),
+                line,
+                col,
+            })
+        })
+        .collect()
 }
 
 /// A `try` that propagates out of top-level code has no function to return

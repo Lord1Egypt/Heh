@@ -14,6 +14,7 @@ pub enum Ty {
     Optional(Box<Ty>),
     Result(Box<Ty>), // `T or error`
     Fn(Vec<Ty>, Box<Ty>),
+    NamedFn(Vec<(String, Ty)>, Box<Ty>),
     VariadicFn(Box<Ty>, Box<Ty>),
     Namespace(String),
     Builtin(String),
@@ -723,7 +724,7 @@ impl Checker {
                     ty
                 } else if self.funcs.contains_key(name) {
                     let f = self.funcs.get(name).unwrap().clone();
-                    let p_tys = f
+                    let p_tys: Vec<Ty> = f
                         .params
                         .iter()
                         .map(|p| {
@@ -738,7 +739,10 @@ impl Checker {
                         .as_ref()
                         .map(|t| self.resolve_type(t))
                         .unwrap_or(Ty::Unit);
-                    Ty::Fn(p_tys, Box::new(r_ty))
+                    Ty::NamedFn(
+                        f.params.iter().map(|p| p.name.clone()).zip(p_tys).collect(),
+                        Box::new(r_ty),
+                    )
                 } else {
                     self.diags.push(Diag {
                         code: "E0011",
@@ -1061,8 +1065,21 @@ impl Checker {
                         CallArg::Positional(a) | CallArg::Named(_, a) => self.check_expr(a),
                     })
                     .collect();
+                let higher_order_return = match (&callee.kind, arg_tys.first()) {
+                    (ExprKind::Field(_, method), Some(Ty::Fn(_, ret))) if method == "map" => {
+                        Some(Ty::List(ret.clone()))
+                    }
+                    (ExprKind::Field(_, method), Some(Ty::NamedFn(_, ret))) if method == "map" => {
+                        Some(Ty::List(ret.clone()))
+                    }
+                    _ => None,
+                };
                 match callee_ty {
                     Ty::Builtin(name) => self.check_builtin_call(&name, &arg_tys, e),
+                    Ty::NamedFn(params, ret) => {
+                        self.check_named_call(&params, args, &arg_tys, e);
+                        *ret
+                    }
                     Ty::RecordCtor(name, fields) => {
                         self.check_record_constructor(&name, &fields, args, &arg_tys, e)
                     }
@@ -1116,7 +1133,7 @@ impl Checker {
                                 }
                             }
                         }
-                        *ret
+                        higher_order_return.unwrap_or(*ret)
                     }
                     Ty::VariadicFn(param, ret) => {
                         for actual in &arg_tys {
@@ -1151,11 +1168,110 @@ impl Checker {
                 }
                 Ty::Record(name.clone())
             }
-            ExprKind::Closure(_params, _ret, _body) => {
-                // Closures type-check to Any for now (parameter/return inference
-                // is future work); their bodies are checked at call sites.
-                Ty::Any
+            ExprKind::Closure(params, ret, body) => {
+                let mut param_tys = Vec::with_capacity(params.len());
+                self.push_scope();
+                for param in params {
+                    let ty = if let Some(annotation) = &param.typ {
+                        self.resolve_type(annotation)
+                    } else {
+                        self.diags.push(Diag {
+                            code: "E0052",
+                            msg: "missing type annotation for closure parameter".into(),
+                            line: param.span.line,
+                            col: param.span.col,
+                        });
+                        Ty::Error
+                    };
+                    param_tys.push(ty.clone());
+                    self.define(param.name.clone(), ty, false);
+                }
+                let return_ty = ret
+                    .as_ref()
+                    .map(|annotation| self.resolve_type(annotation))
+                    .unwrap_or(Ty::Unit);
+                let previous = self.current_fn_ret.replace(return_ty.clone());
+                self.check_block(body);
+                self.current_fn_ret = previous;
+                self.pop_scope();
+                Ty::Fn(param_tys, Box::new(return_ty))
             }
+        }
+    }
+
+    fn check_named_call(
+        &mut self,
+        params: &[(String, Ty)],
+        args: &[CallArg],
+        arg_tys: &[Ty],
+        expr: &Expr,
+    ) {
+        let mut used = std::collections::HashSet::new();
+        let mut saw_named = false;
+        let mut positional = 0usize;
+        for (arg, actual) in args.iter().zip(arg_tys) {
+            let index = match arg {
+                CallArg::Positional(_) => {
+                    if saw_named {
+                        self.diags.push(Diag {
+                            code: "E0109",
+                            msg: "positional argument after named argument".into(),
+                            line: expr.span.line,
+                            col: expr.span.col,
+                        });
+                    }
+                    let index = positional;
+                    positional += 1;
+                    Some(index)
+                }
+                CallArg::Named(name, _) => {
+                    saw_named = true;
+                    params
+                        .iter()
+                        .position(|(candidate, _)| candidate == name)
+                        .or_else(|| {
+                            self.diags.push(Diag {
+                                code: "E0109",
+                                msg: format!("unknown named argument '{}'", name),
+                                line: expr.span.line,
+                                col: expr.span.col,
+                            });
+                            None
+                        })
+                }
+            };
+            if let Some(index) = index {
+                if index >= params.len() {
+                    self.diags.push(Diag {
+                        code: "E0109",
+                        msg: "too many arguments".into(),
+                        line: expr.span.line,
+                        col: expr.span.col,
+                    });
+                } else if !used.insert(index) {
+                    self.diags.push(Diag {
+                        code: "E0109",
+                        msg: format!("duplicate argument '{}'", params[index].0),
+                        line: expr.span.line,
+                        col: expr.span.col,
+                    });
+                } else if !types_compatible(&params[index].1, actual) {
+                    self.diags.push(Diag {
+                        code: "E0040",
+                        msg: "function argument type mismatch".into(),
+                        line: expr.span.line,
+                        col: expr.span.col,
+                    });
+                }
+            }
+        }
+        if used.len() != params.len() {
+            self.diags.push(Diag {
+                code: "E0109",
+                msg: "missing function argument".into(),
+                line: expr.span.line,
+                col: expr.span.col,
+            });
         }
     }
 
@@ -1364,7 +1480,7 @@ impl Checker {
         for item in &file.items {
             match item {
                 TopItem::Fn(function) => {
-                    let params = function
+                    let params: Vec<Ty> = function
                         .params
                         .iter()
                         .map(|param| {
@@ -1380,7 +1496,13 @@ impl Checker {
                         .as_ref()
                         .map(|ty| resolver.resolve_type(ty))
                         .unwrap_or(Ty::Unit);
-                    members.insert(function.name.clone(), Ty::Fn(params, Box::new(ret)));
+                    let named = function
+                        .params
+                        .iter()
+                        .map(|param| param.name.clone())
+                        .zip(params)
+                        .collect();
+                    members.insert(function.name.clone(), Ty::NamedFn(named, Box::new(ret)));
                 }
                 TopItem::Type(decl) => match &decl.kind {
                     TypeDeclKind::Record(fields) => {
@@ -1462,6 +1584,30 @@ impl Checker {
             }
         };
         match name {
+            "map" if arity(self, 2) => match (&args[0], callable_unary(&args[1])) {
+                (Ty::List(element), Some((param, ret))) => {
+                    if !types_compatible(element, param) {
+                        self.builtin_type_error(name, expr);
+                    }
+                    Ty::List(Box::new(ret.clone()))
+                }
+                _ => {
+                    self.builtin_type_error(name, expr);
+                    Ty::Error
+                }
+            },
+            "filter" if arity(self, 2) => match (&args[0], callable_unary(&args[1])) {
+                (Ty::List(element), Some((param, ret))) => {
+                    if !types_compatible(element, param) || !types_compatible(&Ty::Bool, ret) {
+                        self.builtin_type_error(name, expr);
+                    }
+                    Ty::List(element.clone())
+                }
+                _ => {
+                    self.builtin_type_error(name, expr);
+                    Ty::Error
+                }
+            },
             "some" if arity(self, 1) => Ty::Optional(Box::new(args[0].clone())),
             "ok" if arity(self, 1) => Ty::Result(Box::new(args[0].clone())),
             "err" if arity(self, 1) => {
@@ -1577,6 +1723,14 @@ impl Checker {
     }
 }
 
+fn callable_unary(ty: &Ty) -> Option<(&Ty, &Ty)> {
+    match ty {
+        Ty::Fn(params, ret) if params.len() == 1 => Some((&params[0], ret)),
+        Ty::NamedFn(params, ret) if params.len() == 1 => Some((&params[0].1, ret)),
+        _ => None,
+    }
+}
+
 fn namespace_member(namespace: &str, field: &str) -> Option<Ty> {
     let function = |params: Vec<Ty>, ret: Ty| Ty::Fn(params, Box::new(ret));
     let result = |inner: Ty| Ty::Result(Box::new(inner));
@@ -1687,6 +1841,19 @@ fn types_compatible(expected: &Ty, actual: &Ty) -> bool {
         (Ty::Fn(ap, ar), Ty::Fn(bp, br)) => {
             ap.len() == bp.len()
                 && ap.iter().zip(bp).all(|(a, b)| types_compatible(a, b))
+                && types_compatible(ar, br)
+        }
+        (Ty::NamedFn(ap, ar), Ty::NamedFn(bp, br)) => {
+            ap.len() == bp.len()
+                && ap
+                    .iter()
+                    .zip(bp)
+                    .all(|((_, a), (_, b))| types_compatible(a, b))
+                && types_compatible(ar, br)
+        }
+        (Ty::Fn(ap, ar), Ty::NamedFn(bp, br)) | (Ty::NamedFn(bp, br), Ty::Fn(ap, ar)) => {
+            ap.len() == bp.len()
+                && ap.iter().zip(bp).all(|(a, (_, b))| types_compatible(a, b))
                 && types_compatible(ar, br)
         }
         _ => false,

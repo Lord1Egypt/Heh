@@ -150,3 +150,36 @@ fn checks_record_and_enum_constructor_shapes() {
     );
     assert!(diagnostic_codes(&format!("{prefix}let s = circle()\n")).contains(&"E0109"));
 }
+
+#[test]
+fn types_closures_at_declaration_and_higher_order_calls() {
+    let valid = "let show = fn(x: int) -> str\n    return str(x)\nlet values = [1, 2].map(show)\nlet first = values[0].upper()\n";
+    assert!(diagnostic_codes(valid).is_empty());
+
+    let bad_return = "let broken = fn(x: int) -> str\n    return x\n";
+    assert!(diagnostic_codes(bad_return).contains(&"E0040"));
+
+    let missing_annotation = "let broken = fn(x) -> int\n    return 1\n";
+    assert!(diagnostic_codes(missing_annotation).contains(&"E0052"));
+
+    let bad_filter =
+        "let identity = fn(x: int) -> int\n    return x\nlet values = [1, 2].filter(identity)\n";
+    assert!(diagnostic_codes(bad_filter).contains(&"E0040"));
+}
+
+#[test]
+fn validates_named_arguments_by_parameter_identity() {
+    let function = "fn combine(a: int, b: str) -> str\n    return \"{a}:{b}\"\n";
+    assert!(diagnostic_codes(&format!("{function}let x = combine(b: \"two\", a: 1)\n")).is_empty());
+    assert!(
+        diagnostic_codes(&format!("{function}let x = combine(a: 1, a: 2)\n")).contains(&"E0109")
+    );
+    assert!(
+        diagnostic_codes(&format!("{function}let x = combine(a: 1, \"two\")\n")).contains(&"E0109")
+    );
+    assert!(
+        diagnostic_codes(&format!("{function}let x = combine(c: 1, b: \"two\")\n"))
+            .contains(&"E0109")
+    );
+    assert!(diagnostic_codes(&format!("{function}let x = combine(a: 1)\n")).contains(&"E0109"));
+}
