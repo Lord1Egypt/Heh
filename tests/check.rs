@@ -95,12 +95,12 @@ fn checks_calls_through_local_module_interfaces() {
     std::fs::create_dir_all(&root).expect("create module fixture directory");
     std::fs::write(
         root.join("maths.heh"),
-        "let answer = 42\nfn add(a: int, b: int) -> int\n    a + b\n",
+        "type Point\n    x: int\n    y: int\ntype Shape = circle(r: float) or dot\nlet answer = 42\nfn add(a: int, b: int) -> int\n    a + b\n",
     )
     .expect("write module fixture");
     let main_path = root.join("main.heh");
 
-    let valid = "use \"./maths.heh\"\nlet answer = maths.add(20, 22) + maths.answer\n";
+    let valid = "use \"./maths.heh\"\nlet answer = maths.add(20, 22) + maths.answer\nlet p = maths.Point(x: 1, y: 2)\nlet shape = maths.circle(2.0)\n";
     assert!(diagnostic_codes_at(valid, &main_path).is_empty());
 
     let wrong_type = "use \"./maths.heh\"\nlet answer = maths.add(20, \"22\")\n";
@@ -108,6 +108,11 @@ fn checks_calls_through_local_module_interfaces() {
 
     let wrong_arity = "use \"./maths.heh\"\nlet answer = maths.add(20)\n";
     assert!(diagnostic_codes_at(wrong_arity, &main_path).contains(&"E0109"));
+
+    let wrong_field = "use \"./maths.heh\"\nlet p = maths.Point(x: 1, z: 2)\n";
+    assert!(diagnostic_codes_at(wrong_field, &main_path).contains(&"E0109"));
+    let wrong_payload = "use \"./maths.heh\"\nlet shape = maths.circle(\"large\")\n";
+    assert!(diagnostic_codes_at(wrong_payload, &main_path).contains(&"E0040"));
 
     std::fs::write(
         root.join("cycle_a.heh"),
@@ -129,4 +134,19 @@ fn checks_calls_through_local_module_interfaces() {
     .expect("write invalid module fixture");
     let broken = "use \"./broken.heh\"\nlet answer = broken.answer()\n";
     assert!(diagnostic_codes_at(broken, &main_path).contains(&"E0033"));
+}
+
+#[test]
+fn checks_record_and_enum_constructor_shapes() {
+    let prefix = "type Point\n    x: int\n    y: int\ntype Shape = circle(r: float) or dot\n";
+    assert!(diagnostic_codes(&format!(
+        "{prefix}let p = Point(x: 1, y: 2)\nlet s = circle(2.0)\nlet d = dot\n"
+    ))
+    .is_empty());
+    assert!(diagnostic_codes(&format!("{prefix}let p = Point(x: 1)\n")).contains(&"E0109"));
+    assert!(diagnostic_codes(&format!("{prefix}let p = Point(x: 1, x: 2)\n")).contains(&"E0109"));
+    assert!(
+        diagnostic_codes(&format!("{prefix}let p = Point(x: 1, y: \"two\")\n")).contains(&"E0040")
+    );
+    assert!(diagnostic_codes(&format!("{prefix}let s = circle()\n")).contains(&"E0109"));
 }

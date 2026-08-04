@@ -17,6 +17,8 @@ pub enum Ty {
     VariadicFn(Box<Ty>, Box<Ty>),
     Namespace(String),
     Builtin(String),
+    RecordCtor(String, Vec<(String, Ty)>),
+    EnumCtor(String, Vec<Ty>),
     Record(String),
     Enum(String),
     Unit,
@@ -147,15 +149,31 @@ impl Checker {
                     self.types.insert(t.name.clone(), t.clone());
                     // The constructor carries the type it builds, so
                     // `P(x: 1).x` and `p.x = 2` both know `p` is a record.
-                    let built = match t.kind {
-                        TypeDeclKind::Record(_) => Ty::Record(t.name.clone()),
+                    let built = match &t.kind {
+                        TypeDeclKind::Record(fields) => Ty::RecordCtor(
+                            t.name.clone(),
+                            fields
+                                .iter()
+                                .map(|field| (field.name.clone(), self.resolve_type(&field.typ)))
+                                .collect(),
+                        ),
                         TypeDeclKind::Enum(_) => Ty::Enum(t.name.clone()),
                     };
                     self.define(t.name.clone(), built, false);
 
                     if let TypeDeclKind::Enum(variants) = &t.kind {
                         for v in variants {
-                            self.define(v.name.clone(), Ty::Enum(t.name.clone()), false);
+                            let payload: Vec<Ty> = v
+                                .fields
+                                .iter()
+                                .map(|field| self.resolve_type(&field.typ))
+                                .collect();
+                            let variant_ty = if payload.is_empty() {
+                                Ty::Enum(t.name.clone())
+                            } else {
+                                Ty::EnumCtor(t.name.clone(), payload)
+                            };
+                            self.define(v.name.clone(), variant_ty, false);
                         }
                     }
                 }
@@ -1045,6 +1063,12 @@ impl Checker {
                     .collect();
                 match callee_ty {
                     Ty::Builtin(name) => self.check_builtin_call(&name, &arg_tys, e),
+                    Ty::RecordCtor(name, fields) => {
+                        self.check_record_constructor(&name, &fields, args, &arg_tys, e)
+                    }
+                    Ty::EnumCtor(name, fields) => {
+                        self.check_enum_constructor(&name, &fields, args, &arg_tys, e)
+                    }
                     Ty::Fn(params, ret) => {
                         if args.len() != params.len() {
                             self.diags.push(Diag {
@@ -1133,6 +1157,114 @@ impl Checker {
                 Ty::Any
             }
         }
+    }
+
+    fn check_record_constructor(
+        &mut self,
+        name: &str,
+        fields: &[(String, Ty)],
+        args: &[CallArg],
+        arg_tys: &[Ty],
+        expr: &Expr,
+    ) -> Ty {
+        let mut seen = std::collections::HashSet::new();
+        if args.len() != fields.len() {
+            self.diags.push(Diag {
+                code: "E0109",
+                msg: format!(
+                    "record '{}' needs {} fields, {} given",
+                    name,
+                    fields.len(),
+                    args.len()
+                ),
+                line: expr.span.line,
+                col: expr.span.col,
+            });
+        }
+        for (arg, actual) in args.iter().zip(arg_tys) {
+            let CallArg::Named(field, _) = arg else {
+                self.diags.push(Diag {
+                    code: "E0109",
+                    msg: "record fields must be named".into(),
+                    line: expr.span.line,
+                    col: expr.span.col,
+                });
+                continue;
+            };
+            if !seen.insert(field) {
+                self.diags.push(Diag {
+                    code: "E0109",
+                    msg: format!("duplicate field '{}'", field),
+                    line: expr.span.line,
+                    col: expr.span.col,
+                });
+            } else if let Some((_, expected)) =
+                fields.iter().find(|(candidate, _)| candidate == field)
+            {
+                if !types_compatible(expected, actual) {
+                    self.diags.push(Diag {
+                        code: "E0040",
+                        msg: format!("field '{}' type mismatch", field),
+                        line: expr.span.line,
+                        col: expr.span.col,
+                    });
+                }
+            } else {
+                self.diags.push(Diag {
+                    code: "E0109",
+                    msg: format!("unknown field '{}'", field),
+                    line: expr.span.line,
+                    col: expr.span.col,
+                });
+            }
+        }
+        Ty::Record(name.into())
+    }
+
+    fn check_enum_constructor(
+        &mut self,
+        name: &str,
+        fields: &[Ty],
+        args: &[CallArg],
+        arg_tys: &[Ty],
+        expr: &Expr,
+    ) -> Ty {
+        if args.len() != fields.len() {
+            self.diags.push(Diag {
+                code: "E0109",
+                msg: format!(
+                    "variant takes {} arguments, {} given",
+                    fields.len(),
+                    args.len()
+                ),
+                line: expr.span.line,
+                col: expr.span.col,
+            });
+        }
+        for (arg, (expected, actual)) in args.iter().zip(fields.iter().zip(arg_tys)) {
+            if matches!(arg, CallArg::Named(_, _)) {
+                self.diags.push(Diag {
+                    code: "E0109",
+                    msg: "enum payloads are positional".into(),
+                    line: expr.span.line,
+                    col: expr.span.col,
+                });
+            }
+            // Frozen v1 corpus behavior accepts an integer literal for a
+            // float enum payload (`circle(10)`). This contextual constructor
+            // rule does not enable coercion in ordinary expressions.
+            if !types_compatible(expected, actual)
+                && !matches!((expected, actual), (Ty::Float, Ty::Int))
+            {
+                self.diags.push(Diag {
+                    code: "E0040",
+                    msg: "variant argument type mismatch".into(),
+                    line: expr.span.line,
+                    col: expr.span.col,
+                });
+            }
+        }
+        Ty::Enum(name.into())
     }
 
     fn load_module_interface(
@@ -1230,24 +1362,51 @@ impl Checker {
         }
         let mut members = HashMap::new();
         for item in &file.items {
-            if let TopItem::Fn(function) = item {
-                let params = function
-                    .params
-                    .iter()
-                    .map(|param| {
-                        param
-                            .typ
-                            .as_ref()
-                            .map(|ty| resolver.resolve_type(ty))
-                            .unwrap_or(Ty::Error)
-                    })
-                    .collect();
-                let ret = function
-                    .ret_type
-                    .as_ref()
-                    .map(|ty| resolver.resolve_type(ty))
-                    .unwrap_or(Ty::Unit);
-                members.insert(function.name.clone(), Ty::Fn(params, Box::new(ret)));
+            match item {
+                TopItem::Fn(function) => {
+                    let params = function
+                        .params
+                        .iter()
+                        .map(|param| {
+                            param
+                                .typ
+                                .as_ref()
+                                .map(|ty| resolver.resolve_type(ty))
+                                .unwrap_or(Ty::Error)
+                        })
+                        .collect();
+                    let ret = function
+                        .ret_type
+                        .as_ref()
+                        .map(|ty| resolver.resolve_type(ty))
+                        .unwrap_or(Ty::Unit);
+                    members.insert(function.name.clone(), Ty::Fn(params, Box::new(ret)));
+                }
+                TopItem::Type(decl) => match &decl.kind {
+                    TypeDeclKind::Record(fields) => {
+                        let typed = fields
+                            .iter()
+                            .map(|field| (field.name.clone(), resolver.resolve_type(&field.typ)))
+                            .collect();
+                        members.insert(decl.name.clone(), Ty::RecordCtor(decl.name.clone(), typed));
+                    }
+                    TypeDeclKind::Enum(variants) => {
+                        for variant in variants {
+                            let typed: Vec<Ty> = variant
+                                .fields
+                                .iter()
+                                .map(|field| resolver.resolve_type(&field.typ))
+                                .collect();
+                            let variant_ty = if typed.is_empty() {
+                                Ty::Enum(decl.name.clone())
+                            } else {
+                                Ty::EnumCtor(decl.name.clone(), typed)
+                            };
+                            members.insert(variant.name.clone(), variant_ty);
+                        }
+                    }
+                },
+                TopItem::Let(_) | TopItem::Stmt(_) => {}
             }
         }
         self.diags.extend(resolver.diags);
