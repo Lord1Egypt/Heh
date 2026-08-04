@@ -65,3 +65,15 @@ fn checks_std_modules_and_builtin_methods() {
     let unknown_module_member = "use std/hash\nlet x = hash.md5(\"x\")\n";
     assert!(diagnostic_codes(unknown_module_member).contains(&"E0053"));
 }
+
+#[test]
+fn infers_polymorphic_builtin_results_and_rejects_bad_conversions() {
+    let valid = "let parsed = int_of(\"42\")\nlet maybe = some(1)\nlet copied = list([1, 2])\nlet chars = list(\"heh\")\nlet ks = list({\"a\": 1})\nlet n = len(copied)\n";
+    assert!(diagnostic_codes(valid).is_empty());
+
+    assert!(diagnostic_codes("let x = int(\"42\")\n").contains(&"E0040"));
+    assert!(diagnostic_codes("let x = float(true)\n").contains(&"E0040"));
+    assert!(diagnostic_codes("let x = int_of(42)\n").contains(&"E0040"));
+    assert!(diagnostic_codes("let x = list(42)\n").contains(&"E0040"));
+    assert!(diagnostic_codes("let x = some()\n").contains(&"E0109"));
+}
