@@ -39,7 +39,7 @@ def safety_inventory() -> dict[str, object]:
                 kinds.append("recursion")
             if kinds:
                 sites.append({
-                    "path": str(path.relative_to(ROOT)), "line": number,
+                    "path": path.relative_to(ROOT).as_posix(), "line": number,
                     "kinds": kinds, "status": "unresolved",
                     "source": line.strip(),
                 })
@@ -179,10 +179,10 @@ def check() -> None:
     for name, value in expected.items():
         path = EVIDENCE / name
         if not path.exists() or json.loads(path.read_text(encoding="utf-8")) != value:
-            stale.append(str(path.relative_to(ROOT)))
+            stale.append(path.relative_to(ROOT).as_posix())
     baseline = EVIDENCE / "benchmark-baseline.json"
     if not baseline.exists():
-        stale.append(str(baseline.relative_to(ROOT)))
+        stale.append(baseline.relative_to(ROOT).as_posix())
     if stale:
         raise SystemExit("stale or missing Phase 0 evidence: " + ", ".join(stale))
     print(
